@@ -49,11 +49,12 @@ src/
     api/                  # API routes
   components/
     landing/              # Landing page sections
-      Hero.tsx            # Dark cosmic hero with animated book
+      Hero.tsx            # Hero with AI-generated book cover mockup
+      PersonalizationShowcase.tsx  # Photo-to-storybook collage grid (boy photo + 3 book spreads)
       Stats.tsx           # Trust stats bar
       HowItWorks.tsx      # 3-step process cards
       ThemeShowcase.tsx   # 12 theme cards with SVG illustrations (6 original + 4 evergreen + 2 seasonal)
-      SampleBookViewer.tsx
+      SampleBookViewer.tsx # Interactive book spread carousel (space, dino, castle)
       Testimonials.tsx    # Trust points section (preview speed, privacy, free preview)
       Pricing.tsx
       FAQ.tsx
