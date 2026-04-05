@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Baby, User, Smile, ArrowRight } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 const ageOptions = [
   { value: -2, label: "Pre-birth (Sonogram)" },
@@ -41,6 +42,8 @@ export function StepChildInfo() {
     nextStep,
   } = useWizardStore();
 
+  const posthog = usePostHog();
+
   const isValid = childName.trim().length > 0 && childAge !== -1 && childGender !== "";
 
   return (
@@ -72,7 +75,8 @@ export function StepChildInfo() {
       {/* Age */}
       <div className="space-y-2">
         <Label htmlFor="childAge" className="text-sm font-medium text-gray-700">
-          Age
+          Age{" "}
+          <span className="font-normal text-gray-400">(adjusts story reading level)</span>
         </Label>
         <div className="relative">
           <select
@@ -158,7 +162,10 @@ export function StepChildInfo() {
 
       {/* Next */}
       <Button
-        onClick={nextStep}
+        onClick={() => {
+          posthog.capture("wizard_step_completed", { step: "child_info", child_age: childAge, child_gender: childGender });
+          nextStep();
+        }}
         disabled={!isValid}
         className={cn(
           "h-12 w-full rounded-xl text-base font-semibold transition-all",

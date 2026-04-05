@@ -6,6 +6,10 @@ import { Sparkles, Star, Wand2 } from "lucide-react";
 interface LoadingAnimationProps {
   childName: string;
   currentStep?: string;
+  /** Real status from the server polling endpoint */
+  serverStatus?: string;
+  /** Number of illustrations completed so far */
+  illustrationsReady?: number;
 }
 
 const messages = [
@@ -17,9 +21,27 @@ const messages = [
   "Almost done...",
 ];
 
+function getServerMessage(
+  status: string | undefined,
+  illustrationsReady: number | undefined,
+  childName: string
+): string | null {
+  if (!status) return null;
+  if (status === "preview_ready" || status === "completed")
+    return `${childName}'s book is ready!`;
+  if (status === "preview_generating" || status === "generating") {
+    if (illustrationsReady && illustrationsReady > 0)
+      return `Illustrating page ${illustrationsReady + 1}...`;
+    return `Writing ${childName}'s story...`;
+  }
+  return null;
+}
+
 export function LoadingAnimation({
   childName,
   currentStep,
+  serverStatus,
+  illustrationsReady,
 }: LoadingAnimationProps) {
   const [messageIndex, setMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -43,6 +65,7 @@ export function LoadingAnimation({
     return () => clearInterval(progressInterval);
   }, []);
 
+  const serverMessage = getServerMessage(serverStatus, illustrationsReady, childName);
   const currentMessage = messages[messageIndex].replace("{name}", childName);
 
   return (
@@ -97,7 +120,7 @@ export function LoadingAnimation({
         Creating {childName}&apos;s Story
       </h3>
       <p className="text-gray-500 mb-8 h-6 transition-all duration-500">
-        {currentStep || currentMessage}
+        {serverMessage || currentStep || currentMessage}
       </p>
 
       {/* Progress bar */}

@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,8 +42,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn(inter.variable, playfair.variable)}>
       <body className="font-sans antialiased bg-background text-foreground">
-        {children}
-        <Toaster />
+        <PostHogProvider>
+          {children}
+          <Toaster />
+        </PostHogProvider>
       </body>
     </html>
   );

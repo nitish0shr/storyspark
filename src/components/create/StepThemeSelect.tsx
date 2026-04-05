@@ -10,8 +10,10 @@ import {
   Crown,
   Zap,
   Heart,
+  Star,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 const iconMap: Record<string, LucideIcon> = {
   Rocket,
@@ -22,12 +24,22 @@ const iconMap: Record<string, LucideIcon> = {
   Heart,
 };
 
+function isAgeInRange(age: number, ageRange: string): boolean {
+  const match = ageRange.match(/(\d+)-(\d+)/);
+  if (!match) return false;
+  const [, min, max] = match;
+  return age >= Number(min) && age <= Number(max);
+}
+
 export function StepThemeSelect() {
-  const { childName, selectedThemeId, setSelectedTheme, nextStep } =
+  const { childName, childAge, selectedThemeId, setSelectedTheme, nextStep } =
     useWizardStore();
+
+  const posthog = usePostHog();
 
   const handleSelect = (themeId: string) => {
     setSelectedTheme(themeId);
+    posthog.capture("wizard_step_completed", { step: "theme_select", theme_id: themeId });
     // Auto-advance after a brief visual pause
     setTimeout(() => {
       nextStep();
@@ -80,8 +92,23 @@ export function StepThemeSelect() {
                 </div>
               </div>
 
+              {/* Badges */}
+              <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+                {theme.id === "kindness-courage" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                    Most Popular
+                  </span>
+                )}
+                {childAge >= 0 && isAgeInRange(childAge, theme.ageRange) && (
+                  <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                    Great for {childAge}-year-olds!
+                  </span>
+                )}
+              </div>
+
               {/* Content */}
-              <div className="flex flex-1 flex-col p-4">
+              <div className="flex flex-1 flex-col p-4 pt-2">
                 <p className="font-heading text-sm font-semibold text-gray-800 mb-1">
                   {title}
                 </p>

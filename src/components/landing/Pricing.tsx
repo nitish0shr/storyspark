@@ -13,6 +13,7 @@ import {
   Check,
   ShieldCheck,
 } from "lucide-react";
+import { PRICING } from "@/lib/stripe";
 
 const features = [
   { icon: BookOpen, text: "Personalized 12-page storybook" },
@@ -58,7 +59,7 @@ export default function Pricing() {
                   className="border-pink-200 text-pink-600 font-medium"
                 >
                   <Printer className="h-3 w-3 mr-1" />
-                  Print coming soon
+                  Print coming soon — $24.99
                 </Badge>
               </div>
 
@@ -67,9 +68,11 @@ export default function Pricing() {
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-lg font-medium text-gray-400">$</span>
                   <span className="font-heading text-6xl font-bold text-gray-900">
-                    9
+                    {Math.floor(PRICING.base.cents / 100)}
                   </span>
-                  <span className="text-2xl font-bold text-gray-900">.99</span>
+                  <span className="text-2xl font-bold text-gray-900">
+                    .{String(PRICING.base.cents % 100).padStart(2, "0")}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">per storybook</p>
               </div>
@@ -103,8 +106,13 @@ export default function Pricing() {
                 </Button>
               </Link>
 
+              {/* Competitor anchor */}
+              <p className="mt-5 text-center text-xs text-gray-400">
+                Personalized storybooks typically cost $25–40 elsewhere.
+              </p>
+
               {/* Guarantee */}
-              <div className="flex items-center justify-center gap-2 mt-5 text-xs text-gray-500">
+              <div className="flex items-center justify-center gap-2 mt-3 text-xs text-gray-500">
                 <ShieldCheck className="h-4 w-4 text-emerald-500" />
                 <span>100% satisfaction guarantee</span>
               </div>

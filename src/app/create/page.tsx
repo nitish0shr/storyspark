@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWizardStore } from "@/components/create/WizardProvider";
 import { ProgressSteps } from "@/components/shared/ProgressSteps";
@@ -8,26 +9,25 @@ import { StepChildInfo } from "@/components/create/StepChildInfo";
 import { StepPhotoUpload } from "@/components/create/StepPhotoUpload";
 import { StepThemeSelect } from "@/components/create/StepThemeSelect";
 import { StepQuestions } from "@/components/create/StepQuestions";
-import { StepEmail } from "@/components/create/StepEmail";
+import { StepSummary } from "@/components/create/StepSummary";
 import { StepPreview } from "@/components/create/StepPreview";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Internal step mapping:
  * 1 = Child Info       (progress step 1)
  * 2 = Photo Upload     (progress step 2)
  * 3 = Theme Select     (progress step 3)
- * 4 = Questions        (progress step 4 -- shown as "Questions")
- * 5 = Email            (progress step 4 visually, but we map to 4)
+ * 4 = Questions        (progress step 4 — "Personalize")
+ * 5 = Summary + Email  (progress step 5 — "Preview" since it triggers generation)
  * 6 = Preview          (progress step 5)
  */
 function stepToProgress(step: number): number {
-  if (step <= 3) return step;
-  if (step === 4) return 4; // questions
-  if (step === 5) return 4; // email still shows as step 4
-  return 5; // preview
+  if (step <= 4) return step;
+  return 5; // summary + preview both map to step 5
 }
 
 export default function CreatePage() {
@@ -35,6 +35,29 @@ export default function CreatePage() {
   const prevStep = useWizardStore((s) => s.prevStep);
   const [fadeKey, setFadeKey] = useState(step);
   const [isVisible, setIsVisible] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const router = useRouter();
+
+  // Auth gate: redirect to login if not authenticated
+  useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      // No Supabase configured — allow wizard for demo/dev
+      setAuthChecked(true);
+      return;
+    }
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.replace("/auth/login?redirectTo=/create");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
 
   // Animate step transitions
   useEffect(() => {
@@ -45,6 +68,14 @@ export default function CreatePage() {
     }, 150);
     return () => clearTimeout(timeout);
   }, [step]);
+
+  if (!authChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FFFBF5]">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+      </div>
+    );
+  }
 
   const progressStep = stepToProgress(step);
   const showBack = step > 1 && step < 6;
@@ -104,7 +135,7 @@ export default function CreatePage() {
           {fadeKey === 2 && <StepPhotoUpload />}
           {fadeKey === 3 && <StepThemeSelect />}
           {fadeKey === 4 && <StepQuestions />}
-          {fadeKey === 5 && <StepEmail />}
+          {fadeKey === 5 && <StepSummary />}
           {fadeKey === 6 && <StepPreview />}
         </div>
       </main>

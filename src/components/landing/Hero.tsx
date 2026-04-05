@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Star, ChevronDown } from "lucide-react";
+import { Star, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Hero() {
@@ -31,7 +31,7 @@ export default function Hero() {
                 ))}
               </div>
               <span className="text-xs font-medium text-violet-800">
-                Loved by 500+ families
+                Join families creating magical stories
               </span>
             </div>
 
@@ -70,7 +70,7 @@ export default function Hero() {
 
             <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
               Upload a photo, pick an adventure, and AI creates a beautiful
-              personalized storybook in under 2 minutes.
+              personalized storybook — ready in seconds.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
@@ -141,11 +141,78 @@ export default function Hero() {
                       <Star className="h-2.5 w-2.5 text-white/20 fill-white/20" />
                     </div>
 
-                    {/* Child silhouette circle */}
+                    {/* Child character illustration */}
                     <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white/15 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center mb-5">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center">
-                        <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-white/80" />
-                      </div>
+                      <svg viewBox="0 0 80 80" className="w-16 h-16 sm:w-20 sm:h-20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <radialGradient id="heroSkin" cx="40%" cy="35%">
+                            <stop offset="0%" stopColor="#FED7AA" />
+                            <stop offset="100%" stopColor="#FECACA" />
+                          </radialGradient>
+                          <radialGradient id="heroStarGlow" cx="50%" cy="50%">
+                            <stop offset="0%" stopColor="#FEF3C7" />
+                            <stop offset="50%" stopColor="#FDE68A" />
+                            <stop offset="100%" stopColor="#F59E0B" />
+                          </radialGradient>
+                          <linearGradient id="heroShirt" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#C4B5FD" />
+                            <stop offset="100%" stopColor="#8B5CF6" />
+                          </linearGradient>
+                        </defs>
+                        {/* Glowing star companion */}
+                        <circle cx="60" cy="18" r="12" fill="#FBBF24" opacity="0.08" />
+                        <circle cx="60" cy="18" r="8" fill="#FBBF24" opacity="0.12" />
+                        <path d="M60 10L61.5 15.5L67 14L62 17.5L65 23L60 19.5L55 23L58 17.5L53 14L58.5 15.5Z" fill="url(#heroStarGlow)" />
+                        <path d="M60 12L61 15.5L64 14.5L62 17L63.5 20L60 18L56.5 20L58 17L56 14.5L59 15.5Z" fill="#FEF3C7" opacity="0.4" />
+                        <circle cx="58" cy="16" r="1" fill="#92400E" />
+                        <circle cx="62" cy="16" r="1" fill="#92400E" />
+                        <circle cx="58.5" cy="15.5" r="0.3" fill="white" />
+                        <circle cx="62.5" cy="15.5" r="0.3" fill="white" />
+                        <path d="M59 19C59 19 60 20 61 19" stroke="#92400E" strokeWidth="0.5" strokeLinecap="round" />
+                        {/* Child head with 3D shading */}
+                        <circle cx="36" cy="30" r="12" fill="url(#heroSkin)" />
+                        <circle cx="32" cy="26" r="4" fill="white" opacity="0.08" />
+                        {/* Hair with volume */}
+                        <path d="M24 28C24 20 30 16 36 16C42 16 48 20 48 28C48 26 44 22 36 22C28 22 24 26 24 28Z" fill="#7C2D12" />
+                        <path d="M26 27C26 21 31 18 36 18C41 18 46 21 46 27C46 25 42 23 36 23C30 23 26 25 26 27Z" fill="#92400E" />
+                        <path d="M30 20Q33 18 36 19" fill="#A16207" opacity="0.2" />
+                        {/* Eyes with highlights */}
+                        <circle cx="32" cy="30" r="1.8" fill="#1E1B4B" />
+                        <circle cx="40" cy="30" r="1.8" fill="#1E1B4B" />
+                        <circle cx="32.5" cy="29.5" r="0.5" fill="white" />
+                        <circle cx="40.5" cy="29.5" r="0.5" fill="white" />
+                        {/* Rosy cheeks */}
+                        <circle cx="28" cy="33" r="2.5" fill="#F9A8D4" opacity="0.35" />
+                        <circle cx="44" cy="33" r="2.5" fill="#F9A8D4" opacity="0.35" />
+                        {/* Smile */}
+                        <path d="M33 35C33 35 36 38 39 35" stroke="#1E1B4B" strokeWidth="1" strokeLinecap="round" fill="none" />
+                        {/* Shirt with 3D gradient */}
+                        <path d="M24 45C24 39 30 42 36 42C42 42 48 39 48 45L50 62L22 62L24 45Z" fill="url(#heroShirt)" />
+                        <path d="M26 45C26 40 31 42.5 36 42.5C38 42.5 40 42 42 41.5L42 52L26 52Z" fill="white" opacity="0.08" />
+                        {/* Arms reaching up */}
+                        <path d="M24 47L16 38" stroke="#FECACA" strokeWidth="4.5" strokeLinecap="round" />
+                        <path d="M48 47L56 38" stroke="#FECACA" strokeWidth="4.5" strokeLinecap="round" />
+                        {/* Hands with 3D */}
+                        <circle cx="15" cy="37" r="3.5" fill="#FED7AA" />
+                        <circle cx="14" cy="36" r="1.2" fill="white" opacity="0.12" />
+                        <circle cx="57" cy="37" r="3.5" fill="#FED7AA" />
+                        <circle cx="56" cy="36" r="1.2" fill="white" opacity="0.12" />
+                        {/* Legs */}
+                        <rect x="28" y="60" width="6" height="12" rx="3" fill="#6D28D9" opacity="0.8" />
+                        <rect x="29" y="61" width="2" height="10" rx="1" fill="#7C3AED" opacity="0.3" />
+                        <rect x="38" y="60" width="6" height="12" rx="3" fill="#6D28D9" opacity="0.8" />
+                        <rect x="39" y="61" width="2" height="10" rx="1" fill="#7C3AED" opacity="0.3" />
+                        {/* Shoes with 3D shine */}
+                        <ellipse cx="31" cy="73" rx="5.5" ry="3" fill="#DC2626" />
+                        <ellipse cx="30" cy="72" rx="2.5" ry="1.2" fill="#EF4444" opacity="0.4" />
+                        <ellipse cx="41" cy="73" rx="5.5" ry="3" fill="#DC2626" />
+                        <ellipse cx="40" cy="72" rx="2.5" ry="1.2" fill="#EF4444" opacity="0.4" />
+                        {/* Sparkle trails from star */}
+                        <circle cx="52" cy="25" r="1.5" fill="#FDE68A" opacity="0.5" />
+                        <circle cx="52" cy="25" r="3" fill="#FDE68A" opacity="0.08" />
+                        <circle cx="48" cy="22" r="1" fill="#FDE68A" opacity="0.4" />
+                        <circle cx="45" cy="19" r="0.7" fill="#FDE68A" opacity="0.3" />
+                      </svg>
                     </div>
 
                     <h3 className="font-heading text-white text-lg sm:text-xl font-bold leading-tight mb-1.5">

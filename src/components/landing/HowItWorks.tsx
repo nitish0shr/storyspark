@@ -19,8 +19,8 @@ const steps = [
   },
   {
     icon: Sparkles,
-    title: "Get Their Book",
-    description: "AI creates a beautiful storybook in minutes",
+    title: "Get Their Book Instantly",
+    description: "AI creates a personalized storybook — instant PDF download",
     gradient: "from-pink-500 to-pink-600",
     shadow: "shadow-pink-200/60",
   },
@@ -82,6 +82,11 @@ export default function HowItWorks() {
               </div>
             ))}
           </div>
+
+          {/* Price anchor */}
+          <p className="mt-10 text-center text-sm text-gray-500">
+            Each book is just <span className="font-semibold text-gray-700">$9.99</span>. No subscription.
+          </p>
         </div>
       </div>
     </section>

@@ -17,7 +17,14 @@ export const stripe = new Proxy({} as Stripe, {
   },
 });
 
-/** Pricing in cents */
-export const PRICE_BASE = 999;
-export const PRICE_MID = 1999;
-export const PRICE_PREMIUM = 3499;
+/** Centralized pricing — single source of truth */
+export const PRICING = {
+  base: { cents: 999, label: "$9.99", name: "Digital Book" },
+  mid: { cents: 1999, label: "$19.99", name: "Deluxe Digital" },
+  premium: { cents: 3499, label: "$34.99", name: "Premium Bundle" },
+} as const;
+
+/** @deprecated Use PRICING object instead */
+export const PRICE_BASE = PRICING.base.cents;
+export const PRICE_MID = PRICING.mid.cents;
+export const PRICE_PREMIUM = PRICING.premium.cents;

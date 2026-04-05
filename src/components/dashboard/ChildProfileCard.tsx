@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChildProfile } from "@/types/child";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 interface ChildProfileCardProps {
   child: ChildProfile;
@@ -24,6 +26,30 @@ function ageLabel(age: number) {
 }
 
 export default function ChildProfileCard({ child }: ChildProfileCardProps) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!confirm(`Delete ${child.name}'s profile? This cannot be undone. Books will be kept.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/delete-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: child.id }),
+      });
+
+      if (res.ok) {
+        router.refresh();
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const initials = child.name
     .split(" ")
     .map((n) => n[0])
@@ -58,10 +84,12 @@ export default function ChildProfileCard({ child }: ChildProfileCardProps) {
           </div>
 
           <button
-            className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 transition-colors opacity-0 group-hover:opacity-100"
-            title="Edit profile"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+            title="Delete profile"
           >
-            <Pencil className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
 

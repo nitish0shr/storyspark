@@ -9,6 +9,7 @@ import {
   Star,
   CreditCard,
 } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 interface TierOption {
   id: PricingTier;
@@ -31,6 +32,7 @@ export default function CheckoutForm({
   childName,
   tiers,
 }: CheckoutFormProps) {
+  const posthog = usePostHog();
   const [selectedTier, setSelectedTier] = useState<PricingTier>("mid");
   const [isGift, setIsGift] = useState(false);
   const [giftRecipientName, setGiftRecipientName] = useState("");
@@ -69,6 +71,7 @@ export default function CheckoutForm({
       }
 
       if (data.checkoutUrl) {
+        posthog.capture("checkout_initiated", { tier: selectedTier, book_id: bookId, is_gift: isGift });
         window.location.href = data.checkoutUrl;
       }
     } catch {

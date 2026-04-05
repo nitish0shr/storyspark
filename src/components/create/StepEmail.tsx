@@ -6,49 +6,84 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Mail, Sparkles, Shield } from "lucide-react";
+import { Mail, Sparkles, Shield, AlertCircle } from "lucide-react";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export function StepEmail() {
-  const { childName, email, setEmail, nextStep, setGenerating } =
-    useWizardStore();
+  const {
+    childName,
+    childAge,
+    childGender,
+    photoUrl,
+    selectedThemeId,
+    contextualAnswers,
+    email,
+    setEmail,
+    setChildProfileId,
+    setBookId,
+    setGenerating,
+    nextStep,
+  } = useWizardStore();
   const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const valid = isValidEmail(email);
   const showError = touched && !valid && email.length > 0;
 
-  const handleGenerate = () => {
-    if (!valid) return;
-    setGenerating(true, "Preparing your story...");
-    nextStep();
+  const handleGenerate = async () => {
+    if (!valid || submitting) return;
 
-    // Simulate generation progress
-    const steps = [
-      "Analyzing photo...",
-      "Writing the story...",
-      "Creating illustrations...",
-      "Adding finishing touches...",
-    ];
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < steps.length) {
-        setGenerating(true, steps[i]);
-        i++;
-      } else {
-        clearInterval(interval);
-        // Simulate completion after generation
-        setTimeout(() => {
-          useWizardStore.setState({
-            isGenerating: false,
-            generationStep: "",
-            bookId: "preview-" + Date.now(),
-          });
-        }, 2000);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      // Step 1: Create book record via API
+      const createRes = await fetch("/api/create-book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          childName,
+          childAge,
+          childGender,
+          photoUrl: photoUrl || undefined,
+          themeId: selectedThemeId,
+          contextualAnswers,
+          email,
+        }),
+      });
+
+      if (!createRes.ok) {
+        const data = await createRes.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create book. Please try again.");
       }
-    }, 3000);
+
+      const { childProfileId, bookId } = await createRes.json();
+      setChildProfileId(childProfileId);
+      setBookId(bookId);
+
+      // Step 2: Trigger preview generation
+      const genRes = await fetch("/api/generate-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookId }),
+      });
+
+      if (!genRes.ok) {
+        const data = await genRes.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to start generation. Please try again.");
+      }
+
+      // Step 3: Move to preview step with real generation in progress
+      setGenerating(true, "Preparing your story...");
+      nextStep();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -79,26 +114,45 @@ export function StepEmail() {
           onChange={(e) => setEmail(e.target.value)}
           className={cn(
             "h-12 rounded-xl bg-white px-4 text-base focus-visible:border-violet-400 focus-visible:ring-violet-200",
-            showError && "border-red-300 focus-visible:border-red-400 focus-visible:ring-red-200"
+            showError &&
+              "border-red-300 focus-visible:border-red-400 focus-visible:ring-red-200"
           )}
         />
         {showError && (
-          <p className="text-sm text-red-500">Please enter a valid email address.</p>
+          <p className="text-sm text-red-500">
+            Please enter a valid email address.
+          </p>
         )}
       </div>
 
+      {error && (
+        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <Button
         onClick={handleGenerate}
-        disabled={!valid}
+        disabled={!valid || submitting}
         className={cn(
           "h-14 w-full rounded-xl text-lg font-semibold transition-all",
-          valid
+          valid && !submitting
             ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-xl hover:shadow-violet-200 hover:brightness-105"
             : "bg-gray-200 text-gray-400 cursor-not-allowed"
         )}
       >
-        <Sparkles className="mr-2 h-5 w-5" />
-        Generate Preview
+        {submitting ? (
+          <>
+            <span className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Creating...
+          </>
+        ) : (
+          <>
+            <Sparkles className="mr-2 h-5 w-5" />
+            Generate Preview
+          </>
+        )}
       </Button>
 
       <div className="flex items-center justify-center gap-2 text-xs text-gray-400">

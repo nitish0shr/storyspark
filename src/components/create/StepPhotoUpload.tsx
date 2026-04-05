@@ -11,16 +11,47 @@ import {
   X,
   ImageIcon,
   Lightbulb,
+  Loader2,
+  Shield,
 } from "lucide-react";
+import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
 
 export function StepPhotoUpload() {
-  const { childName, photoPreviewUrl, setPhoto, nextStep } = useWizardStore();
+  const { childName, photoPreviewUrl, setPhoto, setPhotoUrl, nextStep } =
+    useWizardStore();
+  const posthog = usePostHog();
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const uploadToServer = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+
+      const res = await fetch("/api/upload-photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPhotoUrl(data.url);
+      }
+      // Non-blocking: if upload fails, we still have the local preview
+      // The photo URL is optional for book creation
+    } catch {
+      // Silent failure — photo upload is best-effort
+    } finally {
+      setUploading(false);
+    }
+  }, [setPhotoUrl]);
 
   const handleFile = useCallback(
     (file: File) => {
@@ -38,8 +69,11 @@ export function StepPhotoUpload() {
 
       const previewUrl = URL.createObjectURL(file);
       setPhoto(file, previewUrl);
+
+      // Upload to server in background (non-blocking)
+      uploadToServer(file);
     },
-    [setPhoto]
+    [setPhoto, uploadToServer]
   );
 
   const handleDrop = useCallback(
@@ -107,7 +141,7 @@ export function StepPhotoUpload() {
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="border-t border-violet-200 bg-violet-50 px-4 py-3">
+          <div className="border-t border-violet-200 bg-violet-50 px-4 py-3 flex items-center justify-between">
             <button
               onClick={() => inputRef.current?.click()}
               className="text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors"
@@ -115,6 +149,12 @@ export function StepPhotoUpload() {
               <Camera className="mr-1.5 inline h-4 w-4 -mt-0.5" />
               Change Photo
             </button>
+            {uploading && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Uploading...
+              </span>
+            )}
           </div>
         </div>
       ) : (
@@ -155,6 +195,12 @@ export function StepPhotoUpload() {
         </div>
       )}
 
+      {/* Privacy reassurance */}
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <Shield className="h-3.5 w-3.5" />
+        <span>Your photo is encrypted and never shared with third parties.</span>
+      </div>
+
       <input
         ref={inputRef}
         type="file"
@@ -169,24 +215,38 @@ export function StepPhotoUpload() {
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
-        <Button
-          onClick={nextStep}
-          disabled={!photoPreviewUrl}
-          className={cn(
-            "h-12 w-full rounded-xl text-base font-semibold transition-all",
-            photoPreviewUrl
-              ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-200 hover:brightness-105"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-          )}
+        <div
+          onClick={() => {
+            if (!photoPreviewUrl) {
+              toast.info(`Please upload a photo of ${childName} to continue, or skip below.`);
+            }
+          }}
         >
-          Next
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
+          <Button
+            onClick={() => {
+              posthog.capture("wizard_step_completed", { step: "photo_upload" });
+              nextStep();
+            }}
+            disabled={!photoPreviewUrl}
+            className={cn(
+              "h-12 w-full rounded-xl text-base font-semibold transition-all",
+              photoPreviewUrl
+                ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-200 hover:brightness-105"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            )}
+          >
+            Next
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
         <button
-          onClick={nextStep}
+          onClick={() => {
+            posthog.capture("wizard_step_completed", { step: "photo_skipped" });
+            nextStep();
+          }}
           className="text-sm font-medium text-gray-400 hover:text-violet-600 transition-colors"
         >
-          Skip for now
+          Skip — illustrations won&apos;t match {childName}&apos;s appearance
         </button>
       </div>
     </div>

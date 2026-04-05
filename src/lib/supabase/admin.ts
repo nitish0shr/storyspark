@@ -31,6 +31,9 @@ export function getSupabaseAdmin(): SupabaseClient {
   return _supabaseAdmin;
 }
 
+// Convenience alias used by admin pages
+export const createAdminClient = getSupabaseAdmin;
+
 // Convenience alias for backward compatibility
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_target, prop) {

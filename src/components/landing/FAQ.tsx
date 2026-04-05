@@ -34,9 +34,24 @@ const faqs = [
       "Yes! During checkout, you can add a personalized gift message and enter the recipient's email. We'll deliver the storybook directly to them with your heartfelt note. It makes a wonderful birthday, holiday, or just-because gift that families treasure.",
   },
   {
+    question: "Will the illustrations look like my child?",
+    answer:
+      "The illustrations are stylized watercolor art inspired by your child\u2019s photo features \u2014 hair color, skin tone, facial structure, and more. They won\u2019t be photorealistic, but parents consistently recognize their child in the art. The style is warm, whimsical, and designed to feel like a hand-illustrated children\u2019s book.",
+  },
+  {
+    question: "How do I access my book after purchasing?",
+    answer:
+      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your StorySpark account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
+  },
+  {
+    question: "Can I print it at home?",
+    answer:
+      "Yes! The PDF is formatted for standard printing. You can print it at home on any color printer, or take it to a local print shop like Walgreens, FedEx Office, or Staples for professional-quality results. We\u2019re also launching printed book delivery soon.",
+  },
+  {
     question: "What's the return policy?",
     answer:
-      "If you're not completely happy with your storybook, contact us within 30 days for a full refund \u2014 no questions asked. We want every family to love their book, and we stand behind the quality of every story we create.",
+      "If you\u2019re not completely happy with your storybook, email us at hello@storyspark.com within 30 days for a full refund \u2014 no questions asked. We want every family to love their book, and we stand behind the quality of every story we create.",
   },
 ];
 

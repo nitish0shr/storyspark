@@ -11,6 +11,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PRICING } from "@/lib/stripe";
 
 interface PaywallOverlayProps {
   bookId: string;
@@ -23,7 +24,7 @@ export default function PaywallOverlay({
   bookId,
   childName,
   remainingPages,
-  price = "$9.99",
+  price = PRICING.base.label,
 }: PaywallOverlayProps) {
   const features = [
     {
@@ -107,7 +108,7 @@ export default function PaywallOverlay({
 
         {/* Secondary link */}
         <Link
-          href={`/gift?bookId=${bookId}`}
+          href={`/gift/${bookId}`}
           className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#EC4899] transition-colors group"
         >
           <Gift className="h-4 w-4 group-hover:scale-110 transition-transform" />

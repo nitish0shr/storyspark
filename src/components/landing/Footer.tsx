@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Heart, Camera, MessageCircle, Globe } from "lucide-react";
+import { Sparkles, Heart, Mail } from "lucide-react";
 
 const footerLinks = [
   { label: "About", href: "/about" },
@@ -63,19 +63,14 @@ export default function Footer() {
               ))}
             </nav>
 
-            {/* Social icons */}
-            <div className="flex items-center gap-3">
-              {[Camera, MessageCircle, Globe].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-8 h-8 rounded-full bg-violet-100 hover:bg-violet-200 flex items-center justify-center text-violet-600 transition-colors"
-                  aria-label="Social media"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
+            {/* Contact */}
+            <a
+              href="mailto:hello@storyspark.com"
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 transition-colors"
+            >
+              <Mail className="h-4 w-4" />
+              hello@storyspark.com
+            </a>
           </div>
 
           {/* Bottom line */}

@@ -2,10 +2,12 @@
 
 import { useWizardStore } from "./WizardProvider";
 import { getQuestionsForTheme } from "@/data/questions";
+import { getThemeById } from "@/data/themes";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 export function StepQuestions() {
   const {
@@ -16,9 +18,12 @@ export function StepQuestions() {
     nextStep,
   } = useWizardStore();
 
+  const posthog = usePostHog();
+
   const questions = selectedThemeId
     ? getQuestionsForTheme(selectedThemeId)
     : [];
+  const theme = selectedThemeId ? getThemeById(selectedThemeId) : null;
 
   const allAnswered = questions.every(
     (q) => contextualAnswers[q.id]?.trim().length > 0
@@ -36,6 +41,11 @@ export function StepQuestions() {
         <p className="mt-2 text-gray-500">
           These details make {childName}&apos;s story extra special.
         </p>
+        {theme && (
+          <p className="mt-1 text-xs text-violet-500 font-medium">
+            Personalizing: {childName}&apos;s {theme.name} ✦
+          </p>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -79,7 +89,8 @@ export function StepQuestions() {
               ) : (
                 <Input
                   type="text"
-                  placeholder="Type your answer..."
+                  placeholder="Type your answer — we'll put this in your story!"
+                  maxLength={30}
                   value={currentValue}
                   onChange={(e) =>
                     setContextualAnswer(question.id, e.target.value)
@@ -93,7 +104,10 @@ export function StepQuestions() {
       </div>
 
       <Button
-        onClick={nextStep}
+        onClick={() => {
+          posthog.capture("wizard_step_completed", { step: "questions", theme_id: selectedThemeId });
+          nextStep();
+        }}
         disabled={!allAnswered}
         className={cn(
           "h-12 w-full rounded-xl text-base font-semibold transition-all",

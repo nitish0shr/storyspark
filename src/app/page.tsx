@@ -11,22 +11,30 @@ import FAQ from "@/components/landing/FAQ";
 import Footer from "@/components/landing/Footer";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let navUser = null;
 
-  const navUser = user
-    ? {
-        id: user.id,
-        email: user.email ?? undefined,
-        name:
-          user.user_metadata?.full_name ??
-          user.user_metadata?.name ??
-          undefined,
-        avatarUrl: user.user_metadata?.avatar_url ?? undefined,
-      }
-    : null;
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      navUser = user
+        ? {
+            id: user.id,
+            email: user.email ?? undefined,
+            name:
+              user.user_metadata?.full_name ??
+              user.user_metadata?.name ??
+              undefined,
+            avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+          }
+        : null;
+    } catch {
+      // Supabase not configured — continue without auth
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#FFFBF5]">

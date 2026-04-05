@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const stepLabels = ["Child Info", "Photo", "Theme", "Questions", "Preview"];
+const stepLabels = ["Child Info", "Photo", "Theme", "Personalize", "Preview"];
 
 interface ProgressStepsProps {
   currentStep: number;
@@ -96,6 +96,13 @@ export function ProgressSteps({
       <p className="mt-2 text-center text-xs font-medium text-violet-600 sm:hidden">
         Step {currentStep} of {totalSteps}: {stepLabels[currentStep - 1]}
       </p>
+
+      {/* Time estimate */}
+      {currentStep < totalSteps && (
+        <p className="mt-1 text-center text-[11px] text-gray-400">
+          About 2 minutes total
+        </p>
+      )}
     </nav>
   );
 }

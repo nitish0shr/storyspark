@@ -118,7 +118,7 @@ export default function Navbar({ user }: NavbarProps) {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer"
-                    onClick={() => router.push("/dashboard/account")}
+                    onClick={() => router.push("/dashboard")}
                   >
                     <User className="h-4 w-4 mr-2 text-gray-500" />
                     Account
@@ -215,7 +215,7 @@ export default function Navbar({ user }: NavbarProps) {
                     Dashboard
                   </Link>
                   <Link
-                    href="/dashboard/account"
+                    href="/dashboard"
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:text-[#7C3AED] hover:bg-violet-50 transition-colors"
                   >
