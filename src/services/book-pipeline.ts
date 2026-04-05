@@ -6,6 +6,8 @@ import { analyzeFace } from "@/services/face-analysis";
 import { generateStory } from "@/services/story-generation";
 import { generateIllustrations } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
+import { generateNarration } from "@/services/tts-narration";
+import { isOpenAIConfigured } from "@/lib/openai";
 
 /**
  * Fetches a book record and its associated child profile from the database.
@@ -216,6 +218,24 @@ export async function generateFullBook(bookId: string): Promise<void> {
     await updateBookStatus(bookId, "generating", {
       illustration_urls: allIllustrationUrls,
     });
+
+    // Generate audio narration (if OpenAI is configured)
+    if (isOpenAIConfigured()) {
+      try {
+        console.log(`Generating audio narration for book ${bookId}...`);
+        const pagesForAudio = storyPages.map((page) => ({
+          pageNumber: page.pageNumber,
+          text: page.text,
+        }));
+        await generateNarration(bookId, pagesForAudio);
+        console.log(`Audio narration complete for book ${bookId}`);
+      } catch (audioError) {
+        console.error(
+          `Audio narration failed for book ${bookId} (non-fatal):`,
+          audioError
+        );
+      }
+    }
 
     // Trigger PDF assembly
     const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);

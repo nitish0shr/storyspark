@@ -11,11 +11,13 @@ import {
 import { cn } from "@/lib/utils";
 import PageRenderer from "./PageRenderer";
 import PaywallOverlay from "./PaywallOverlay";
+import AudioNarrationPlayer from "./AudioNarrationPlayer";
 
 interface BookPage {
   pageNumber: number;
   text: string;
   illustrationUrl?: string;
+  audioUrl?: string | null;
 }
 
 interface BookViewerProps {
@@ -260,6 +262,14 @@ export default function BookViewer({
       <p className="hidden sm:block mt-3 text-center text-xs text-gray-400">
         Use arrow keys to navigate
       </p>
+
+      {/* Audio narration player */}
+      <AudioNarrationPlayer
+        audioUrls={pages.map((p) => p.audioUrl || null)}
+        currentPage={currentPage}
+        totalPages={Math.min(previewPageCount, pages.length)}
+        onPageChange={goToPage}
+      />
     </div>
   );
 }
