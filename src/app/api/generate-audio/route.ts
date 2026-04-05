@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status")
+      .select("id, user_id, status, is_purchased")
       .eq("id", bookId)
       .single();
 
@@ -52,6 +52,13 @@ export async function POST(request: NextRequest) {
 
     if (book.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (!book.is_purchased) {
+      return NextResponse.json(
+        { error: "Audio narration is only available for purchased books" },
+        { status: 403 }
+      );
     }
 
     const { data: pages, error: pagesError } = await supabaseAdmin
