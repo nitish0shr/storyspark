@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Baby, User, Smile, ArrowRight, UserPlus, X } from "lucide-react";
+import { Baby, Smile, ArrowRight, UserPlus, X } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
 const ageOptions = [
@@ -28,7 +28,6 @@ const ageOptions = [
 const genderOptions = [
   { value: "boy" as const, label: "Boy", icon: Baby },
   { value: "girl" as const, label: "Girl", icon: Smile },
-  { value: "neutral" as const, label: "Prefer not to say", icon: User },
 ];
 
 function ChildForm({

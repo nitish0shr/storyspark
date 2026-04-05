@@ -1,0 +1,169 @@
+Update my existing personalized kids storybook app. Do not rebuild it from scratch. Keep the current structure, styling direction, and overall flow where possible, but revise the landing page, preview flow, pricing section, FAQs, sample content, and trust messaging based on the requirements below.
+
+Goal:
+Make the product feel more real, more trustworthy, and more conversion-focused by showing a realistic personalized preview experience, simplifying the promise, and removing refund/guarantee language that does not match the product.
+
+Core product direction:
+This is a personalized storybook app where a parent uploads one clear photo of their child, chooses a story/theme, adds a few details, and gets a personalized illustrated storybook. The app should emphasize a free preview first, not a refund promise.
+
+High-level changes:
+1. Remove all refund / guarantee language
+- Remove “30-day guarantee”
+- Remove “100% Happiness Guaranteed”
+- Remove all “return policy” messaging
+- Remove any language that implies refunds after the final book has been built and delivered
+- Replace the value proposition with a free preview model instead
+
+2. Reposition the offer around preview, privacy, and personalization
+Use messaging like:
+- “Every kid deserves to be the star of their own story!”
+- “Create a magical, personalized storybook your child will treasure forever. Free preview — no credit card needed!”
+- “Every theme is a unique story waiting for your child to be the star.”
+- “Preview ready in about 2 minutes”
+- “Photo stays private”
+Do not promise hard timing like “under 2 minutes” everywhere. Use softer language like “about 2 minutes” because generation speed may vary.
+
+3. Personalization must feel visually real
+- Show what the AI will actually create using a real child face example in the preview/demo area
+- All sample kid images should feel consistent and realistic
+- Use custom child faces, but keep body types natural and neutral
+- Avoid exaggerated body proportions or stylized extremes
+- Include a sample cartoon/AI version of the child plus one sample page from the book
+- For marketing/demo images, only use properly licensed stock images or consented images as source material for mockups
+
+4. Improve the “how it works” copy
+Replace current copy with something close to:
+
+Step 1:
+“Provide just one clear photo of your child’s face. Our AI studies their features — hair color, eye color, and skin tone — to make them the star of their own book.”
+
+Step 2:
+“Choose from 6 magical worlds: Space Explorer, Dino Land, Ocean Adventure, Enchanted Castle, Superhero City, or Magic Forest. Then add your child’s name and a few fun details.”
+
+Important:
+Do not make the 6 options feel like only themes. Each one should feel like a distinct story experience with its own narrative hook.
+
+Step 3:
+“In about 2 minutes, AI writes a unique 12-page story and creates beautiful illustrations with your child as the star. Download, print, or share instantly!”
+
+5. Make each world/story feel unique
+Update the 6 options so each has a short unique story angle, not just a theme name. For example:
+- Space Explorer: a mission across the stars
+- Dino Land: an adventure with friendly dinosaurs
+- Ocean Adventure: a magical underwater journey
+- Enchanted Castle: a royal story full of wonder
+- Superhero City: a brave mission to save the day
+- Magic Forest: a whimsical quest through an enchanted world
+
+6. Preview flow
+- Emphasize preview before purchase
+- Show only one AI-generated preview image and one or two story pages max before purchase
+- Do not show the full story before payment
+- Make it clear that the preview is free and no credit card is needed
+- If the current app says full story instantly before purchase, change that to preview-first
+
+7. Account / signup logic
+I want a smoother “no account needed to get started” experience, but be thoughtful because users are uploading a child’s photo.
+Preferred UX direction:
+- Let users start without creating an account
+- Allow them to upload the child photo and generate a preview
+- Ask for signup/account creation only when needed to save, purchase, or access the final book
+- If there are privacy or technical reasons this is not ideal, implement the best safe version while keeping friction low
+
+8. Update sample sections / gallery / story examples
+- Anywhere we show “Image/Story examples,” use realistic personalized child-face mock examples
+- “Peek Inside a Storybook” should show one page from each story, not the whole story
+- Show a single-page example with image + short excerpt for each story/world
+- Keep the examples warm and imaginative
+
+If there are example story snippets, they should feel like:
+- “Farmer Jeff climbed into his tractor to plow the field...”
+- “Princess Jenny’s carriage arrived to take her to the ball...”
+- “Officer Daniel...”
+Use similar examples only if they fit the current content model
+
+9. Pricing section fixes
+- Remove “Much cheaper than competitors”
+- Remove “print soon” for now
+- Keep the $9.99 price, but style it properly:
+  - Dollar sign should be the same size as the 9
+  - The “99” should be smaller and raised at the top, like standard pricing typography
+
+10. Sharing claim must be real
+If the app says “Easily share with family,” only keep that if the flow actually supports it.
+Make the sharing method explicit, such as:
+- download PDF
+- copy a share link
+- send by email
+If sharing is not fully implemented, either remove the claim or rewrite it so it matches what the app can actually do today.
+
+11. FAQ updates
+Rename FAQ heading to:
+“You Asked, We Answered!”
+
+Update FAQ content as follows:
+
+A. Is my child’s photo safe?
+Use an answer like:
+“We use the photo only to create the illustrations for your book. Your child’s photo stays private.”
+
+B. How long does it take?
+Mention preview timing, not guaranteed full-book timing:
+“You’ll see a preview in about 2 minutes. Final timing may vary slightly depending on image upload and generation speed.”
+
+C. What ages is this for?
+Keep it simple and broad if already supported, but remove this line entirely:
+“We also support special pre-birth and newborn editions that make perfect baby shower or welcome gifts.”
+
+D. Can I gift this?
+Answer:
+“Yes. If this is a gift, ask the user upfront during the flow.”
+Also:
+- add a gift option early in the order flow
+- if it is a gift, prefer deleting the uploaded child image after fulfillment/delivery if feasible
+
+E. What’s the return policy?
+Remove this entire FAQ and all related policy messaging. No returns language should appear.
+
+12. Testimonials / quotes
+- Do not display fake customer quotes or testimonials
+- If current testimonials are placeholders or not from real users, remove them
+- Only show testimonials if they are real and approved for use
+
+13. Gender options
+- Remove “Prefer not to say”
+- Keep only “Boy” and “Girl” if that is the required product decision for now
+
+14. Final trust/value strip
+If there is a trust/value banner with 3 short points, update it to something like:
+- “Preview ready in about 2 minutes”
+- “Photo stays private”
+- “No credit card needed”
+
+Do not include any refund/guarantee point.
+
+15. Content and UX tone
+The tone should feel:
+- magical
+- warm
+- premium
+- trustworthy
+- simple for parents
+Avoid sounding overly salesy or making claims that could create refund disputes.
+
+Implementation instructions:
+- Update the existing codebase directly
+- Reuse existing components where possible
+- Keep the UI polished and conversion-oriented
+- Make sure all removed claims are fully removed from every screen/component
+- Review the hero, how-it-works section, gallery/examples, pricing, FAQ, trust strip, and CTA flow for consistency
+- If there are edge cases or unclear areas, make the best product decision aligned with the direction above
+
+Deliverables:
+1. Updated copy throughout the app
+2. Updated preview/landing page UX
+3. Cleaner pricing display for $9.99
+4. Updated FAQ section
+5. Removal of all refund/guarantee language
+6. More realistic child-personalization demo experience
+7. A short summary of what you changed and which files/components were updated

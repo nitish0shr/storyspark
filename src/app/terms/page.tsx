@@ -54,13 +54,12 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              4. Purchases and Refunds
+              4. Purchases
             </h2>
             <p>
               All purchases are processed securely through Stripe. Digital products are
-              delivered instantly upon payment. If you are unsatisfied with the quality
-              of your generated book, contact us within 14 days for a full refund.
-              We stand behind a 100% satisfaction guarantee.
+              delivered instantly upon payment. You can preview your personalized storybook
+              for free before purchasing.
             </p>
           </section>
 
