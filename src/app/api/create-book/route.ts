@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       photoUrl,
       themeId,
       contextualAnswers,
+      dedication,
       email,
     } = body;
 
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
         child_name: childName,
         theme_title: theme.name,
         contextual_answers: contextualAnswers || {},
+        dedication: dedication || null,
         status: "draft",
       })
       .select("id")

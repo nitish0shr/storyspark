@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PageRenderer from "./PageRenderer";
+import DedicationPage from "./DedicationPage";
 import PaywallOverlay from "./PaywallOverlay";
 import AudioNarrationPlayer from "./AudioNarrationPlayer";
 import ThemeAmbiance from "./ThemeAmbiance";
@@ -31,6 +32,7 @@ interface BookViewerProps {
   themeTitle?: string;
   bookId: string;
   price?: string;
+  dedication?: string | null;
 }
 
 export default function BookViewer({
@@ -41,7 +43,9 @@ export default function BookViewer({
   themeTitle,
   bookId,
   price,
+  dedication,
 }: BookViewerProps) {
+  const hasDedication = Boolean(dedication && dedication.trim());
   const [currentPage, setCurrentPage] = useState(0);
   const [isShareCopied, setIsShareCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -54,10 +58,15 @@ export default function BookViewer({
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const flipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const totalVisibleSlides = Math.min(previewPageCount, pages.length) + 1;
-  const isPaywallSlide = currentPage >= previewPageCount;
+  const dedicationOffset = hasDedication ? 1 : 0;
+  const totalVisibleSlides = Math.min(previewPageCount, pages.length) + 1 + dedicationOffset;
+  const isCoverSlide = currentPage === 0;
+  const isDedicationSlide = hasDedication && currentPage === 1;
+  const pageIndex = currentPage - dedicationOffset;
+  const isPaywallSlide = !isCoverSlide && !isDedicationSlide && pageIndex >= previewPageCount;
   const isFirstPage = currentPage === 0;
   const isLastSlide = currentPage === totalVisibleSlides - 1;
+  const isStorySlide = !isCoverSlide && !isDedicationSlide && !isPaywallSlide;
 
   useEffect(() => {
     const timer = setTimeout(() => setShowCoverAnim(false), 1500);
@@ -172,16 +181,27 @@ export default function BookViewer({
           remainingPages={remainingPages}
           price={price}
         />
-      ) : (
+      ) : isDedicationSlide ? (
+        <DedicationPage dedication={dedication!} themeId={themeId} />
+      ) : isCoverSlide ? (
         <PageRenderer
-          pageNumber={pages[currentPage].pageNumber}
-          text={pages[currentPage].text}
-          illustrationUrl={pages[currentPage].illustrationUrl}
-          isCover={currentPage === 0}
+          pageNumber={pages[0].pageNumber}
+          text={pages[0].text}
+          illustrationUrl={pages[0].illustrationUrl}
+          isCover={true}
           childName={childName}
           themeTitle={themeTitle}
         />
-      )}
+      ) : isStorySlide && pageIndex >= 0 && pageIndex < pages.length ? (
+        <PageRenderer
+          pageNumber={pages[pageIndex].pageNumber}
+          text={pages[pageIndex].text}
+          illustrationUrl={pages[pageIndex].illustrationUrl}
+          isCover={false}
+          childName={childName}
+          themeTitle={themeTitle}
+        />
+      ) : null}
     </>
   );
 
@@ -229,7 +249,9 @@ export default function BookViewer({
     <div className={cn("flex items-center justify-center gap-1.5", isFullscreen ? "mt-4" : "mt-6")}>
       {Array.from({ length: totalVisibleSlides }).map((_, i) => {
         const isActive = i === currentPage;
-        const isPaywall = i >= previewPageCount;
+        const isDedDot = hasDedication && i === 1;
+        const dotPageIdx = i - dedicationOffset;
+        const isPaywall = !isDedDot && i > 0 && dotPageIdx >= previewPageCount;
 
         return (
           <button
@@ -240,12 +262,14 @@ export default function BookViewer({
               isFullscreen ? "h-2.5" : "h-2",
               isActive
                 ? cn(isFullscreen ? "w-8" : "w-6", "bg-[#7C3AED]")
-                : isPaywall
-                  ? cn(isFullscreen ? "w-2.5" : "w-2", "bg-pink-200 hover:bg-pink-300")
-                  : cn(isFullscreen ? "w-2.5" : "w-2", "bg-violet-200 hover:bg-violet-300")
+                : isDedDot
+                  ? cn(isFullscreen ? "w-2.5" : "w-2", "bg-pink-300 hover:bg-pink-400")
+                  : isPaywall
+                    ? cn(isFullscreen ? "w-2.5" : "w-2", "bg-pink-200 hover:bg-pink-300")
+                    : cn(isFullscreen ? "w-2.5" : "w-2", "bg-violet-200 hover:bg-violet-300")
             )}
             aria-label={
-              isPaywall ? "Unlock more pages" : `Go to page ${i + 1}`
+              isDedDot ? "Dedication" : isPaywall ? "Unlock more pages" : `Go to page ${i + 1}`
             }
           />
         );
@@ -275,7 +299,9 @@ export default function BookViewer({
           <span>
             {isPaywallSlide
               ? "Preview complete"
-              : `Page ${currentPage + 1} of ${pages.length}`}
+              : isDedicationSlide
+                ? "Dedication"
+                : `Page ${pageIndex + 1} of ${pages.length}`}
           </span>
         </div>
 
@@ -310,9 +336,9 @@ export default function BookViewer({
           audioUrls={pages.map((p, i) =>
             i < previewPageCount ? (p.audioUrl || null) : null
           )}
-          currentPage={currentPage}
+          currentPage={isDedicationSlide ? -1 : pageIndex}
           totalPages={Math.min(previewPageCount, pages.length)}
-          onPageChange={goToPage}
+          onPageChange={(audioIdx) => goToPage(audioIdx + dedicationOffset)}
         />
       </div>
     );
@@ -326,7 +352,9 @@ export default function BookViewer({
           <span>
             {isPaywallSlide
               ? "Preview complete"
-              : `Page ${currentPage + 1} of ${pages.length}`}
+              : isDedicationSlide
+                ? "Dedication"
+                : `Page ${pageIndex + 1} of ${pages.length}`}
           </span>
         </div>
 
@@ -388,9 +416,9 @@ export default function BookViewer({
         audioUrls={pages.map((p, i) =>
           i < previewPageCount ? (p.audioUrl || null) : null
         )}
-        currentPage={currentPage}
+        currentPage={isDedicationSlide ? -1 : pageIndex}
         totalPages={Math.min(previewPageCount, pages.length)}
-        onPageChange={goToPage}
+        onPageChange={(audioIdx) => goToPage(audioIdx + dedicationOffset)}
       />
     </div>
   );

@@ -13,6 +13,7 @@ interface WizardState {
   photoUrl: string | null; // server URL after upload
   selectedThemeId: string | null;
   contextualAnswers: Record<string, string>;
+  dedication: string;
   email: string;
   childProfileId: string | null;
   bookId: string | null;
@@ -29,6 +30,7 @@ interface WizardState {
   setPhotoUrl: (url: string) => void;
   setSelectedTheme: (themeId: string) => void;
   setContextualAnswer: (questionId: string, answer: string) => void;
+  setDedication: (dedication: string) => void;
   setEmail: (email: string) => void;
   setChildProfileId: (id: string) => void;
   setBookId: (id: string) => void;
@@ -46,6 +48,7 @@ const initialState = {
   photoUrl: null,
   selectedThemeId: null,
   contextualAnswers: {},
+  dedication: "",
   email: "",
   childProfileId: null,
   bookId: null,
@@ -76,6 +79,7 @@ export const useWizardStore = create<WizardState>()(
             [questionId]: answer,
           },
         })),
+      setDedication: (dedication) => set({ dedication }),
       setEmail: (email) => set({ email }),
       setChildProfileId: (childProfileId) => set({ childProfileId }),
       setBookId: (bookId) => set({ bookId }),
@@ -94,6 +98,7 @@ export const useWizardStore = create<WizardState>()(
         photoUrl: state.photoUrl,
         selectedThemeId: state.selectedThemeId,
         contextualAnswers: state.contextualAnswers,
+        dedication: state.dedication,
         email: state.email,
         childProfileId: state.childProfileId,
         bookId: state.bookId,

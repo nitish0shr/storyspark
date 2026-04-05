@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       giftRecipientName,
       giftRecipientEmail,
       giftMessage,
+      dedication,
     } = body as {
       bookId: string;
       tier: PricingTier;
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       giftRecipientName?: string;
       giftRecipientEmail?: string;
       giftMessage?: string;
+      dedication?: string;
     };
 
     if (!bookId || typeof bookId !== "string") {
@@ -96,6 +98,21 @@ export async function POST(request: NextRequest) {
         { error: "This book has already been purchased." },
         { status: 409 }
       );
+    }
+
+    if (dedication !== undefined) {
+      const { error: dedError } = await supabaseAdmin
+        .from("books")
+        .update({ dedication: dedication || null })
+        .eq("id", bookId);
+
+      if (dedError) {
+        console.error("Failed to save dedication:", dedError);
+        return NextResponse.json(
+          { error: "Failed to save dedication. Please try again." },
+          { status: 500 }
+        );
+      }
     }
 
     const tierConfig = TIER_CONFIG[tier];

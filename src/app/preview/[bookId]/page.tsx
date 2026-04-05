@@ -32,6 +32,7 @@ async function getBook(bookId: string) {
       user_id,
       is_purchased,
       price_cents,
+      dedication,
       pages:book_pages(
         page_number,
         text,
@@ -215,6 +216,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
           themeTitle={book.theme_title}
           bookId={book.id}
           price={priceDollars}
+          dedication={book.dedication}
         />
       </main>
     </div>
