@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     if (dedication !== undefined) {
       const { error: dedError } = await supabaseAdmin
         .from("books")
-        .update({ dedication: dedication || null })
+        .update({ dedication: dedication?.trim() || null })
         .eq("id", bookId);
 
       if (dedError) {
