@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { themes } from "@/data/themes";
+import PersonalizationShowcase from "@/components/landing/PersonalizationShowcase";
 import ThemeShowcase from "@/components/landing/ThemeShowcase";
 import SampleBookViewer from "@/components/landing/SampleBookViewer";
 import Pricing from "@/components/landing/Pricing";
@@ -34,6 +35,7 @@ export default async function HomePage() {
 
   const middleContent = (
     <>
+      <PersonalizationShowcase />
       <ThemeShowcase themes={themes} />
       <SampleBookViewer />
       <Pricing />

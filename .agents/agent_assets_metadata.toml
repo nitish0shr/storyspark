@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "WXczlQn1K-np4mUMTg0uP"
+uri = "file://public/images/demo/child-photo.png"
+type = "image"
+title = "demo child photo portrait"
+
+[[generated]]
+id = "ja9sXxqak4lVXTPTsX5ld"
+uri = "file://public/images/demo/child-illustrated.png"
+type = "image"
+title = "demo child storybook illustration"
+
+[[generated]]
+id = "C7hcsH2h0ktDpD6UU69IV"
+uri = "file://public/images/demo/sample-page-dino.png"
+type = "image"
+title = "storybook page dinosaur adventure"
+
+[[generated]]
+id = "5wUqArGgohqkYW52Zw6a2"
+uri = "file://public/images/demo/sample-page-space.png"
+type = "image"
+title = "storybook page space adventure"
+
+[[generated]]
+id = "eR8w3EdzGf5V0-zwbo736"
+uri = "file://public/images/demo/sample-page-ocean.png"
+type = "image"
+title = "storybook page ocean adventure"
+
+[[generated]]
+id = "KrD1JJQlGDJpVheYTkjzH"
+uri = "file://public/images/demo/book-cover.png"
+type = "image"
+title = "storybook cover castle adventure"
+
+[[generated]]
+id = "TC6-HCfzXEJwR78-XGnoG"
+uri = "file://public/images/demo/child-photo-boy.png"
+type = "image"
+title = "demo boy photo portrait"
+
+[[generated]]
+id = "5JHA1j9ba9w9vao5E4eFV"
+uri = "file://public/images/demo/spread-space.png"
+type = "image"
+title = "storybook spread space adventure"
+
+[[generated]]
+id = "GyxowV4F5XLy_ndNZI10H"
+uri = "file://public/images/demo/spread-dino.png"
+type = "image"
+title = "storybook spread dino adventure"
+
+[[generated]]
+id = "xYNtAsXPkuhtsmi1eSqtm"
+uri = "file://public/images/demo/spread-castle.png"
+type = "image"
+title = "storybook spread castle adventure"
