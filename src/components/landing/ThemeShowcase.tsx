@@ -673,20 +673,18 @@ export default function ThemeShowcase({ themes }: ThemeShowcaseProps) {
   };
 
   return (
-    <section id="themes" className="py-20 sm:py-28 relative">
-      {/* Subtle background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-50/30 to-transparent pointer-events-none" />
+    <section id="themes" className="py-20 sm:py-28 relative bg-[#FFF4CC]">
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative">
         {/* Section header */}
         <div className="text-center mb-12">
-          <p className="text-sm font-semibold uppercase tracking-wider text-violet-600 mb-3">
-            6 Magical Worlds
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Choose Their Adventure
+          <div className="inline-block bg-[#FF9F1C] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
+            <span className="font-body font-bold text-sm text-[#1a1a2e]">6 magical worlds 🌍</span>
+          </div>
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
+            Choose Their Adventure!
           </h2>
-          <p className="text-lg text-gray-500 max-w-md mx-auto">
+          <p className="font-body text-lg text-[#1a1a2e]/60 max-w-md mx-auto">
             Every theme is a unique story waiting for your child to be the hero.
           </p>
         </div>
@@ -695,14 +693,14 @@ export default function ThemeShowcase({ themes }: ThemeShowcaseProps) {
         <div className="relative">
           <button
             onClick={() => scroll("left")}
-            className="hidden lg:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 border border-violet-200 shadow-md items-center justify-center text-violet-600 hover:bg-violet-50 transition-colors"
+            className="hidden lg:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] transition-colors"
             aria-label="Scroll left"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
             onClick={() => scroll("right")}
-            className="hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 border border-violet-200 shadow-md items-center justify-center text-violet-600 hover:bg-violet-50 transition-colors"
+            className="hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] transition-colors"
             aria-label="Scroll right"
           >
             <ChevronRight className="h-5 w-5" />

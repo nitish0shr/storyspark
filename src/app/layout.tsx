@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Nunito, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-nunito",
+  weight: ["400", "600", "700", "800", "900"],
 });
 
-const playfair = Playfair_Display({
+const baloo = Baloo_2({
   subsets: ["latin"],
-  variable: "--font-playfair",
+  variable: "--font-baloo",
+  weight: ["400", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -40,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(inter.variable, playfair.variable)}>
-      <body className="font-sans antialiased bg-background text-foreground">
+    <html lang="en" className={cn(nunito.variable, baloo.variable)}>
+      <body className="font-sans antialiased bg-[#FFFBF0] text-[#1a1a2e]">
         <PostHogProvider>
           {children}
           <Toaster />
