@@ -10,16 +10,16 @@ interface WizardState {
   childGender: "boy" | "girl" | "neutral" | "";
   photoFile: File | null;
   photoPreviewUrl: string | null;
-  photoUrl: string | null; // server URL after upload
+  photoUrl: string | null;
   selectedThemeId: string | null;
   contextualAnswers: Record<string, string>;
   dedication: string;
+  language: string;
   email: string;
   childProfileId: string | null;
   bookId: string | null;
   isGenerating: boolean;
   generationStep: string;
-  // actions
   setStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -31,6 +31,7 @@ interface WizardState {
   setSelectedTheme: (themeId: string) => void;
   setContextualAnswer: (questionId: string, answer: string) => void;
   setDedication: (dedication: string) => void;
+  setLanguage: (language: string) => void;
   setEmail: (email: string) => void;
   setChildProfileId: (id: string) => void;
   setBookId: (id: string) => void;
@@ -49,6 +50,7 @@ const initialState = {
   selectedThemeId: null,
   contextualAnswers: {},
   dedication: "",
+  language: "en",
   email: "",
   childProfileId: null,
   bookId: null,
@@ -80,6 +82,7 @@ export const useWizardStore = create<WizardState>()(
           },
         })),
       setDedication: (dedication) => set({ dedication }),
+      setLanguage: (language) => set({ language }),
       setEmail: (email) => set({ email }),
       setChildProfileId: (childProfileId) => set({ childProfileId }),
       setBookId: (bookId) => set({ bookId }),
@@ -99,6 +102,7 @@ export const useWizardStore = create<WizardState>()(
         selectedThemeId: state.selectedThemeId,
         contextualAnswers: state.contextualAnswers,
         dedication: state.dedication,
+        language: state.language,
         email: state.email,
         childProfileId: state.childProfileId,
         bookId: state.bookId,

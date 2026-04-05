@@ -7,6 +7,7 @@ import { Theme } from "@/types/theme";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getLanguageByCode } from "@/data/languages";
 import {
   BookOpen,
   Download,
@@ -16,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Globe,
 } from "lucide-react";
 
 interface BookLibraryProps {
@@ -141,6 +143,15 @@ function BookCard({
           </Badge>
           {theme && (
             <span className="text-xs text-gray-400">{theme.name}</span>
+          )}
+          {book.language && book.language !== "en" && (
+            <Badge
+              variant="outline"
+              className="text-xs font-medium border-blue-200 bg-blue-50 text-blue-600 px-2 py-0.5"
+            >
+              <Globe className="h-3 w-3 mr-1" />
+              {getLanguageByCode(book.language)?.name || book.language}
+            </Badge>
           )}
         </div>
 

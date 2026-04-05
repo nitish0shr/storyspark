@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       themeId,
       contextualAnswers,
       dedication,
+      language,
       email,
     } = body;
 
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
         theme_title: theme.name,
         contextual_answers: contextualAnswers || {},
         dedication: dedication?.trim() || null,
+        language: ["en", "es", "fr", "de", "pt", "it", "hi", "zh"].includes(language) ? language : "en",
         status: "draft",
       })
       .select("id")

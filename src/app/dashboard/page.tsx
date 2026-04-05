@@ -72,6 +72,7 @@ export default async function DashboardPage() {
     userId: row.user_id,
     childProfileId: row.child_profile_id,
     themeId: row.theme_id,
+    language: row.language ?? "en",
     status: row.status,
     contextualAnswers: row.contextual_answers,
     storyText: row.story_text,
