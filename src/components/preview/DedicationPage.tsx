@@ -38,6 +38,36 @@ const THEME_ACCENTS: Record<string, { gradient: string; textColor: string; ornam
     textColor: "text-pink-100",
     ornamentColor: "text-pink-300/40",
   },
+  "pirate-treasure": {
+    gradient: "from-amber-800 via-yellow-800 to-amber-900",
+    textColor: "text-amber-100",
+    ornamentColor: "text-amber-300/40",
+  },
+  "fairy-garden": {
+    gradient: "from-violet-800 via-fuchsia-800 to-violet-900",
+    textColor: "text-violet-100",
+    ornamentColor: "text-violet-300/40",
+  },
+  "safari-adventure": {
+    gradient: "from-orange-800 via-amber-800 to-orange-900",
+    textColor: "text-orange-100",
+    ornamentColor: "text-orange-300/40",
+  },
+  "time-travel": {
+    gradient: "from-teal-800 via-cyan-800 to-teal-900",
+    textColor: "text-teal-100",
+    ornamentColor: "text-teal-300/40",
+  },
+  "christmas-magic": {
+    gradient: "from-red-800 via-green-800 to-red-900",
+    textColor: "text-red-100",
+    ornamentColor: "text-red-300/40",
+  },
+  "halloween-adventure": {
+    gradient: "from-orange-800 via-purple-800 to-orange-900",
+    textColor: "text-orange-100",
+    ornamentColor: "text-orange-300/40",
+  },
 };
 
 const DEFAULT_ACCENT = {

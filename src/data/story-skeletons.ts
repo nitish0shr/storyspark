@@ -526,4 +526,526 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Child tucked into bed, warm golden light surrounding them, stars visible through the window, looking peaceful and deeply loved",
     },
   ],
+
+  "pirate-treasure": [
+    {
+      pageNumber: 1,
+      template:
+        "{name} had always dreamed of the open sea. Every night, {pronoun} would sit by the window and imagine sailing to faraway islands full of treasure and adventure. \"Someday,\" {name} whispered to {possessive} toy telescope, \"I'll be the greatest pirate captain the world has ever seen!\"",
+      sceneDescription:
+        "Child sitting by a window at sunset, holding a toy telescope, looking out at a distant ocean with a dreamy expression",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "One morning, {name} found a dusty old bottle washed up on the shore. Inside was a rolled-up map with faded golden ink and a note that read: \"For the bravest captain of all -- the treasure of {ship_name} awaits!\" {name}'s eyes went wide. A real treasure map!",
+      sceneDescription:
+        "Child on a beach holding up an old treasure map from a glass bottle, golden ink glittering in the sunlight",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "At the harbor, a magnificent ship bobbed in the water, its sails shimmering like silk. A banner on the mast read \"{ship_name}\" in gold letters. {pirate_pet} was already on deck, waiting with a pirate hat. \"Welcome aboard, Captain {name}!\" {pirate_pet} seemed to say. Together, they raised the anchor and set sail!",
+      sceneDescription:
+        "Child dressed as a pirate captain boarding a colorful wooden ship at a sunny harbor, their animal sidekick waiting on deck",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "The ocean sparkled like a million diamonds. Dolphins raced alongside {ship_name}, leaping and splashing. {name} stood at the helm, the salty breeze in {possessive} hair, feeling brave and free. {pirate_pet} perched beside {object}, keeping watch for islands on the horizon.",
+      sceneDescription:
+        "Child at the helm of a pirate ship on sparkling open ocean, dolphins jumping alongside, their animal friend beside them",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "\"Land ho!\" {name} called out. A tropical island appeared, covered in palm trees and ringed by white sand beaches. But as they got closer, they heard music -- someone was singing! A crew of friendly pirates was having a beach party, roasting marshmallows and dancing a silly jig.",
+      sceneDescription:
+        "Child arriving at a tropical island where friendly pirates are dancing around a campfire on the beach, palm trees swaying",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "\"Ahoy, Captain {name}!\" called a jolly pirate with a big red beard. \"We've been waiting for you! The treasure of {ship_name} is real, but to find it, you'll need to solve three riddles. Are you clever enough?\" {name} grinned. \"I was born ready!\"",
+      sceneDescription:
+        "Child meeting a friendly bearded pirate on the beach, both smiling, the pirate holding up three fingers",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "The first riddle led to a waterfall that flowed upward! {name} had to walk through it backwards to find a golden key hidden behind the curtain of water. The second riddle pointed to a cave where shadows danced on the walls. {name} followed the shadows and found a silver compass that always pointed to treasure.",
+      sceneDescription:
+        "Child walking through a magical upward-flowing waterfall in a jungle, reaching for a golden key, light sparkling through the water",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "The third riddle was the trickiest of all. \"What treasure is worth more than gold?\" {name} thought and thought. Then {pronoun} looked at {pirate_pet}, at the friendly pirates, at the beautiful island. \"Friendship!\" {name} shouted. \"The treasure worth more than gold is friendship!\" The ground beneath them began to glow.",
+      sceneDescription:
+        "Child having a moment of realization on a glowing hilltop, arms spread wide, their animal friend beside them, pirates cheering below",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "The glowing ground opened to reveal a hidden treasure cave filled with sparkling gems, golden coins, and the most beautiful seashells {name} had ever seen. But in the very center sat a crystal globe that showed the faces of everyone {name} loved. THAT was the real treasure.",
+      sceneDescription:
+        "Child in a treasure cave surrounded by gold and gems, holding a crystal globe that glows with warmth, looking amazed",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "{name} shared the treasure with every pirate on the island. They divided the gems and coins fairly, and each pirate got a beautiful seashell to remember the day. The jolly pirate with the red beard wiped a tear from his eye. \"You're the best captain we've ever met, {name}.\"",
+      sceneDescription:
+        "Child sharing treasure with the friendly pirate crew on the beach, everyone smiling and holding seashells and gems",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "As the sun began to set, painting the sky in oranges and pinks, {name} set sail for home. {pirate_pet} curled up beside {object} as {ship_name} glided across the calm, golden water. The friendly pirates waved from the shore, their voices carrying across the waves: \"Come back anytime, Captain {name}!\"",
+      sceneDescription:
+        "Child sailing away from the island at sunset, the friendly pirates waving from the beach, golden light on the water",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "That night, {name} placed the crystal globe on {possessive} nightstand. It glowed softly, showing tiny images of {pirate_pet}, the friendly pirates, and the beautiful island. \"Goodnight, crew,\" {name} whispered. And if {pronoun} listened carefully, {pronoun} could hear the gentle sound of waves and a distant pirate song, just for {object}.",
+      sceneDescription:
+        "Child tucked in bed, a glowing crystal globe on the nightstand showing tiny pirate scenes, moonlight streaming through the window",
+    },
+  ],
+
+  "fairy-garden": [
+    {
+      pageNumber: 1,
+      template:
+        "{name} loved the garden more than any place in the world. Every flower was a friend, every butterfly a visitor, and every raindrop a tiny gift from the sky. But {name} had always wondered: what if the garden had secrets too small for human eyes to see?",
+      sceneDescription:
+        "Child kneeling in a beautiful garden full of colorful flowers, peering curiously at the base of a large sunflower",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "One dewy morning, {name} noticed something strange at the bottom of the oldest rosebush -- a tiny door, no bigger than a thumb! It was painted {fairy_wing_color} and had a doorknob made from a single dewdrop. {name} reached out and touched it. WHOOOOSH! A swirl of sparkles lifted {object} off the ground.",
+      sceneDescription:
+        "Child touching a tiny glowing door at the base of a rosebush, sparkles beginning to swirl around them, their expression full of wonder",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "When the sparkles cleared, everything was ENORMOUS. The rosebush towered like a skyscraper. Blades of grass reached high above {name}'s head. A ladybug the size of a car trundled by. {name} looked down and gasped -- {pronoun} had wings! Beautiful {fairy_wing_color} wings that shimmered in the sunlight.",
+      sceneDescription:
+        "Child fairy-sized with beautiful wings, standing among towering blades of grass and enormous flowers, looking amazed at their tiny hands",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "\"Welcome to the Fairy Garden!\" chimed a tiny voice. A fairy no taller than {name}'s pinky finger floated down on a dandelion puff. She had sparkly silver hair and a dress made of petals. \"I'm Dewdrop. We've been waiting for you, {name}! Our garden needs someone with the gift of {fairy_power}.\"",
+      sceneDescription:
+        "Child meeting a tiny fairy named Dewdrop who floats on a dandelion puff, both surrounded by giant flowers and sparkling light",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "Dewdrop led {name} through the Fairy Garden -- and oh, what a garden it was! Mushroom houses glowed with warm light. Snail-shell slides spiraled between the roots. Fairy children played tag on spider-silk trampolines, and a caterpillar band played the tiniest music {name} had ever heard.",
+      sceneDescription:
+        "A magical miniature fairy village among flower roots with mushroom houses, glowing windows, fairy children playing, and a caterpillar band",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "But something was wrong. The heart of the garden -- the Great Blossom Tree -- was wilting. Its petals were falling, and its glow was fading. \"Without the Great Blossom, our whole garden will disappear,\" Dewdrop said sadly. \"But your gift of {fairy_power} might be the key to saving it.\"",
+      sceneDescription:
+        "Child and Dewdrop standing before a large wilting flower tree, its petals falling softly, fairy folk looking worried around them",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "{name} flew to the Great Blossom Tree on {possessive} new wings, wobbling a little at first but growing steadier. Up close, {pronoun} could see the tree was sad. Its roots were tangled and its branches drooped. \"Don't worry,\" {name} whispered, placing {possessive} small hands on the bark. \"I'm here to help.\"",
+      sceneDescription:
+        "Child with fairy wings flying up to the wilting Great Blossom Tree, gently placing hands on its bark, a warm glow beginning",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "{name} closed {possessive} eyes and used {possessive} gift of {fairy_power}. Magic flowed from {possessive} fingertips like warm honey. The tree's roots untangled. Its branches lifted. Color rushed back into every petal -- pink, gold, blue, and violet. The whole garden held its breath.",
+      sceneDescription:
+        "Child pouring magical energy into the Great Blossom Tree, colorful magic flowing from their hands, the tree beginning to bloom brilliantly",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "POP! POP! POP! The Great Blossom Tree burst into the most magnificent bloom anyone had ever seen! Flowers of every color erupted from every branch. Seeds of light drifted down like snow, landing on every corner of the garden. Everywhere they touched, new flowers sprang up instantly.",
+      sceneDescription:
+        "The Great Blossom Tree in full spectacular bloom, seeds of light drifting down everywhere, new flowers springing up, fairies cheering",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "The fairies threw the grandest party the garden had ever seen. They danced on lily pads, ate honeycomb cake, and drank dewdrop lemonade. {name} was the guest of honor, wearing a crown of living flowers that Dewdrop had woven. \"You saved our home,\" Dewdrop said, hugging {name} tight.",
+      sceneDescription:
+        "Grand fairy celebration on lily pads with fairy lights, child wearing a flower crown, eating tiny cakes with fairy friends",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "As the sun began to set in the giant-sized sky, {name}'s wings started to shimmer and fade. \"It's time to go back,\" Dewdrop said gently. She pressed a tiny seed into {name}'s palm. \"Plant this, and you'll always have a little piece of our magic.\" {name} hugged every fairy friend goodbye.",
+      sceneDescription:
+        "Child's fairy wings beginning to shimmer, Dewdrop pressing a glowing seed into their palm, other fairies waving goodbye with tears",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "{name} was back to full size in the garden, the sun warm on {possessive} face. Was it all a dream? But there in {possessive} palm was the tiny seed, glowing faintly. {name} planted it right there by the rosebush. And every morning after that, {pronoun} would check on it -- and sometimes, just sometimes, {pronoun} could hear tiny fairy laughter on the breeze.",
+      sceneDescription:
+        "Child back to normal size, planting a tiny glowing seed beside the rosebush, a faint sparkle visible at the base of the flowers",
+    },
+  ],
+
+  "safari-adventure": [
+    {
+      pageNumber: 1,
+      template:
+        "{name} had a map on {possessive} bedroom wall with all the places {pronoun} dreamed of visiting. But one place had a golden star next to it, circled three times: Africa. {name} wanted to see the great wide savanna where {favorite_animal}s roamed free under endless blue skies.",
+      sceneDescription:
+        "Child in their bedroom pointing at a colorful world map on the wall, a golden star marking Africa, safari books on the bed",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "One morning, a mysterious package arrived with no return address. Inside was a safari hat, a pair of tiny binoculars, and a golden ticket that read: \"Safari Adventure -- One Explorer. Departing immediately.\" Before {name} could even blink, the bedroom floor turned to soft, warm sand.",
+      sceneDescription:
+        "Child opening a mysterious package to find a safari hat and golden ticket, the floor transforming into sandy ground beneath them",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "{name} was standing on a vast golden savanna! Tall grass swayed in the warm breeze as far as {pronoun} could see. The sky was the biggest sky {name} had ever imagined, painted in soft blues and golds. A colorful safari jeep waited nearby with a note on the steering wheel: \"For {name} -- the bravest explorer.\"",
+      sceneDescription:
+        "Child standing on a golden African savanna wearing a safari hat, a colorful jeep nearby, vast grasslands stretching to the horizon",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "The first friend {name} met was a baby {favorite_animal}, no bigger than a dog. It bumbled over on wobbly legs and nuzzled {name}'s hand. Its mother watched nearby, her eyes gentle and warm. \"Hello, little one,\" {name} whispered. The baby {favorite_animal} followed {name} everywhere after that, like a loyal puppy.",
+      sceneDescription:
+        "Child gently petting a baby safari animal while its mother watches approvingly nearby, golden savanna grass all around",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "Together, {name} and the baby {favorite_animal} drove across the savanna in the jeep. They saw zebras painted in perfect stripes, flamingos standing in a pink lake, and hippos blowing bubbles in a muddy river. Every animal waved or nodded as {name} passed. This was the friendliest place on Earth!",
+      sceneDescription:
+        "Child driving a colorful jeep across the savanna with their baby animal friend, zebras and flamingos visible nearby, a warm golden scene",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "But near {safari_discovery}, {name} heard a worried sound. A young bird had fallen from its nest high up in an acacia tree. The nest was so far up that no animal could reach it. \"Don't worry,\" {name} said, looking up at the tall tree. \"I'll figure this out.\"",
+      sceneDescription:
+        "Child looking up at a tall acacia tree where a baby bird has fallen from its nest, other animals gathered around looking concerned",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "{name} had an idea! {pronoun} asked the tallest giraffe to bend its long neck. Then {name} climbed up, step by step, gently holding the baby bird in one hand. Higher and higher {pronoun} went, the baby {favorite_animal} cheering from below. Finally, {name} reached the nest and placed the little bird safely home.",
+      sceneDescription:
+        "Child climbing a giraffe's long neck to reach a high nest in an acacia tree, gently placing a baby bird back home, animals watching below",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "The mother bird sang the most beautiful song {name} had ever heard -- a thank-you melody that echoed across the whole savanna. Every animal stopped to listen. Even the wind seemed to pause. {name} felt warm inside, like the sun was glowing right in {possessive} chest.",
+      sceneDescription:
+        "Child standing beneath the acacia tree as a beautiful bird sings above, musical notes floating through the air, all animals listening peacefully",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "As a reward, the savanna animals invited {name} to a sunset celebration at the Great Watering Hole. Elephants sprayed water into rainbow arcs. Monkeys served mango smoothies. Lions told funny stories, and the baby {favorite_animal} danced the silliest dance anyone had ever seen. {name} laughed until {possessive} belly ached.",
+      sceneDescription:
+        "Grand celebration at a watering hole at sunset, elephants spraying rainbow water, monkeys and lions and the child all laughing and dancing",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "The oldest elephant, wise and gentle, placed a necklace of colorful beads around {name}'s neck. \"This is the Explorer's Heart,\" she said in a voice like a warm rumble. \"It means you carry the spirit of kindness wherever you go. The savanna will always remember you, {name}.\"",
+      sceneDescription:
+        "A wise old elephant placing a colorful beaded necklace around the child's neck, other animals watching respectfully in golden light",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "The baby {favorite_animal} walked {name} back to the safari jeep, nuzzling {possessive} hand one last time. {name} hugged the little animal tight. \"I'll miss you so much,\" {name} whispered. The baby {favorite_animal} blinked its big eyes and made a soft sound that clearly meant, \"I'll miss you too.\"",
+      sceneDescription:
+        "Tender goodbye scene of child hugging the baby safari animal beside the jeep, the setting sun painting everything in warm orange",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "Back in {possessive} bedroom, {name} found the colorful bead necklace still around {possessive} neck. It was real! {name} hung it on the bedpost and looked at the map on the wall. The golden star over Africa glowed a little brighter now. \"Goodnight, savanna,\" {name} whispered. And far away, a baby {favorite_animal} looked up at the same stars and seemed to whisper back.",
+      sceneDescription:
+        "Child in bed wearing the bead necklace, the map on the wall glowing softly over Africa, stars visible through the window",
+    },
+  ],
+
+  "time-travel": [
+    {
+      pageNumber: 1,
+      template:
+        "{name} loved two things more than anything: questions and clocks. {possessive} bedroom had clocks of every kind -- digital ones, cuckoo clocks, even a sundial made from a paper plate. But {name}'s biggest question was one no clock could answer: \"What was yesterday REALLY like? And what will tomorrow bring?\"",
+      sceneDescription:
+        "Child in a bedroom filled with clocks of all kinds, holding a magnifying glass and looking curiously at an old pocket watch",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "One rainy afternoon, {name} found a dusty trunk in {possessive} grandparent's attic. Inside, beneath old photographs and lace, lay a golden pocket watch. But this was no ordinary watch -- its hands spun backwards AND forwards, and it hummed with a warm, golden glow. A tiny engraving read: \"For the curious. Press the crown.\"",
+      sceneDescription:
+        "Child in a dusty attic opening an old trunk, discovering a glowing golden pocket watch that illuminates their amazed face",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "{name} pressed the tiny crown on top of the watch. WHOOOOSH! The room dissolved into ribbons of light -- gold and silver and every color in between. {name} felt like {pronoun} was flying through a tunnel made of clocks and calendars. Then everything went still, and {name} was standing somewhere completely different.",
+      sceneDescription:
+        "Child being pulled into a time portal made of swirling clockwork gears, golden light, and calendar pages flying around them",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "{name} had landed in {time_period}! Everything was incredible. The air smelled different. The sounds were different. People wore amazing clothes and spoke with wonder in their voices. A friendly person noticed {name} and smiled. \"You look lost, young traveler. Welcome! Let me show you around.\"",
+      sceneDescription:
+        "Child arriving in a historical setting, greeted by a friendly person in period clothing, amazing architecture and scenery behind them",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "{name}'s guide showed {object} extraordinary things -- inventions that changed the world, buildings that reached for the sky, and art that made {possessive} heart sing. \"Every person here has a dream,\" the guide said. \"And every dream matters.\" {name} felt inspired. What would {possessive} own dream change someday?",
+      sceneDescription:
+        "Child being shown amazing inventions and architecture by their guide, eyes wide with wonder, taking in the incredible sights",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "But {name} noticed something: a child about {possessive} age, sitting alone and looking sad. \"What's wrong?\" {name} asked. \"Nobody believes in my idea,\" the child said quietly. \"They say it's impossible.\" {name} sat down beside them. \"Tell me about it,\" {pronoun} said. \"I love impossible things.\"",
+      sceneDescription:
+        "Child sitting beside a sad young person from the time period, offering comfort, a half-built invention or project visible nearby",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "The young inventor's idea was brilliant. {name} helped them build it, using skills {pronoun} had learned at home. Together, they tinkered, adjusted, and tried again and again. When it finally worked, the young inventor's face lit up like sunrise. \"You believed in me,\" they whispered. \"That made all the difference.\"",
+      sceneDescription:
+        "Child and the young inventor celebrating as their creation works, sparks of light and joy all around them, tools and parts scattered about",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "The pocket watch hummed again. It was time to move on. {name} hugged the young inventor goodbye. \"Remember,\" {name} said, \"impossible things are just things that haven't happened YET.\" The watch glowed, and WHOOOOSH -- {name} was pulled through the time tunnel once more, spinning through stars and clockwork.",
+      sceneDescription:
+        "Child waving goodbye to the inventor friend as golden time-portal light begins to swirl around them again",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "This time, {name} landed in the far future! Flying cars hummed overhead. Buildings were made of crystal and grew like flowers. Robots and people walked side by side, laughing together. A friendly robot offered {name} a cup of something that tasted like sunshine and bubbles. Everything was amazing!",
+      sceneDescription:
+        "Child in a dazzling futuristic city with crystal buildings, flying cars, and friendly robots, holding a glowing cup, mouth open in awe",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "In the future city's museum, {name} saw something incredible -- a display about {time_souvenir}! Next to it was a tiny plaque: \"Inspired by a time traveler named {name}, who taught the world that believing in others changes everything.\" {name}'s eyes filled with happy tears. {possessive} kindness had echoed through time.",
+      sceneDescription:
+        "Child standing in a futuristic museum looking at a display with their name on it, golden light illuminating a plaque, tears of joy on their face",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "The pocket watch gave one final hum. {name} closed {possessive} eyes and felt the warm rush of time flowing around {object}. When {pronoun} opened them, {pronoun} was back in the attic, the rain still tapping on the window. The trunk was there. The pocket watch glowed softly in {possessive} hand.",
+      sceneDescription:
+        "Child back in the attic, holding the glowing pocket watch, rain on the window, a peaceful smile on their face",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "That night, {name} placed the golden pocket watch on {possessive} nightstand. Its hands moved gently -- forward, backward, always in motion. \"Goodnight, yesterday,\" {name} whispered. \"Goodnight, tomorrow.\" And as {pronoun} drifted off to sleep, {name} knew that every moment -- past, present, and future -- was a gift worth treasuring.",
+      sceneDescription:
+        "Child asleep in bed, the golden pocket watch glowing on the nightstand, tiny clockwork gears reflected on the ceiling like stars",
+    },
+  ],
+
+  "christmas-magic": [
+    {
+      pageNumber: 1,
+      template:
+        "It was Christmas Eve, and {name}'s house smelled like gingerbread and cinnamon. The tree sparkled with lights, stockings hung by the fireplace, and snowflakes danced outside the window. But {name} had something on {possessive} mind -- a wish so big, {pronoun} hadn't told anyone. Not even Santa.",
+      sceneDescription:
+        "Child in cozy pajamas looking at a beautiful Christmas tree in a warm living room, snow falling outside the window",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "\"Dear Santa,\" {name} wrote in {possessive} neatest handwriting. \"My Christmas wish is {christmas_wish}. I know it's a big wish, but I've been working really hard to be good.\" {name} folded the letter carefully, tucked it into an envelope, and placed it under the tree. Then something magical happened.",
+      sceneDescription:
+        "Child writing a letter to Santa at a desk, a warm lamp and Christmas decorations around them, the letter beginning to glow",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "The letter began to GLOW! It floated up from under the tree, swirled around the room leaving a trail of golden sparkles, and zoomed straight up the chimney! {name} raced to the window and watched it fly into the snowy sky like a tiny shooting star, heading north.",
+      sceneDescription:
+        "Child watching a glowing letter fly up the chimney trailing golden sparkles, eyes wide with amazement, Christmas tree behind them",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "WHOOOOSH! A sleigh appeared outside the window, pulled by eight magnificent reindeer! And there in the driver's seat was Santa himself, rosy-cheeked and smiling. \"Ho ho ho! {name}! I got your letter before it even arrived! Hop in -- I need your help tonight!\"",
+      sceneDescription:
+        "Santa's magical sleigh landing on the snowy roof, reindeer with glowing noses, Santa waving to the child from the driver's seat",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "{name} climbed into the sleigh, which was warmer than it looked -- like sitting in a cup of hot cocoa. {reindeer_friend} the reindeer turned and winked. \"Hold on tight!\" Santa called. The sleigh shot into the sky, zooming over snowy rooftops and twinkling towns. {name} could see the whole world below!",
+      sceneDescription:
+        "Child sitting beside Santa in the flying sleigh high above a snowy village, reindeer galloping through starry sky, the child's face full of joy",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "They landed at the North Pole, and it was even more magical than {name} had imagined. Candy-cane lampposts lined the streets. Gingerbread houses puffed warm smoke. Elves in colorful outfits bustled about, wrapping presents, painting toys, and singing carols in squeaky, happy voices.",
+      sceneDescription:
+        "Child walking through Santa's North Pole village with candy-cane lampposts, gingerbread houses, and bustling elves everywhere",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "\"Here's the problem,\" Santa said, leading {name} to the Great Gift Machine. \"This machine fills every present with a little bit of Christmas magic. But the Magic Meter is running low! We need more kindness and joy to power it up. And you, {name}, have one of the kindest hearts I've ever seen.\"",
+      sceneDescription:
+        "Child and Santa standing before an enormous sparkling gift machine with a meter showing low, elves looking worried around them",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "{name} thought about all the kind things {pronoun} had done this year. Helping friends, sharing toys, giving hugs when someone was sad, being brave when things were hard. With every memory, {name}'s heart glowed a little brighter. {pronoun} placed {possessive} hands on the Great Gift Machine and poured all that kindness in.",
+      sceneDescription:
+        "Child placing glowing hands on the Great Gift Machine, golden light streaming from their heart, memories appearing as floating images around them",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "The Magic Meter shot up -- past green, past gold, all the way to sparkling diamond! The Great Gift Machine hummed with joy. Every present on every shelf burst with a warm, golden glow. The elves cheered, Santa laughed his biggest ho-ho-ho, and {reindeer_friend} did a happy reindeer dance.",
+      sceneDescription:
+        "The Great Gift Machine glowing brilliantly, all presents sparkling with golden light, elves dancing and Santa laughing heartily",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "As a thank-you, Santa gave {name} a very special gift -- the first present off the Great Gift Machine. It was wrapped in paper that changed colors and had a bow made of starlight. \"Don't open it until Christmas morning,\" Santa whispered with a wink. \"I think you'll like what's inside.\"",
+      sceneDescription:
+        "Santa handing the child a beautiful color-changing present with a starlight bow, both smiling warmly, the workshop glowing behind them",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "The sleigh ride home was peaceful. Snow fell gently, and Christmas lights twinkled below like earthbound stars. {reindeer_friend} hummed a carol. {name} snuggled into the warm sleigh, holding {possessive} special present close. \"Thank you, Santa,\" {name} murmured. \"Thank YOU, {name},\" Santa replied. \"You saved Christmas.\"",
+      sceneDescription:
+        "Child snuggled in Santa's sleigh flying home through gently falling snow, holding the special present, twinkling lights below",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "{name} woke up on Christmas morning, warm and cozy in bed. Was it a dream? But there, under the tree, sat the color-changing present with the starlight bow. {name} opened it and smiled the biggest smile. Inside was exactly {christmas_wish} -- and a note in Santa's handwriting: \"For the child who saved Christmas. With love, S.C.\"",
+      sceneDescription:
+        "Child on Christmas morning opening the magical present under the tree, a look of pure joy and wonder, warm morning light streaming in",
+    },
+  ],
+
+  "halloween-adventure": [
+    {
+      pageNumber: 1,
+      template:
+        "It was the best night of the year -- Halloween! The air smelled like fallen leaves and candy corn. Jack-o'-lanterns grinned from every porch, and the full moon hung low and orange in the sky. {name} was almost ready. {possessive} costume was perfect: {costume}. Tonight was going to be AMAZING.",
+      sceneDescription:
+        "Child putting on their Halloween costume in front of a mirror, a carved pumpkin glowing on the windowsill, twilight sky outside",
+    },
+    {
+      pageNumber: 2,
+      template:
+        "{name} stepped outside and gasped. The street looked... different. The houses had grown taller and wigglier. The trees had faces that winked and grinned. And floating down the moonlit sidewalk came {halloween_friend}, waving cheerfully. \"Happy Halloween, {name}! Ready for the REAL adventure?\"",
+      sceneDescription:
+        "Child stepping outside into a magically transformed Halloween street with wiggly houses and face-bearing trees, a friendly spooky creature approaching",
+    },
+    {
+      pageNumber: 3,
+      template:
+        "\"The real adventure?\" {name} asked. {halloween_friend} grinned. \"Every Halloween, a magical portal opens behind the oldest jack-o'-lantern on Boo Lane. It leads to Monster Town, where all the friendly monsters celebrate together. And this year, YOU'RE invited!\" {name}'s eyes went wide. \"Let's GO!\"",
+      sceneDescription:
+        "Child and their friendly spooky friend running toward a glowing jack-o'-lantern at the end of a spooky but fun-looking street",
+    },
+    {
+      pageNumber: 4,
+      template:
+        "They found the oldest jack-o'-lantern -- it was as big as a car and glowed purple and green! Its mouth opened wiiiiide, and inside was a swirling portal of orange and black sparkles. {name} took {halloween_friend}'s hand, took a deep breath, and JUMPED IN!",
+      sceneDescription:
+        "Child and their spooky friend jumping into a giant glowing jack-o'-lantern portal, swirling with orange and purple light",
+    },
+    {
+      pageNumber: 5,
+      template:
+        "Monster Town was the most wonderfully spooky place {name} had ever seen! Cobblestone streets wound between crooked houses. Bat-shaped streetlights flickered with purple flames. A skeleton played the xylophone on his own ribs, and a group of mummies were trying to wrap each other up -- very badly.",
+      sceneDescription:
+        "Child arriving in a colorful, fun Monster Town with crooked buildings, bat streetlights, a skeleton musician, and silly mummies",
+    },
+    {
+      pageNumber: 6,
+      template:
+        "\"Welcome, welcome!\" called the Mayor of Monster Town -- a very jolly Frankenstein with flowers in his bolts. \"We have a problem! Our Great Cauldron of Candy has stopped bubbling! Without it, there'll be no treats for anyone -- monster or human!\" The crowd of friendly monsters looked worried.",
+      sceneDescription:
+        "A friendly Frankenstein mayor addressing the child and a crowd of worried but cute monsters, a large empty cauldron visible behind him",
+    },
+    {
+      pageNumber: 7,
+      template:
+        "{name} peeked into the Great Cauldron. It was dark and cold inside. But wait -- something was stuck at the bottom! A tiny candy corn had gotten wedged in the magic spout. \"I can fix this!\" {name} said. {pronoun} reached in bravely and wiggled the candy corn free. BUBBLEEEE!",
+      sceneDescription:
+        "Child reaching bravely into a large cauldron, wiggling free a stuck candy corn, the cauldron beginning to glow and bubble",
+    },
+    {
+      pageNumber: 8,
+      template:
+        "The Great Cauldron EXPLODED with candy! Chocolate bats, gummy eyeballs, lollipop skulls, and candy pumpkins flew into the air like a candy firework show! Every monster caught handfuls, cheering and laughing. {halloween_friend} caught a giant chocolate spider and shared half with {name}.",
+      sceneDescription:
+        "Candy exploding from the cauldron like fireworks, all kinds of Halloween candy flying through the air, monsters and the child catching them joyfully",
+    },
+    {
+      pageNumber: 9,
+      template:
+        "The monsters threw the greatest Halloween party in Monster Town history! They bobbed for apples (the vampire kept popping them with his fangs), danced the Monster Mash, and had a costume contest. {name}'s {costume} costume won first place! The trophy was a golden pumpkin that glowed in the dark.",
+      sceneDescription:
+        "Grand Monster Town Halloween party with monsters dancing, bobbing for apples, the child holding a golden glowing pumpkin trophy",
+    },
+    {
+      pageNumber: 10,
+      template:
+        "\"You're the bravest human we've ever met!\" the Mayor declared. All the monsters agreed -- the mummies clapped (though their bandages got tangled), the ghost did a happy loop-de-loop, and {halloween_friend} gave {name} the biggest, warmest hug. \"You'll always be an honorary monster, {name}.\"",
+      sceneDescription:
+        "All the friendly monsters hugging and celebrating the child, the Mayor giving a speech, monsters with tangled bandages and happy ghosts spinning",
+    },
+    {
+      pageNumber: 11,
+      template:
+        "The portal home opened in the mouth of the great jack-o'-lantern. {name} waved goodbye to every monster, every ghost, every skeleton and mummy and vampire. \"Same time next year?\" {halloween_friend} called. \"DEFINITELY!\" {name} shouted back, and jumped through the swirling orange light.",
+      sceneDescription:
+        "Child waving goodbye through the glowing portal, all the Monster Town citizens waving back, orange and purple light swirling",
+    },
+    {
+      pageNumber: 12,
+      template:
+        "Back on {possessive} own street, the moon was still full and the jack-o'-lanterns still glowed. {name} walked home with a candy bag bulging and a golden pumpkin trophy tucked under {possessive} arm. Best Halloween EVER. As {pronoun} drifted off to sleep, {name} could swear {pronoun} heard a friendly monster voice whisper: \"Happy Halloween, {name}. Sweet dreams.\"",
+      sceneDescription:
+        "Child in bed on Halloween night, golden pumpkin trophy glowing on the nightstand, candy bag nearby, a friendly monster shadow waving in the moonlight",
+    },
+  ],
 };

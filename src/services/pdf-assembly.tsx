@@ -50,6 +50,36 @@ const THEME_COLORS: Record<
     secondary: "#db2777",
     text: "#fce7f3",
   },
+  "pirate-treasure": {
+    primary: "#78350f",
+    secondary: "#ca8a04",
+    text: "#fefce8",
+  },
+  "fairy-garden": {
+    primary: "#4c1d95",
+    secondary: "#a855f7",
+    text: "#f5f3ff",
+  },
+  "safari-adventure": {
+    primary: "#7c2d12",
+    secondary: "#ea580c",
+    text: "#fff7ed",
+  },
+  "time-travel": {
+    primary: "#134e4a",
+    secondary: "#0d9488",
+    text: "#f0fdfa",
+  },
+  "christmas-magic": {
+    primary: "#7f1d1d",
+    secondary: "#15803d",
+    text: "#fef2f2",
+  },
+  "halloween-adventure": {
+    primary: "#7c2d12",
+    secondary: "#9333ea",
+    text: "#fff7ed",
+  },
 };
 
 const styles = StyleSheet.create({
