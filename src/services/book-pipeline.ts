@@ -106,6 +106,7 @@ export async function generatePreview(bookId: string): Promise<void> {
       appearanceProfile,
       themeId: book.theme_id,
       contextualAnswers,
+      language: book.language || "en",
     });
 
     // Step 3: Generate preview illustrations (first 3 pages)
