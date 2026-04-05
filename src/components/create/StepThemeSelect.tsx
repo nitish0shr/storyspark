@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useWizardStore } from "./WizardProvider";
 import { themes } from "@/data/themes";
+import { isThemeAvailable, ThemeCategory } from "@/types/theme";
 import { cn } from "@/lib/utils";
 import {
   Rocket,
@@ -11,6 +13,13 @@ import {
   Zap,
   Heart,
   Star,
+  Compass,
+  Flower2,
+  Binoculars,
+  Clock,
+  Snowflake,
+  Moon,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
@@ -22,7 +31,21 @@ const iconMap: Record<string, LucideIcon> = {
   Crown,
   Zap,
   Heart,
+  Compass,
+  Flower2,
+  Binoculars,
+  Clock,
+  Snowflake,
+  Moon,
 };
+
+const categoryLabels: { key: "all" | ThemeCategory; label: string }[] = [
+  { key: "all", label: "All Themes" },
+  { key: "adventure", label: "Adventure" },
+  { key: "fantasy", label: "Fantasy" },
+  { key: "heartfelt", label: "Heartfelt" },
+  { key: "seasonal", label: "Seasonal" },
+];
 
 function isAgeInRange(age: number, ageRange: string): boolean {
   const match = ageRange.match(/(\d+)-(\d+)/);
@@ -34,17 +57,27 @@ function isAgeInRange(age: number, ageRange: string): boolean {
 export function StepThemeSelect() {
   const { childName, childAge, selectedThemeId, setSelectedTheme, nextStep } =
     useWizardStore();
+  const [activeCategory, setActiveCategory] = useState<"all" | ThemeCategory>("all");
 
   const posthog = usePostHog();
 
   const handleSelect = (themeId: string) => {
     setSelectedTheme(themeId);
     posthog.capture("wizard_step_completed", { step: "theme_select", theme_id: themeId });
-    // Auto-advance after a brief visual pause
     setTimeout(() => {
       nextStep();
     }, 400);
   };
+
+  const availableSeasonalCount = themes.filter(
+    (t) => t.category === "seasonal" && isThemeAvailable(t)
+  ).length;
+
+  const filteredThemes = themes.filter((theme) => {
+    if (theme.seasonal && !isThemeAvailable(theme)) return false;
+    if (activeCategory === "all") return true;
+    return theme.category === activeCategory;
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -57,8 +90,34 @@ export function StepThemeSelect() {
         </p>
       </div>
 
+      <div className="flex flex-wrap justify-center gap-2">
+        {categoryLabels.map(({ key, label }) => {
+          if (key === "seasonal" && availableSeasonalCount === 0) return null;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveCategory(key)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-medium transition-all",
+                activeCategory === key
+                  ? "bg-violet-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+            >
+              {label}
+              {key === "seasonal" && availableSeasonalCount > 0 && (
+                <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-amber-900">
+                  {availableSeasonalCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {themes.map((theme) => {
+        {filteredThemes.map((theme) => {
           const Icon = iconMap[theme.icon] ?? Rocket;
           const isSelected = selectedThemeId === theme.id;
           const title = theme.titleTemplate.replace("[Child]", childName);
@@ -76,7 +135,6 @@ export function StepThemeSelect() {
                   : "border-gray-200 bg-white hover:border-violet-300"
               )}
             >
-              {/* Gradient header */}
               <div
                 className={cn(
                   "flex items-center gap-3 bg-gradient-to-r p-4",
@@ -92,8 +150,13 @@ export function StepThemeSelect() {
                 </div>
               </div>
 
-              {/* Badges */}
               <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+                {theme.badge && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-amber-200/50">
+                    <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                    {theme.badge}
+                  </span>
+                )}
                 {theme.id === "kindness-courage" && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                     <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
@@ -107,7 +170,6 @@ export function StepThemeSelect() {
                 )}
               </div>
 
-              {/* Content */}
               <div className="flex flex-1 flex-col p-4 pt-2">
                 <p className="font-heading text-sm font-semibold text-gray-800 mb-1">
                   {title}
@@ -117,7 +179,6 @@ export function StepThemeSelect() {
                 </p>
               </div>
 
-              {/* Selected indicator */}
               {isSelected && (
                 <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white text-violet-600 shadow-sm">
                   <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

@@ -17,6 +17,18 @@ const THEME_OUTFITS: Record<string, string> = {
     "a bright red homemade cape, fun goggles, and colorful boots",
   "kindness-courage":
     "a cozy everyday outfit -- a soft sweater and comfortable pants",
+  "pirate-treasure":
+    "a fun pirate captain outfit with a tricorn hat, striped shirt, and a toy cutlass at the hip",
+  "fairy-garden":
+    "a delicate outfit made of flower petals and leaves with shimmering fairy wings on the back",
+  "safari-adventure":
+    "a khaki safari outfit with cargo shorts, a wide-brimmed hat, and a pair of tiny binoculars around the neck",
+  "time-travel":
+    "a cozy adventure outfit with a leather satchel, goggles pushed up on the forehead, and a golden pocket watch chain",
+  "christmas-magic":
+    "cozy red and green pajamas with candy cane stripes and a Santa hat slightly tilted to the side",
+  "halloween-adventure":
+    "a creative Halloween costume with fun accessories, slightly oversized and full of personality",
 };
 
 /**
