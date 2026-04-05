@@ -7,8 +7,9 @@ AI-powered personalized children's storybook generator. Parents upload a photo o
 - **Framework**: Next.js 14 (App Router)
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **Auth & DB**: Supabase (PostgreSQL + Auth + Storage)
-- **AI Story**: OpenAI
-- **AI Images**: Replicate
+- **AI Story**: OpenAI (GPT-4o-mini)
+- **AI Audio**: OpenAI TTS (tts-1, "shimmer" voice)
+- **AI Images**: Replicate (Flux Schnell)
 - **Payments**: Stripe
 - **Email**: Resend
 - **Analytics**: PostHog
@@ -65,6 +66,11 @@ src/
     ui/                   # shadcn/ui components
   lib/                    # Utilities, Supabase clients, Stripe
   services/               # AI generation services
+    tts-narration.ts      # OpenAI TTS audio narration for book pages
+    book-pipeline.ts      # Book generation pipeline (preview + full + audio)
+    story-generation.ts   # GPT-4o-mini story generation
+    illustration.ts       # Replicate Flux illustration generation
+    pdf-assembly.tsx      # PDF rendering with @react-pdf/renderer
   data/                   # Theme definitions
   types/                  # TypeScript types
 ```
