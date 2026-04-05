@@ -250,6 +250,7 @@ const h = React.createElement;
 
 interface BookPdfProps {
   childName: string;
+  secondChildName?: string | null;
   themeId: string;
   themeName: string;
   storyPages: BookPage[];
@@ -260,6 +261,7 @@ interface BookPdfProps {
 
 function BookPdfDocument({
   childName,
+  secondChildName,
   themeId,
   themeName,
   storyPages,
@@ -272,10 +274,13 @@ function BookPdfDocument({
 
   const pageStyle = [styles.page, { fontFamily }];
 
+  const displayNames = secondChildName
+    ? `${childName} & ${secondChildName}`
+    : childName;
+
   return h(
     Document,
-    { title: `${childName}'s ${themeName} - StorySpark`, author: "StorySpark" },
-    // Cover Page
+    { title: `${displayNames}'s ${themeName} - StorySpark`, author: "StorySpark" },
     h(
       Page,
       { size: "A4", style: pageStyle },
@@ -285,12 +290,14 @@ function BookPdfDocument({
         h(
           Text,
           { style: [styles.coverTitle, { color: colors.text }] },
-          `${childName}'s\n${themeName}`
+          `${displayNames}'s\n${themeName}`
         ),
         h(
           Text,
           { style: [styles.coverSubtitle, { color: colors.text }] },
-          `A personalized story created just for ${childName}`
+          secondChildName
+            ? `A personalized story created just for ${childName} and ${secondChildName}`
+            : `A personalized story created just for ${childName}`
         )
       )
     ),
@@ -363,7 +370,9 @@ function BookPdfDocument({
         h(
           Text,
           { style: styles.backDedication },
-          `Created with love for ${childName}`
+          secondChildName
+            ? `Created with love for ${childName} and ${secondChildName}`
+            : `Created with love for ${childName}`
         ),
         h(Text, { style: styles.backLogo }, "StorySpark"),
         h(
@@ -410,6 +419,18 @@ export async function assemblePdf(
     );
   }
 
+  let secondChildName: string | null = null;
+  if (book.second_child_profile_id) {
+    const { data: sc } = await supabaseAdmin
+      .from("child_profiles")
+      .select("name")
+      .eq("id", book.second_child_profile_id)
+      .single();
+    if (sc) {
+      secondChildName = sc.name;
+    }
+  }
+
   const storyPages: BookPage[] = book.story_text || [];
   const illustrationUrls: (string | null)[] = book.illustration_urls || [];
   const theme = getThemeById(book.theme_id);
@@ -421,6 +442,7 @@ export async function assemblePdf(
 
   const pdfElement = h(BookPdfDocument, {
     childName: child.name,
+    secondChildName,
     themeId: book.theme_id,
     themeName,
     storyPages,

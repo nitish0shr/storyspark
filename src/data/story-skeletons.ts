@@ -2,6 +2,17 @@ export interface StorySkeletonPage {
   pageNumber: number;
   template: string;
   sceneDescription: string;
+  dualCharacterSceneDescription?: string;
+}
+
+export function getSceneDescription(
+  page: StorySkeletonPage,
+  hasTwoChildren: boolean
+): string {
+  if (hasTwoChildren && page.dualCharacterSceneDescription) {
+    return page.dualCharacterSceneDescription;
+  }
+  return page.sceneDescription;
 }
 
 export const storySkeletons: Record<string, StorySkeletonPage[]> = {
