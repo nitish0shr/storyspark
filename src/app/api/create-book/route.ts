@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { getThemeById } from "@/data/themes";
+import { isValidLanguageCode } from "@/data/languages";
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
         theme_title: theme.name,
         contextual_answers: contextualAnswers || {},
         dedication: dedication?.trim() || null,
-        language: ["en", "es", "fr", "de", "pt", "it", "hi", "zh"].includes(language) ? language : "en",
+        language: isValidLanguageCode(language) ? language : "en",
         status: "draft",
       })
       .select("id")
