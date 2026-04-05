@@ -43,6 +43,30 @@ const THEME_PARTICLES: Record<string, { chars: string[]; colors: string[] }> = {
     chars: ["♥", "✿", "✦", "·"],
     colors: ["#F9A8D4", "#F472B6", "#FBCFE8", "#FCE7F3"],
   },
+  "pirate-treasure": {
+    chars: ["⚓", "✦", "◆", "·"],
+    colors: ["#FCD34D", "#F59E0B", "#FBBF24", "#FEF3C7"],
+  },
+  "fairy-garden": {
+    chars: ["✿", "❀", "✦", "·"],
+    colors: ["#C084FC", "#A78BFA", "#E9D5FF", "#F5F3FF"],
+  },
+  "safari-adventure": {
+    chars: ["✦", "◆", "❋", "·"],
+    colors: ["#FB923C", "#FDBA74", "#FED7AA", "#FFEDD5"],
+  },
+  "time-travel": {
+    chars: ["⚙", "✦", "◷", "·"],
+    colors: ["#5EEAD4", "#2DD4BF", "#99F6E4", "#CCFBF1"],
+  },
+  "christmas-magic": {
+    chars: ["❄", "★", "✦", "·"],
+    colors: ["#FCA5A5", "#86EFAC", "#FCD34D", "#FECACA"],
+  },
+  "halloween-adventure": {
+    chars: ["🎃", "★", "✦", "·"],
+    colors: ["#FB923C", "#C084FC", "#FCD34D", "#FDBA74"],
+  },
 };
 
 const THEME_GRADIENTS: Record<string, string> = {
@@ -52,6 +76,12 @@ const THEME_GRADIENTS: Record<string, string> = {
   "royal-quest": "from-amber-950/25 via-yellow-950/15 to-orange-950/20",
   "superhero-origin": "from-red-950/30 via-rose-950/15 to-pink-950/20",
   "kindness-courage": "from-pink-950/25 via-rose-950/15 to-fuchsia-950/20",
+  "pirate-treasure": "from-yellow-950/30 via-amber-950/20 to-orange-950/25",
+  "fairy-garden": "from-violet-950/30 via-fuchsia-950/15 to-pink-950/20",
+  "safari-adventure": "from-orange-950/30 via-amber-950/15 to-yellow-950/20",
+  "time-travel": "from-teal-950/30 via-cyan-950/15 to-sky-950/20",
+  "christmas-magic": "from-red-950/30 via-green-950/20 to-red-950/25",
+  "halloween-adventure": "from-orange-950/35 via-purple-950/20 to-amber-950/25",
 };
 
 export default function ThemeAmbiance({ themeId, className }: ThemeAmbianceProps) {

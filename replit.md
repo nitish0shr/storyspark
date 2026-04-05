@@ -52,7 +52,7 @@ src/
       Hero.tsx            # Dark cosmic hero with animated book
       Stats.tsx           # Trust stats bar
       HowItWorks.tsx      # 3-step process cards
-      ThemeShowcase.tsx   # 6 theme cards with SVG illustrations
+      ThemeShowcase.tsx   # 12 theme cards with SVG illustrations (6 original + 4 evergreen + 2 seasonal)
       SampleBookViewer.tsx
       Testimonials.tsx    # 6 testimonial cards with gradient avatars
       Pricing.tsx
