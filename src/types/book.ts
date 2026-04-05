@@ -16,6 +16,7 @@ export interface Book {
   userId: string;
   childProfileId: string;
   themeId: string;
+  language: string;
   status: BookStatus;
   contextualAnswers: Record<string, string> | null;
   storyText: BookPage[] | null;

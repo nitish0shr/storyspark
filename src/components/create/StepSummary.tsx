@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWizardStore } from "./WizardProvider";
 import { getThemeById } from "@/data/themes";
 import { getQuestionsForTheme } from "@/data/questions";
+import { supportedLanguages } from "@/data/languages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
   Camera,
   MessageCircle,
   Heart,
+  Globe,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
@@ -40,6 +42,8 @@ export function StepSummary() {
     contextualAnswers,
     dedication,
     setDedication,
+    language,
+    setLanguage,
     email,
     setEmail,
     setChildProfileId,
@@ -82,6 +86,7 @@ export function StepSummary() {
           themeId: selectedThemeId,
           contextualAnswers,
           dedication: dedication.trim() || undefined,
+          language,
           email,
         }),
       });
@@ -227,6 +232,33 @@ export function StepSummary() {
         <p className="text-xs text-gray-400">
           This will appear as a special page right after the cover.
         </p>
+      </div>
+
+      {/* Language selector */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-violet-500" />
+          <Label htmlFor="language" className="text-sm font-medium text-gray-700">
+            Story language
+          </Label>
+        </div>
+        <select
+          id="language"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent appearance-none cursor-pointer"
+        >
+          {supportedLanguages.map((lang) => (
+            <option key={lang.code} value={lang.code}>
+              {lang.name} ({lang.nativeName})
+            </option>
+          ))}
+        </select>
+        {language !== "en" && (
+          <p className="text-xs text-violet-500">
+            The story text will be written in {supportedLanguages.find((l) => l.code === language)?.name}. UI stays in English.
+          </p>
+        )}
       </div>
 
       {/* Value prop */}

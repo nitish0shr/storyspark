@@ -141,6 +141,7 @@ export async function generateStory(params: {
   appearanceProfile: AppearanceProfile;
   themeId: string;
   contextualAnswers: Record<string, string>;
+  language?: string;
 }): Promise<BookPage[]> {
   const {
     childName,
@@ -149,6 +150,7 @@ export async function generateStory(params: {
     appearanceProfile,
     themeId,
     contextualAnswers,
+    language = "en",
   } = params;
 
   const skeleton = storySkeletons[themeId];
@@ -173,7 +175,18 @@ export async function generateStory(params: {
   const hairDescription = `${appearanceProfile.hairStyle} ${appearanceProfile.hairColor} hair`;
   const appearanceNotes = `${appearanceProfile.skinTone} skin tone, ${appearanceProfile.eyeColor} eyes`;
 
-  // Build the system prompt
+  const languageNames: Record<string, string> = {
+    en: "English",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    pt: "Portuguese",
+    it: "Italian",
+    hi: "Hindi",
+    zh: "Mandarin Chinese",
+  };
+  const languageName = languageNames[language] || "English";
+
   const systemPrompt = fillPromptTemplate(STORY_GENERATION_SYSTEM_PROMPT, {
     name: childName,
     age: ageLabel,
@@ -187,19 +200,25 @@ export async function generateStory(params: {
     contextual_answers: formatContextualAnswers(contextualAnswers),
   });
 
+  const languageInstruction =
+    language !== "en"
+      ? `\n\nLANGUAGE: Write the entire story in ${languageName}. Keep the child's name "${childName}" unchanged. Use natural, fluent ${languageName} appropriate for children. The "Page N:" prefix must remain in English.`
+      : "";
+
+  const fullSystemPrompt = systemPrompt + languageInstruction;
+
   const expectedPageCount = skeleton.length;
   let lastError: Error | null = null;
 
-  // Try up to 2 times (initial + 1 retry)
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: fullSystemPrompt },
           {
             role: "user",
-            content: `Write the complete ${expectedPageCount}-page story now. Output ONLY the story pages in the format "Page N: <text>". No other commentary.`,
+            content: `Write the complete ${expectedPageCount}-page story now in ${languageName}. Output ONLY the story pages in the format "Page N: <text>". No other commentary.`,
           },
         ],
         temperature: 0.8,

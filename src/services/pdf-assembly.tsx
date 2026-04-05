@@ -5,12 +5,51 @@ import {
   Text,
   View,
   Image,
+  Font,
   StyleSheet,
   renderToBuffer,
 } from "@react-pdf/renderer";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { BookPage } from "@/types/book";
 import { getThemeById } from "@/data/themes";
+import { getLanguageByCode } from "@/data/languages";
+
+Font.register({
+  family: "NotoSans",
+  fonts: [
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosans/NotoSans-Bold.ttf",
+      fontWeight: 700,
+    },
+  ],
+});
+
+Font.register({
+  family: "NotoSansDevanagari",
+  src: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosansdevanagari/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf",
+});
+
+Font.register({
+  family: "NotoSansSC",
+  src: "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+});
+
+function getFontFamily(language: string): string {
+  const lang = getLanguageByCode(language);
+  if (!lang) return "NotoSans";
+  switch (lang.script) {
+    case "devanagari":
+      return "NotoSansDevanagari";
+    case "cjk":
+      return "NotoSansSC";
+    default:
+      return "NotoSans";
+  }
+}
 
 // ────────────────────────���─────────────────────────────────────
 // Styles
@@ -216,6 +255,7 @@ interface BookPdfProps {
   storyPages: BookPage[];
   illustrationUrls: (string | null)[];
   dedication?: string | null;
+  language?: string;
 }
 
 function BookPdfDocument({
@@ -225,8 +265,12 @@ function BookPdfDocument({
   storyPages,
   illustrationUrls,
   dedication,
+  language = "en",
 }: BookPdfProps) {
   const colors = THEME_COLORS[themeId] || THEME_COLORS["kindness-courage"];
+  const fontFamily = getFontFamily(language);
+
+  const pageStyle = [styles.page, { fontFamily }];
 
   return h(
     Document,
@@ -234,7 +278,7 @@ function BookPdfDocument({
     // Cover Page
     h(
       Page,
-      { size: "A4", style: styles.page },
+      { size: "A4", style: pageStyle },
       h(
         View,
         { style: [styles.coverPage, { backgroundColor: colors.primary }] },
@@ -258,7 +302,7 @@ function BookPdfDocument({
       return [
         h(
           Page,
-          { key: "dedication", size: "A4", style: styles.page },
+          { key: "dedication", size: "A4", style: pageStyle },
           h(
             View,
             { style: [styles.dedicationPage, { backgroundColor: colors.primary }] },
@@ -280,7 +324,7 @@ function BookPdfDocument({
 
       return h(
         Page,
-        { key: page.pageNumber, size: "A4", style: styles.page },
+        { key: page.pageNumber, size: "A4", style: pageStyle },
         h(
           View,
           { style: styles.interiorPage },
@@ -312,7 +356,7 @@ function BookPdfDocument({
     // Back Cover
     h(
       Page,
-      { size: "A4", style: styles.page },
+      { size: "A4", style: pageStyle },
       h(
         View,
         { style: styles.backPage },
@@ -382,6 +426,7 @@ export async function assemblePdf(
     storyPages,
     illustrationUrls,
     dedication: book.dedication || null,
+    language: book.language || "en",
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfBuffer = await renderToBuffer(pdfElement as any);
