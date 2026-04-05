@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         child_name: childName,
         theme_title: theme.name,
         contextual_answers: contextualAnswers || {},
-        dedication: dedication || null,
+        dedication: dedication?.trim() || null,
         status: "draft",
       })
       .select("id")

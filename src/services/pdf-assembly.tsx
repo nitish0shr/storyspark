@@ -222,7 +222,7 @@ function BookPdfDocument({
     ),
 
     // Dedication Page (if provided)
-    ...(dedication
+    ...(dedication?.trim()
       ? [
           h(
             Page,
