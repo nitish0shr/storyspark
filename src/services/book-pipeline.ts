@@ -220,6 +220,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
     });
 
     // Generate audio narration (if OpenAI is configured)
+    let audioStatus: "complete" | "failed" | "skipped" = "skipped";
     if (isOpenAIConfigured()) {
       try {
         console.log(`Generating audio narration for book ${bookId}...`);
@@ -228,10 +229,12 @@ export async function generateFullBook(bookId: string): Promise<void> {
           text: page.text,
         }));
         await generateNarration(bookId, pagesForAudio);
+        audioStatus = "complete";
         console.log(`Audio narration complete for book ${bookId}`);
       } catch (audioError) {
+        audioStatus = "failed";
         console.error(
-          `Audio narration failed for book ${bookId} (non-fatal):`,
+          `Audio narration failed for book ${bookId} (continuing to PDF):`,
           audioError
         );
       }
@@ -244,6 +247,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
     await updateBookStatus(bookId, "complete", {
       pdf_url: pdfUrl,
       pdf_print_url: pdfPrintUrl,
+      audio_status: audioStatus,
     });
   } catch (error) {
     console.error(`Full book generation failed for book ${bookId}:`, error);
