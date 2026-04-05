@@ -62,7 +62,7 @@ export default function BookViewer({
   const totalVisibleSlides = Math.min(previewPageCount, pages.length) + 1 + dedicationOffset;
   const isCoverSlide = currentPage === 0;
   const isDedicationSlide = hasDedication && currentPage === 1;
-  const pageIndex = currentPage - dedicationOffset;
+  const pageIndex = isCoverSlide ? 0 : currentPage - dedicationOffset;
   const isPaywallSlide = !isCoverSlide && !isDedicationSlide && pageIndex >= previewPageCount;
   const isFirstPage = currentPage === 0;
   const isLastSlide = currentPage === totalVisibleSlides - 1;
