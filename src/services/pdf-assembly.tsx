@@ -222,25 +222,27 @@ function BookPdfDocument({
     ),
 
     // Dedication Page (if provided)
-    ...(dedication?.trim()
-      ? [
+    ...(() => {
+      const trimmedDedication = dedication?.trim();
+      if (!trimmedDedication) return [];
+      return [
+        h(
+          Page,
+          { key: "dedication", size: "A4", style: styles.page },
           h(
-            Page,
-            { key: "dedication", size: "A4", style: styles.page },
+            View,
+            { style: [styles.dedicationPage, { backgroundColor: colors.primary }] },
+            h(Text, { style: [styles.dedicationOrnament, { color: colors.text }] }, "\u2766"),
             h(
-              View,
-              { style: [styles.dedicationPage, { backgroundColor: colors.primary }] },
-              h(Text, { style: [styles.dedicationOrnament, { color: colors.text }] }, "\u2766"),
-              h(
-                Text,
-                { style: [styles.dedicationText, { color: colors.text }] },
-                `\u201C${dedication}\u201D`
-              ),
-              h(Text, { style: [styles.dedicationOrnamentBottom, { color: colors.text }] }, "\u2766")
-            )
-          ),
-        ]
-      : []),
+              Text,
+              { style: [styles.dedicationText, { color: colors.text }] },
+              `\u201C${trimmedDedication}\u201D`
+            ),
+            h(Text, { style: [styles.dedicationOrnamentBottom, { color: colors.text }] }, "\u2766")
+          )
+        ),
+      ];
+    })(),
 
     // Interior Pages
     ...storyPages.map((page, idx) => {

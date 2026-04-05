@@ -257,7 +257,7 @@ export default function AudioNarrationPlayer({
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-900">
-              {currentPage === 0 ? "Cover" : `Page ${currentPage + 1}`}
+              {currentPage < 0 ? "Dedication" : currentPage === 0 ? "Cover" : `Page ${currentPage + 1}`}
             </p>
             <p className="text-xs text-gray-500">
               {hasError
