@@ -24,11 +24,11 @@ const oneTimeFeatures = [
 ];
 
 const subscriptionFeatures = [
-  { icon: BookOpen, text: "New book every month" },
-  { icon: RefreshCw, text: "Rotating themes automatically" },
-  { icon: Percent, text: "15% off additional books" },
-  { icon: Crown, text: "Subscriber badge" },
-  { icon: Gift, text: "Cancel or pause anytime" },
+  { icon: BookOpen, text: "1 new personalized book every month" },
+  { icon: RefreshCw, text: "Theme picked for you automatically" },
+  { icon: Percent, text: "15% off any extra books" },
+  { icon: Crown, text: "Subscriber badge on your account" },
+  { icon: Gift, text: "Pause or cancel anytime" },
 ];
 
 export default function Pricing() {
@@ -108,17 +108,16 @@ export default function Pricing() {
 
             <div className="text-center mb-6 bg-white rounded-2xl border-2 border-[#1a1a2e] p-5 shadow-[3px_3px_0px_#1a1a2e]">
               <div className="flex items-start justify-center">
-                <span className="font-heading text-3xl font-bold text-[#1a1a2e] mt-1">$</span>
-                <span className="font-heading text-7xl font-bold text-[#1a1a2e] leading-none">
-                  {subDollars}
+                <span className="font-heading text-6xl font-bold text-[#1a1a2e] leading-none">
+                  ${subDollars}
                 </span>
-                <span className="font-heading text-2xl font-bold text-[#1a1a2e] mt-1">
+                <span className="font-heading text-2xl font-bold text-[#1a1a2e] leading-none">
                   .{subCents}
                 </span>
               </div>
-              <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per month</p>
+              <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per month — 1 book included</p>
               <p className="font-body text-xs text-[#06D6A0] font-bold mt-1">
-                Save 20% vs one-time!
+                Save 20% vs buying one at a time
               </p>
             </div>
 
