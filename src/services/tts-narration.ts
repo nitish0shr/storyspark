@@ -88,11 +88,12 @@ export async function generateNarration(
         page.pageNumber
       );
 
-      const { error: updateError } = await supabaseAdmin
+      const { data: updated, error: updateError } = await supabaseAdmin
         .from("book_pages")
         .update({ audio_url: audioUrl })
         .eq("book_id", bookId)
-        .eq("page_number", page.pageNumber);
+        .eq("page_number", page.pageNumber)
+        .select("id");
 
       if (updateError) {
         console.error(
@@ -101,6 +102,12 @@ export async function generateNarration(
         );
         throw new Error(
           `Failed to save audio URL for page ${page.pageNumber}: ${updateError.message}`
+        );
+      }
+
+      if (!updated || updated.length === 0) {
+        throw new Error(
+          `No book_pages row found for book ${bookId}, page ${page.pageNumber}`
         );
       }
 
