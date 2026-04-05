@@ -116,7 +116,8 @@ function parseStoryResponse(
 function validateStory(
   pages: BookPage[],
   childName: string,
-  expectedCount: number
+  expectedCount: number,
+  secondChildName?: string | null
 ): void {
   if (pages.length !== expectedCount) {
     throw new Error(
@@ -124,7 +125,6 @@ function validateStory(
     );
   }
 
-  // Check for empty pages
   const emptyPages = pages.filter((p) => p.text.trim().length === 0);
   if (emptyPages.length > 0) {
     throw new Error(
@@ -132,10 +132,13 @@ function validateStory(
     );
   }
 
-  // Check that child's name appears at least once across the entire story
   const fullText = pages.map((p) => p.text).join(" ");
   if (!fullText.includes(childName)) {
     throw new Error("Child's name does not appear in the generated story");
+  }
+
+  if (secondChildName && !fullText.includes(secondChildName)) {
+    throw new Error("Second child's name does not appear in the generated co-hero story");
   }
 }
 
@@ -277,7 +280,7 @@ DUAL-CHARACTER INSTRUCTIONS:
       }
 
       const pages = parseStoryResponse(responseText, expectedPageCount);
-      validateStory(pages, childName, expectedPageCount);
+      validateStory(pages, childName, expectedPageCount, secondChild?.name);
 
       return pages;
     } catch (error) {
