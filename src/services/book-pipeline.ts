@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
-import { storySkeletons } from "@/data/story-skeletons";
+import { storySkeletons, getSceneDescription } from "@/data/story-skeletons";
 import { analyzeFace } from "@/services/face-analysis";
 import { generateStory } from "@/services/story-generation";
 import { generateIllustrations } from "@/services/illustration";
@@ -152,8 +152,9 @@ export async function generatePreview(bookId: string): Promise<void> {
     });
 
     const skeleton = storySkeletons[book.theme_id];
+    const hasTwoChildren = !!secondChild;
     const sceneDescriptions = skeleton
-      ? skeleton.map((s) => s.sceneDescription)
+      ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
       : [];
 
     const previewPageNumbers = [1, 2, 3];
@@ -244,8 +245,9 @@ export async function generateFullBook(bookId: string): Promise<void> {
 
     if (remainingPageNumbers.length > 0) {
       const skeleton = storySkeletons[book.theme_id];
+      const hasTwoChildren = !!secondChild;
       const sceneDescriptions = skeleton
-        ? skeleton.map((s) => s.sceneDescription)
+        ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
         : [];
 
       const newUrls = await generateIllustrations({
