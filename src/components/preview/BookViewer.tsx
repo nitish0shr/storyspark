@@ -263,9 +263,11 @@ export default function BookViewer({
         Use arrow keys to navigate
       </p>
 
-      {/* Audio narration player */}
+      {/* Audio narration player — only pass audio for accessible pages */}
       <AudioNarrationPlayer
-        audioUrls={pages.map((p) => p.audioUrl || null)}
+        audioUrls={pages.map((p, i) =>
+          i < previewPageCount ? (p.audioUrl || null) : null
+        )}
         currentPage={currentPage}
         totalPages={Math.min(previewPageCount, pages.length)}
         onPageChange={goToPage}
