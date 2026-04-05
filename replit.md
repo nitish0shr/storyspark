@@ -54,7 +54,7 @@ src/
       HowItWorks.tsx      # 3-step process cards
       ThemeShowcase.tsx   # 12 theme cards with SVG illustrations (6 original + 4 evergreen + 2 seasonal)
       SampleBookViewer.tsx
-      Testimonials.tsx    # 6 testimonial cards with gradient avatars
+      Testimonials.tsx    # Trust points section (preview speed, privacy, free preview)
       Pricing.tsx
       FAQ.tsx
       Footer.tsx          # Dark CTA + footer bar

@@ -601,6 +601,275 @@ function KindnessIllustration() {
   );
 }
 
+function PirateIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="pirate-sky" x1="0" y1="0" x2="0" y2="128">
+          <stop stopColor="#1E3A5F" /><stop offset="0.6" stopColor="#2563EB" /><stop offset="1" stopColor="#60A5FA" />
+        </linearGradient>
+        <linearGradient id="pirate-sea" x1="0" y1="0" x2="0" y2="1">
+          <stop stopColor="#1E40AF" /><stop offset="1" stopColor="#1E3A5F" />
+        </linearGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#pirate-sky)" />
+      <circle cx="260" cy="25" r="14" fill="#FDE68A" opacity="0.9" />
+      <circle cx="260" cy="25" r="8" fill="#FEF3C7" opacity="0.5" />
+      {[40, 90, 180, 230, 270].map((x, i) => (
+        <circle key={i} cx={x} cy={10 + (i % 3) * 8} r="1.5" fill="white" opacity="0.6" />
+      ))}
+      <rect x="0" y="80" width="300" height="48" fill="url(#pirate-sea)" />
+      {[0, 60, 120, 180, 240].map((x, i) => (
+        <path key={i} d={`M${x},${90 + (i % 2) * 4} Q${x + 15},${84 + (i % 2) * 4} ${x + 30},${90 + (i % 2) * 4}`} stroke="#93C5FD" strokeWidth="1.5" opacity="0.3" fill="none" />
+      ))}
+      <g transform="translate(100,42)">
+        <path d="M-30,38 Q-35,20 -20,15 L80,15 Q95,20 90,38 Z" fill="#92400E" />
+        <path d="M-25,36 Q-30,22 -18,18 L78,18 Q90,22 85,36 Z" fill="#78350F" opacity="0.5" />
+        <rect x="25" y="-40" width="3" height="55" fill="#78350F" />
+        <path d="M28,-35 L75,-20 L28,-5 Z" fill="white" opacity="0.9" />
+        <path d="M28,-33 L70,-20 L28,-8 Z" fill="#F5F5F4" opacity="0.3" />
+        <text x="42" y="-16" fontSize="10" fill="#1E1B4B" fontWeight="bold">☠</text>
+      </g>
+      <circle cx="50" cy="105" r="12" fill="#FFD166" opacity="0.4" />
+      <circle cx="50" cy="105" r="6" fill="#FDE68A" opacity="0.5" />
+    </svg>
+  );
+}
+
+function FairyIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="fairy-bg" x1="0" y1="0" x2="0" y2="128">
+          <stop stopColor="#A78BFA" /><stop offset="0.5" stopColor="#C4B5FD" /><stop offset="1" stopColor="#DDD6FE" />
+        </linearGradient>
+        <radialGradient id="fairy-glow" cx="50%" cy="40%">
+          <stop offset="0%" stopColor="#FEF3C7" /><stop offset="100%" stopColor="#FEF3C7" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#fairy-bg)" />
+      <ellipse cx="150" cy="140" rx="180" ry="30" fill="#16A34A" opacity="0.3" />
+      <ellipse cx="150" cy="138" rx="160" ry="22" fill="#86EFAC" opacity="0.2" />
+      {[30, 80, 220, 265].map((x, i) => (
+        <g key={i}>
+          <rect x={x} y={85 - i * 5} width={4 + i} height={40 + i * 5} rx="2" fill="#78350F" opacity="0.6" />
+          <ellipse cx={x + 2 + i / 2} cy={80 - i * 5} rx={18 + i * 3} ry={14 + i * 2} fill="#22C55E" opacity={0.35 + i * 0.05} />
+          <ellipse cx={x + i / 2} cy={76 - i * 5} rx={14 + i * 2} ry={10 + i} fill="#4ADE80" opacity={0.2 + i * 0.03} />
+        </g>
+      ))}
+      {[60, 110, 170, 240].map((x, i) => (
+        <g key={i}>
+          <line x1={x} y1={118} x2={x} y2={105 - i * 2} stroke="#16A34A" strokeWidth="1.5" />
+          <circle cx={x} cy={103 - i * 2} r={3 + (i % 2)} fill={["#F472B6", "#A78BFA", "#FBBF24", "#60A5FA"][i]} />
+          <circle cx={x} cy={103 - i * 2} r={1.5} fill="white" opacity="0.3" />
+        </g>
+      ))}
+      <circle cx="150" cy="50" r="20" fill="url(#fairy-glow)" />
+      <g transform="translate(150,50)">
+        <ellipse cx="-8" cy="-2" rx="10" ry="6" fill="#E9D5FF" opacity="0.7" transform="rotate(-25)" />
+        <ellipse cx="8" cy="-2" rx="10" ry="6" fill="#DDD6FE" opacity="0.6" transform="rotate(25)" />
+        <circle cx="0" cy="3" r="5" fill="#FED7AA" />
+        <circle cx="-2" cy="2" r="0.8" fill="#1E1B4B" />
+        <circle cx="2" cy="2" r="0.8" fill="#1E1B4B" />
+        <path d="M-1.5,5 Q0,6.5 1.5,5" stroke="#1E1B4B" strokeWidth="0.6" fill="none" />
+        <rect x="-3" y="8" width="6" height="10" rx="2" fill="#E879F9" />
+      </g>
+      {[70, 120, 190, 250, 45, 275].map((x, i) => (
+        <circle key={i} cx={x} cy={20 + (i * 13) % 40} r="1.5" fill="#FDE68A" opacity={0.5 + (i % 3) * 0.15}>
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur={`${2 + i * 0.3}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
+function SafariIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="safari-sky" x1="0" y1="0" x2="0" y2="128">
+          <stop stopColor="#F59E0B" /><stop offset="0.5" stopColor="#FBBF24" /><stop offset="1" stopColor="#FDE68A" />
+        </linearGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#safari-sky)" />
+      <circle cx="250" cy="30" r="20" fill="#FEF3C7" opacity="0.8" />
+      <circle cx="250" cy="30" r="12" fill="white" opacity="0.3" />
+      <ellipse cx="150" cy="140" rx="200" ry="30" fill="#92400E" opacity="0.25" />
+      <ellipse cx="150" cy="135" rx="180" ry="25" fill="#D97706" opacity="0.15" />
+      {[40, 240].map((x, i) => (
+        <g key={i}>
+          <rect x={x - 3} y={50 - i * 10} width="6" height={75 + i * 10} fill="#78350F" />
+          <ellipse cx={x} cy={48 - i * 10} rx="30" ry="8" fill="#16A34A" opacity="0.4" />
+          <ellipse cx={x - 15} cy={55 - i * 10} rx="20" ry="10" fill="#22C55E" opacity="0.3" />
+          <ellipse cx={x + 15} cy={55 - i * 10} rx="20" ry="10" fill="#15803D" opacity="0.3" />
+        </g>
+      ))}
+      <g transform="translate(120,65)">
+        <ellipse cx="0" cy="0" rx="20" ry="12" fill="#F59E0B" />
+        <ellipse cx="0" cy="-2" rx="18" ry="10" fill="#FBBF24" opacity="0.5" />
+        <circle cx="-22" cy="-8" r="8" fill="#F59E0B" />
+        <circle cx="-22" cy="-8" r="6" fill="#FBBF24" opacity="0.4" />
+        <circle cx="-24" cy="-10" r="1.2" fill="#1E1B4B" />
+        <circle cx="-20" cy="-10" r="1.2" fill="#1E1B4B" />
+        <rect x="-4" y="12" width="3" height="14" fill="#92400E" />
+        <rect x="2" y="12" width="3" height="14" fill="#92400E" />
+        <path d="M16,0 Q28,-2 22,10" stroke="#F59E0B" strokeWidth="3" fill="none" />
+      </g>
+      <g transform="translate(190,72)">
+        <ellipse cx="0" cy="0" rx="8" ry="6" fill="#9CA3AF" />
+        <circle cx="-10" cy="-4" r="5" fill="#9CA3AF" />
+        <circle cx="-12" cy="-6" r="1" fill="#1E1B4B" />
+        <rect x="-3" y="6" width="2" height="8" fill="#6B7280" />
+        <rect x="2" y="6" width="2" height="8" fill="#6B7280" />
+        <path d="M-10,-9 L-12,-14" stroke="#9CA3AF" strokeWidth="2" />
+        <path d="M-8,-9 L-6,-14" stroke="#9CA3AF" strokeWidth="2" />
+      </g>
+      {[70, 145, 200, 260].map((x, i) => (
+        <g key={i}>
+          <line x1={x} y1={128} x2={x} y2={100 - i * 3} stroke="#D97706" strokeWidth="1" opacity="0.3" />
+          <line x1={x - 3} y1={105 - i * 3} x2={x + 3} y2={105 - i * 3} stroke="#D97706" strokeWidth="1" opacity="0.2" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function TimeTravelIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="time-bg" x1="0" y1="0" x2="300" y2="128">
+          <stop stopColor="#1E1B4B" /><stop offset="0.5" stopColor="#312E81" /><stop offset="1" stopColor="#4338CA" />
+        </linearGradient>
+        <radialGradient id="portal" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#C084FC" /><stop offset="40%" stopColor="#7C3AED" /><stop offset="70%" stopColor="#4338CA" /><stop offset="100%" stopColor="#4338CA" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#time-bg)" />
+      {[20, 55, 90, 130, 170, 210, 250, 280, 40, 150, 270].map((x, i) => (
+        <circle key={i} cx={x} cy={8 + (i * 17) % 110} r={1 + (i % 2)} fill="white" opacity={0.3 + (i % 4) * 0.15}>
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+      <circle cx="150" cy="64" r="38" fill="url(#portal)" opacity="0.8" />
+      <circle cx="150" cy="64" r="30" fill="#312E81" opacity="0.6" />
+      <circle cx="150" cy="64" r="22" fill="#1E1B4B" opacity="0.7" />
+      <circle cx="150" cy="64" r="28" fill="none" stroke="#C084FC" strokeWidth="2" opacity="0.5">
+        <animateTransform attributeName="transform" type="rotate" from="0 150 64" to="360 150 64" dur="8s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="150" cy="64" r="35" fill="none" stroke="#A78BFA" strokeWidth="1" opacity="0.3" strokeDasharray="4 6">
+        <animateTransform attributeName="transform" type="rotate" from="360 150 64" to="0 150 64" dur="12s" repeatCount="indefinite" />
+      </circle>
+      <g transform="translate(150,64)">
+        <line x1="0" y1="0" x2="0" y2="-12" stroke="#E9D5FF" strokeWidth="2" strokeLinecap="round" />
+        <line x1="0" y1="0" x2="8" y2="4" stroke="#C084FC" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="0" cy="0" r="2" fill="#E9D5FF" />
+        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => {
+          const rad = (deg * Math.PI) / 180;
+          return <circle key={i} cx={Math.cos(rad) * 17} cy={Math.sin(rad) * 17} r="1" fill="#E9D5FF" opacity="0.6" />;
+        })}
+      </g>
+      <g transform="translate(60,50)">
+        <path d="M0,20 L10,0 L20,20 Z" fill="#F59E0B" opacity="0.4" />
+        <path d="M3,20 L10,4 L17,20 Z" fill="#FDE68A" opacity="0.2" />
+      </g>
+      <g transform="translate(230,70)">
+        <rect x="0" y="0" width="25" height="18" rx="3" fill="#6B7280" opacity="0.4" />
+        <rect x="3" y="3" width="8" height="5" fill="#60A5FA" opacity="0.5" />
+        <rect x="14" y="3" width="8" height="5" fill="#4ADE80" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+function ChristmasIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="xmas-bg" x1="0" y1="0" x2="0" y2="128">
+          <stop stopColor="#1E3A5F" /><stop offset="0.7" stopColor="#1E40AF" /><stop offset="1" stopColor="#DBEAFE" />
+        </linearGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#xmas-bg)" />
+      <ellipse cx="150" cy="140" rx="200" ry="28" fill="white" opacity="0.9" />
+      <ellipse cx="150" cy="136" rx="180" ry="20" fill="#DBEAFE" opacity="0.4" />
+      {[20, 50, 80, 120, 160, 200, 240, 270].map((x, i) => (
+        <circle key={i} cx={x} cy={5 + (i * 11) % 50} r="1.5" fill="white" opacity={0.4 + (i % 3) * 0.2}>
+          <animate attributeName="cy" values={`${5 + (i * 11) % 50};${15 + (i * 11) % 50};${5 + (i * 11) % 50}`} dur={`${3 + i * 0.4}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+      <g transform="translate(150,45)">
+        <polygon points="0,-35 -28,40 28,40" fill="#16A34A" />
+        <polygon points="0,-35 -5,40 5,40" fill="#22C55E" opacity="0.3" />
+        <polygon points="0,-20 -22,30 22,30" fill="#15803D" opacity="0.4" />
+        <rect x="-5" y="40" width="10" height="12" fill="#78350F" />
+        <circle cx="0" cy="-35" r="4" fill="#FDE68A" />
+        <circle cx="0" cy="-35" r="2" fill="white" opacity="0.5" />
+        {[[-8, 5, "#EF4444"], [10, 15, "#3B82F6"], [-5, 25, "#FBBF24"], [8, -5, "#EC4899"]].map(([x, y, c], i) => (
+          <circle key={i} cx={x as number} cy={y as number} r="3" fill={c as string} />
+        ))}
+        <path d="M-15,10 Q-5,5 5,10 Q15,15 20,8" stroke="#FDE68A" strokeWidth="1" fill="none" opacity="0.4" />
+      </g>
+      {[50, 250].map((x, i) => (
+        <g key={i} transform={`translate(${x},85)`}>
+          <rect x="-8" y="-8" width="16" height="16" rx="2" fill={i === 0 ? "#EF4444" : "#3B82F6"} />
+          <rect x="-1" y="-8" width="2" height="16" fill="#FDE68A" />
+          <rect x="-8" y="-1" width="16" height="2" fill="#FDE68A" />
+          <path d="M-3,-8 Q0,-14 3,-8" fill="#FDE68A" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function HalloweenIllustration() {
+  return (
+    <svg viewBox="0 0 300 128" className="w-full h-full" fill="none">
+      <defs>
+        <linearGradient id="hween-bg" x1="0" y1="0" x2="0" y2="128">
+          <stop stopColor="#1E1B4B" /><stop offset="0.6" stopColor="#312E81" /><stop offset="1" stopColor="#4C1D95" />
+        </linearGradient>
+      </defs>
+      <rect width="300" height="128" fill="url(#hween-bg)" />
+      <circle cx="240" cy="25" r="18" fill="#FDE68A" opacity="0.8" />
+      <circle cx="240" cy="25" r="15" fill="#FEF3C7" opacity="0.3" />
+      <circle cx="236" cy="22" r="6" fill="#1E1B4B" opacity="0.15" />
+      <circle cx="244" cy="28" r="4" fill="#1E1B4B" opacity="0.1" />
+      {[30, 70, 120, 180, 250, 280].map((x, i) => (
+        <circle key={i} cx={x} cy={8 + (i * 13) % 40} r="1" fill="white" opacity={0.3 + (i % 3) * 0.15} />
+      ))}
+      <ellipse cx="150" cy="140" rx="200" ry="28" fill="#1E1B4B" opacity="0.5" />
+      <g transform="translate(130,55)">
+        <ellipse cx="0" cy="5" rx="22" ry="18" fill="#F97316" />
+        <ellipse cx="0" cy="2" rx="20" ry="16" fill="#FB923C" opacity="0.4" />
+        <rect x="-2" y="-15" width="4" height="10" rx="2" fill="#16A34A" />
+        <path d="M-8,-2 L-5,2 L-2,-2" fill="#1E1B4B" />
+        <path d="M3,-2 L6,2 L9,-2" fill="#1E1B4B" />
+        <path d="M-6,8 L-3,5 L0,8 L3,5 L6,8" stroke="#1E1B4B" strokeWidth="1.5" fill="none" />
+        <circle cx="0" cy="5" r="16" fill="#FDE68A" opacity="0.05" />
+      </g>
+      {[40, 60].map((x, i) => (
+        <g key={i} transform={`translate(${x},${65 + i * 10})`}>
+          <ellipse cx="0" cy="0" rx="5" ry="4" fill="#9CA3AF" opacity="0.5" />
+          <rect x="-3" y="4" width="2" height="6" fill="#6B7280" opacity="0.4" />
+          <rect x="1" y="4" width="2" height="6" fill="#6B7280" opacity="0.4" />
+          <circle cx="-1" cy="-1" r="0.8" fill="#1E1B4B" opacity="0.4" />
+          <circle cx="2" cy="-1" r="0.8" fill="#1E1B4B" opacity="0.4" />
+        </g>
+      ))}
+      <g transform="translate(220,60)" opacity="0.5">
+        <path d="M0,0 Q-8,-5 -3,-10 Q2,-5 0,0" fill="#6B7280" />
+        <path d="M0,0 Q8,-5 3,-10 Q-2,-5 0,0" fill="#9CA3AF" />
+        <ellipse cx="0" cy="4" rx="3" ry="8" fill="#1E1B4B" opacity="0.4" />
+      </g>
+      <g transform="translate(260,50)" opacity="0.4">
+        <path d="M0,0 Q-6,-4 -2,-8 Q2,-4 0,0" fill="#6B7280" />
+        <path d="M0,0 Q6,-4 2,-8 Q-2,-4 0,0" fill="#9CA3AF" />
+      </g>
+    </svg>
+  );
+}
+
 const themeIllustrations: Record<string, React.FC> = {
   "space-adventure": SpaceIllustration,
   "dinosaur-discovery": DinoIllustration,
@@ -608,6 +877,12 @@ const themeIllustrations: Record<string, React.FC> = {
   "royal-quest": CastleIllustration,
   "superhero-origin": SuperheroIllustration,
   "kindness-courage": KindnessIllustration,
+  "pirate-treasure": PirateIllustration,
+  "fairy-garden": FairyIllustration,
+  "safari-adventure": SafariIllustration,
+  "time-travel": TimeTravelIllustration,
+  "christmas-magic": ChristmasIllustration,
+  "halloween-adventure": HalloweenIllustration,
 };
 
 interface ThemeShowcaseProps {
@@ -679,7 +954,7 @@ export default function ThemeShowcase({ themes }: ThemeShowcaseProps) {
         {/* Section header */}
         <div className="text-center mb-12">
           <div className="inline-block bg-[#FF9F1C] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
-            <span className="font-body font-bold text-sm text-[#1a1a2e]">6 magical worlds 🌍</span>
+            <span className="font-body font-bold text-sm text-[#1a1a2e]">12 magical worlds 🌍</span>
           </div>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
             Choose Their Adventure!

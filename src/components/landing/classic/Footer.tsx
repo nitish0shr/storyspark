@@ -48,7 +48,7 @@ export default function Footer() {
 
           <p className="text-lg text-white/50 mb-10 max-w-xl mx-auto leading-relaxed">
             Create a magical, personalized storybook your child will treasure forever.
-            Upload a photo and be done in 2 minutes.
+            Free preview — no credit card needed!
           </p>
 
           <Link href="/create">
