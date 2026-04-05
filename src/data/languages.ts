@@ -23,3 +23,9 @@ export function getLanguageByCode(code: string): SupportedLanguage | undefined {
 export function getLanguageName(code: string): string {
   return getLanguageByCode(code)?.name ?? "English";
 }
+
+export const supportedLanguageCodes = supportedLanguages.map((l) => l.code);
+
+export function isValidLanguageCode(code: string): boolean {
+  return supportedLanguageCodes.includes(code);
+}
