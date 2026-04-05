@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Sparkles, Star, Heart, Zap } from "lucide-react";
 
 /* ── Decorative doodle components ── */
@@ -162,82 +163,15 @@ export default function Hero() {
                     boxShadow: "8px 8px 0px #1a1a2e",
                   }}
                 >
-                  {/* Cover gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#9B59B6] via-[#7B2D8B] to-[#5A1E73]" />
-
-                  {/* Polka dots pattern */}
-                  <div className="absolute inset-0 opacity-10"
-                    style={{
-                      backgroundImage: "radial-gradient(circle, white 2px, transparent 2px)",
-                      backgroundSize: "18px 18px",
-                    }}
+                  {/* AI-generated book cover */}
+                  <Image
+                    src="/images/demo/book-cover.png"
+                    alt="Sample personalized storybook cover featuring a child as the hero"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 256px, 288px"
+                    priority
                   />
-
-                  {/* Cover content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                    {/* Rainbow arc at top */}
-                    <div className="absolute top-4 left-0 right-0 flex justify-center">
-                      <svg viewBox="0 0 200 40" className="w-40 h-8 opacity-40" fill="none">
-                        <path d="M10 35 Q100 -10 190 35" stroke="#FF6B6B" strokeWidth="6" fill="none" strokeLinecap="round" />
-                        <path d="M18 35 Q100 0 182 35" stroke="#FFD166" strokeWidth="6" fill="none" strokeLinecap="round" />
-                        <path d="M26 35 Q100 8 174 35" stroke="#06D6A0" strokeWidth="6" fill="none" strokeLinecap="round" />
-                        <path d="M34 35 Q100 16 166 35" stroke="#4FC3F7" strokeWidth="6" fill="none" strokeLinecap="round" />
-                      </svg>
-                    </div>
-
-                    {/* Child avatar circle */}
-                    <div className="relative w-28 h-28 rounded-full bg-white/20 border-3 border-white/40 flex items-center justify-center mb-4"
-                      style={{ border: "3px solid rgba(255,255,255,0.5)" }}
-                    >
-                      <svg viewBox="0 0 80 80" className="w-20 h-20" fill="none">
-                        <defs>
-                          <radialGradient id="skin" cx="40%" cy="35%">
-                            <stop offset="0%" stopColor="#FED7AA" />
-                            <stop offset="100%" stopColor="#FECACA" />
-                          </radialGradient>
-                          <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#FFD166" />
-                            <stop offset="100%" stopColor="#FF9F1C" />
-                          </linearGradient>
-                        </defs>
-                        <circle cx="36" cy="30" r="13" fill="url(#skin)" />
-                        <path d="M23 28C23 19 30 15 36 15C42 15 49 19 49 28C49 26 44 22 36 22C28 22 23 26 23 28Z" fill="#7C2D12" />
-                        <circle cx="31" cy="30" r="2" fill="#1E1B4B" />
-                        <circle cx="41" cy="30" r="2" fill="#1E1B4B" />
-                        <circle cx="31.5" cy="29.5" r="0.6" fill="white" />
-                        <circle cx="41.5" cy="29.5" r="0.6" fill="white" />
-                        <circle cx="27" cy="33" r="3" fill="#F9A8D4" opacity="0.4" />
-                        <circle cx="45" cy="33" r="3" fill="#F9A8D4" opacity="0.4" />
-                        <path d="M32 36C32 36 36 40 40 36" stroke="#1E1B4B" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-                        <path d="M22 46C22 40 29 43 36 43C43 43 50 40 50 46L52 64L20 64L22 46Z" fill="url(#shirt)" />
-                        <path d="M22 48L14 38" stroke="#FECACA" strokeWidth="5" strokeLinecap="round" />
-                        <path d="M50 48L58 38" stroke="#FECACA" strokeWidth="5" strokeLinecap="round" />
-                        <circle cx="13" cy="37" r="4" fill="#FED7AA" />
-                        <circle cx="59" cy="37" r="4" fill="#FED7AA" />
-                        <rect x="27" y="62" width="7" height="13" rx="3.5" fill="#7B2D8B" />
-                        <rect x="38" y="62" width="7" height="13" rx="3.5" fill="#7B2D8B" />
-                        <ellipse cx="30.5" cy="75" rx="6" ry="3.5" fill="#FF6B6B" />
-                        <ellipse cx="41.5" cy="75" rx="6" ry="3.5" fill="#FF6B6B" />
-                        {/* Cape */}
-                        <path d="M22 46 Q18 58 16 70 Q28 65 36 68 Q44 65 56 70 Q54 58 50 46" fill="#FF6B6B" opacity="0.7" />
-                      </svg>
-                    </div>
-
-                    {/* Stars row */}
-                    <div className="flex gap-1 mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 text-[#FFD166] fill-[#FFD166]" />
-                      ))}
-                    </div>
-
-                    <h3 className="font-heading text-white text-lg font-bold leading-tight mb-1">
-                      Your Child&apos;s<br />Adventure
-                    </h3>
-                    <div className="w-12 h-1 bg-white/40 rounded-full mx-auto mb-2" />
-                    <p className="text-white/60 text-[10px] font-bold tracking-[0.2em] uppercase">
-                      A StorySpark Book
-                    </p>
-                  </div>
 
                   {/* Glossy sheen */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/12 to-transparent" />
