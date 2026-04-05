@@ -15,6 +15,7 @@ import {
   Gift,
 } from "lucide-react";
 import { PRICING } from "@/lib/stripe";
+import SubscribeButton from "./SubscribeButton";
 
 const oneTimeFeatures = [
   { icon: BookOpen, text: "Personalized 12-page storybook" },
@@ -146,12 +147,7 @@ export default function Pricing() {
               ))}
             </ul>
 
-            <Link href="/create" className="block">
-              <button className="btn-chunky w-full flex items-center justify-center gap-2 bg-[#7B2D8B] text-white font-heading font-bold text-lg px-8 py-4">
-                <Crown className="h-5 w-5" />
-                Join Book Club!
-              </button>
-            </Link>
+            <SubscribeButton />
 
             <div className="flex items-center justify-center gap-2 mt-4 text-xs text-[#1a1a2e]/60 font-body font-bold">
               <ShieldCheck className="h-4 w-4 text-[#06D6A0]" />
