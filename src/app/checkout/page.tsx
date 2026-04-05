@@ -58,7 +58,7 @@ export default async function CheckoutPage({
   // Fetch book details
   const { data: book } = await supabaseAdmin
     .from("books")
-    .select("id, child_name, theme_title, status, user_id, is_purchased")
+    .select("id, child_name, theme_title, status, user_id, is_purchased, dedication")
     .eq("id", bookId)
     .single();
 
@@ -153,6 +153,7 @@ export default async function CheckoutPage({
           bookId={bookId}
           childName={book.child_name}
           tiers={tiers}
+          dedication={book.dedication}
         />
       </main>
     </div>
