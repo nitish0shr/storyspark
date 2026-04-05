@@ -33,7 +33,7 @@ const baloo = Baloo_2({
 export const metadata: Metadata = {
   title: "StorySpark — Personalized AI Storybooks for Kids",
   description:
-    "Upload a photo, pick an adventure, and AI creates a beautiful personalized storybook with your child as the hero. Digital delivery in under 2 minutes.",
+    "Upload a photo, pick an adventure, and AI creates a beautiful personalized storybook with your child as the hero. Free preview — no credit card needed!",
   keywords: [
     "personalized children's book",
     "AI storybook",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "StorySpark — Your Child Is the Star of Their Own Storybook",
     description:
-      "Upload a photo, pick an adventure theme, and get a beautifully illustrated storybook featuring your child in under 2 minutes.",
+      "Upload a photo, pick an adventure theme, and get a beautifully illustrated storybook featuring your child. Free preview in about 2 minutes!",
     type: "website",
   },
 };

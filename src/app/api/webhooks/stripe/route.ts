@@ -262,7 +262,7 @@ function buildOrderConfirmationEmail(data: {
         Thank you for your order! ${data.childName}'s personalized storybook is being created right now. Our AI illustrators are hard at work bringing the story to life.
       </p>
       <p style="margin:0 0 24px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        You'll be able to download your book as a PDF and view it in your browser once it's ready (usually under 2 minutes).
+        You'll be able to download your book as a PDF and view it in your browser once it's ready (usually about 2 minutes).
       </p>
 
       <!-- CTA Button -->
