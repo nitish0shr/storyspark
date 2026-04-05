@@ -4,20 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Sparkles, Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, Sparkles, BookOpen } from "lucide-react";
 
 interface NavbarUser {
   id: string;
@@ -25,7 +12,6 @@ interface NavbarUser {
   name?: string;
   avatarUrl?: string;
 }
-
 interface NavbarProps {
   user?: NavbarUser | null;
 }
@@ -47,219 +33,118 @@ export default function Navbar({ user }: NavbarProps) {
     router.refresh();
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user?.email
-      ? user.email[0].toUpperCase()
-      : "U";
-
   return (
-    <nav className="sticky top-0 z-50 w-full bg-[#0D0720]/80 backdrop-blur-xl border-b border-white/10">
+    <nav className="sticky top-0 z-50 w-full bg-[#FFFBF0]/95 backdrop-blur-md border-b-[2.5px] border-[#1a1a2e]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
+
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <Sparkles className="h-4 w-4 text-white" />
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-[#FFD166] border-2 border-[#1a1a2e] flex items-center justify-center shadow-[3px_3px_0px_#1a1a2e] group-hover:shadow-[1px_1px_0px_#1a1a2e] group-hover:translate-x-[2px] group-hover:translate-y-[2px] transition-all duration-150">
+              <Sparkles className="h-4 w-4 text-[#1a1a2e]" />
             </div>
-            <span className="font-heading text-xl font-bold text-white">
-              StorySpark
+            <span className="font-heading text-xl font-bold text-[#1a1a2e]">
+              Story<span className="text-[#7B2D8B]">Spark</span>
             </span>
           </Link>
 
-          {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-7">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+                className="font-body font-700 text-sm font-bold text-[#1a1a2e]/70 hover:text-[#7B2D8B] transition-colors"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          {/* Desktop Right Side */}
+          {/* Desktop right */}
           <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger className="outline-none">
-                  <Avatar className="cursor-pointer ring-2 ring-violet-100 hover:ring-violet-200 transition-all">
-                    {user.avatarUrl && (
-                      <AvatarImage src={user.avatarUrl} alt={user.name || "User"} />
-                    )}
-                    <AvatarFallback className="bg-gradient-to-br from-[#7C3AED] to-[#EC4899] text-white text-xs font-medium">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
-                  <div className="px-2 py-1.5">
-                    {user.name && (
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                    )}
-                    {user.email && (
-                      <p className="text-xs text-gray-500 truncate max-w-[200px]">
-                        {user.email}
-                      </p>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => router.push("/dashboard")}
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2 text-gray-500" />
-                    Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => router.push("/dashboard")}
-                  >
-                    <User className="h-4 w-4 mr-2 text-gray-500" />
-                    Account
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-red-600 focus:text-red-600"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <Link href="/dashboard">
+                  <button className="flex items-center gap-2 font-body font-bold text-sm text-[#1a1a2e]/70 hover:text-[#7B2D8B] transition-colors px-3 py-2">
+                    <BookOpen className="h-4 w-4" />
+                    My Books
+                  </button>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="font-body font-bold text-sm text-[#1a1a2e]/60 hover:text-coral-brand transition-colors px-3 py-2"
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <>
                 <Link href="/auth/login">
-                  <Button
-                    variant="ghost"
-                    className="text-sm font-medium text-white/70 hover:text-white hover:bg-white/10"
-                  >
+                  <button className="font-body font-bold text-sm text-[#1a1a2e]/70 hover:text-[#7B2D8B] transition-colors px-3 py-2">
                     Sign In
-                  </Button>
+                  </button>
                 </Link>
                 <Link href="/create">
-                  <Button className="rounded-full bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-400 hover:to-pink-400 text-white font-semibold text-sm px-5 shadow-lg shadow-violet-900/40 transition-all duration-200 border-0">
-                    <Sparkles className="h-4 w-4 mr-1.5" />
-                    Create Your Book
-                  </Button>
+                  <button className="btn-chunky flex items-center gap-2 bg-[#FFD166] text-[#1a1a2e] font-heading font-bold text-sm px-5 py-2.5">
+                    <Sparkles className="h-4 w-4" />
+                    Create a Book
+                  </button>
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile Hamburger */}
+          {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            className="md:hidden p-2 rounded-xl border-2 border-[#1a1a2e] bg-white shadow-[2px_2px_0px_#1a1a2e] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
           >
-            {mobileOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/10 bg-[#0D0720]">
-          <div className="px-4 py-4 space-y-1">
+        <div className="md:hidden border-t-[2.5px] border-[#1a1a2e] bg-[#FFFBF0]">
+          <div className="px-4 py-5 space-y-2">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="block px-4 py-2.5 rounded-xl font-body font-bold text-sm text-[#1a1a2e] hover:bg-[#FFD166]/40 transition-colors"
               >
                 {link.label}
               </a>
             ))}
-
-            <div className="pt-3 border-t border-white/10">
+            <div className="pt-3 border-t-2 border-dashed border-[#1a1a2e]/20 space-y-2">
               {user ? (
                 <>
-                  <div className="flex items-center gap-3 px-3 py-2.5">
-                    <Avatar size="sm">
-                      {user.avatarUrl && (
-                        <AvatarImage src={user.avatarUrl} alt={user.name || "User"} />
-                      )}
-                      <AvatarFallback className="bg-gradient-to-br from-[#7C3AED] to-[#EC4899] text-white text-xs font-medium">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      {user.name && (
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {user.name}
-                        </p>
-                      )}
-                      {user.email && (
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                      )}
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:text-[#7C3AED] hover:bg-violet-50 transition-colors"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
+                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="block">
+                    <button className="w-full btn-chunky bg-white text-[#1a1a2e] font-heading font-bold text-sm px-5 py-3">
+                      My Books
+                    </button>
                   </Link>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:text-[#7C3AED] hover:bg-violet-50 transition-colors"
-                  >
-                    <User className="h-4 w-4" />
-                    Account
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setMobileOpen(false);
-                      handleSignOut();
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
+                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2.5 font-body font-bold text-sm text-[#1a1a2e]/60">
                     Sign Out
                   </button>
                 </>
               ) : (
-                <div className="space-y-2 px-3">
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="block w-full"
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-xl border-white/20 text-white/80 hover:bg-white/10 font-medium bg-transparent"
-                    >
+                <>
+                  <Link href="/auth/login" onClick={() => setMobileOpen(false)} className="block">
+                    <button className="w-full btn-chunky bg-white text-[#1a1a2e] font-heading font-bold text-sm px-5 py-3">
                       Sign In
-                    </Button>
+                    </button>
                   </Link>
-                  <Link
-                    href="/create"
-                    onClick={() => setMobileOpen(false)}
-                    className="block w-full"
-                  >
-                    <Button className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold shadow-lg border-0">
-                      <Sparkles className="h-4 w-4 mr-1.5" />
-                      Create Your Book
-                    </Button>
+                  <Link href="/create" onClick={() => setMobileOpen(false)} className="block">
+                    <button className="w-full btn-chunky flex items-center justify-center gap-2 bg-[#FFD166] text-[#1a1a2e] font-heading font-bold text-sm px-5 py-3">
+                      <Sparkles className="h-4 w-4" />
+                      Create a Book
+                    </button>
                   </Link>
-                </div>
+                </>
               )}
             </div>
           </div>

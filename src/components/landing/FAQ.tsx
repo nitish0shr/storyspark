@@ -57,30 +57,30 @@ const faqs = [
 
 export default function FAQ() {
   return (
-    <section id="faq" className="py-20 sm:py-28 relative">
+    <section id="faq" className="py-20 sm:py-28 relative bg-[#E0F4FD]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-14">
-          <p className="text-sm font-semibold uppercase tracking-wider text-violet-600 mb-3">
-            Questions?
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Frequently Asked Questions
+          <div className="inline-block bg-[#4FC3F7] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
+            <span className="font-body font-bold text-sm text-[#1a1a2e]">Got questions? 🤔</span>
+          </div>
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
+            You Asked, We Answer!
           </h2>
         </div>
 
         {/* Accordion */}
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-3">
           <Accordion className="space-y-3">
             {faqs.map((faq, index) => (
               <AccordionItem
                 key={index}
-                className="border border-violet-100/60 rounded-xl bg-white/80 backdrop-blur-sm px-6 data-[open]:shadow-md data-[open]:shadow-violet-100/30 transition-shadow"
+                className="bg-white border-2 border-[#1a1a2e] rounded-2xl px-6 shadow-[4px_4px_0px_#1a1a2e] transition-shadow"
               >
-                <AccordionTrigger className="text-left font-heading text-base font-semibold text-gray-900 hover:text-violet-700 hover:no-underline py-4 data-[open]:text-violet-700">
+                <AccordionTrigger className="text-left font-heading text-base font-bold text-[#1a1a2e] hover:text-[#7B2D8B] hover:no-underline py-4 data-[open]:text-[#7B2D8B]">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-gray-600 leading-relaxed pb-4">
+                <AccordionContent className="font-body text-sm text-[#1a1a2e]/70 leading-relaxed pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
