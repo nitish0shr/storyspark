@@ -5,6 +5,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { generateFullBook } from "@/services/book-pipeline";
 import { getAppUrl } from "@/lib/utils";
+import { getNextThemeForSubscriber } from "@/services/theme-rotation";
+import { generatePreview } from "@/services/book-pipeline";
 
 export async function POST(request: NextRequest) {
   if (!isStripeConfigured() || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -54,8 +56,32 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        await handleSubscriptionUpdated(
+          event.data.object as Stripe.Subscription
+        );
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        await handleSubscriptionDeleted(
+          event.data.object as Stripe.Subscription
+        );
+        break;
+      }
+
+      case "invoice.payment_succeeded": {
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+      }
+
       default:
-        // Unhandled event type — ignore
         break;
     }
   } catch (error) {
@@ -322,4 +348,246 @@ function buildGiftNotificationEmail(data: {
   </div>
 </body>
 </html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Subscription event handlers
+// ---------------------------------------------------------------------------
+
+function mapStripeSubStatus(status: string): string {
+  switch (status) {
+    case "active":
+      return "active";
+    case "past_due":
+      return "past_due";
+    case "canceled":
+      return "canceled";
+    case "paused":
+      return "paused";
+    case "incomplete":
+    case "incomplete_expired":
+      return "incomplete";
+    case "trialing":
+      return "active";
+    case "unpaid":
+      return "past_due";
+    default:
+      console.warn(`Unknown Stripe subscription status: ${status}, treating as incomplete`);
+      return "incomplete";
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const metadata = subscription.metadata ?? {};
+  const userId = metadata.user_id;
+  const childProfileId = metadata.child_profile_id;
+
+  if (!userId || !childProfileId) {
+    console.error("Missing user_id or child_profile_id in subscription metadata");
+    return;
+  }
+
+  const status = mapStripeSubStatus(subscription.status);
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id ?? null;
+
+  const periodStart = subscription.current_period_start
+    ? new Date(subscription.current_period_start * 1000).toISOString()
+    : null;
+  const periodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : null;
+
+  const { data: existing } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+
+  if (existing) {
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        status,
+        stripe_customer_id: customerId,
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+  } else {
+    await supabaseAdmin.from("subscriptions").insert({
+      user_id: userId,
+      child_profile_id: childProfileId,
+      stripe_subscription_id: subscription.id,
+      stripe_customer_id: customerId,
+      status,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+    });
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  await supabaseAdmin
+    .from("subscriptions")
+    .update({
+      status: "canceled",
+      cancel_at_period_end: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const subId =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : (invoice.subscription as Stripe.Subscription | null)?.id ?? null;
+
+  if (!subId) return;
+
+  if (invoice.billing_reason === "subscription_create") {
+    return;
+  }
+
+  const invoiceId = invoice.id;
+  if (invoiceId) {
+    const { data: existingBook } = await supabaseAdmin
+      .from("books")
+      .select("id")
+      .eq("stripe_invoice_id", invoiceId)
+      .maybeSingle();
+
+    if (existingBook) {
+      console.log(`Book already created for invoice ${invoiceId}, skipping`);
+      return;
+    }
+  }
+
+  const { data: sub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("*")
+    .eq("stripe_subscription_id", subId)
+    .single();
+
+  if (!sub || sub.status !== "active") return;
+
+  const nextTheme = getNextThemeForSubscriber(sub.used_theme_ids || []);
+  if (!nextTheme) {
+    console.warn(`No available themes for subscription ${sub.id}`);
+    return;
+  }
+
+  const { data: book, error: bookError } = await supabaseAdmin
+    .from("books")
+    .insert({
+      user_id: sub.user_id,
+      child_profile_id: sub.child_profile_id,
+      theme_id: nextTheme,
+      status: "draft",
+      language: "en",
+      subscription_id: sub.id,
+      stripe_invoice_id: invoice.id || null,
+      contextual_answers: {},
+    })
+    .select("id")
+    .single();
+
+  if (bookError || !book) {
+    console.error("Failed to create subscription book:", bookError);
+    return;
+  }
+
+  await supabaseAdmin
+    .from("subscriptions")
+    .update({
+      used_theme_ids: [...(sub.used_theme_ids || []), nextTheme],
+      books_generated: (sub.books_generated || 0) + 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sub.id);
+
+  generatePreview(book.id)
+    .then(() => generateFullBook(book.id))
+    .catch((err: Error) => {
+      console.error(`Subscription book generation failed for ${book.id}:`, err);
+      supabaseAdmin
+        .from("books")
+        .update({ status: "failed" })
+        .eq("id", book.id);
+    });
+
+  const appUrl = getAppUrl();
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("email, full_name")
+    .eq("id", sub.user_id)
+    .single();
+
+  const { data: child } = await supabaseAdmin
+    .from("child_profiles")
+    .select("name")
+    .eq("id", sub.child_profile_id)
+    .single();
+
+  if (profile?.email && isResendConfigured()) {
+    try {
+      await resend.emails.send({
+        from: RESEND_FROM_EMAIL,
+        to: profile.email,
+        subject: `${child?.name || "Your child"}'s new monthly StorySpark book is ready!`,
+        html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
+    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
+      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">StorySpark</h1>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">Your monthly book is here!</p>
+    </div>
+    <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
+      <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${profile.full_name || "there"}!</h2>
+      <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
+        Great news! ${child?.name || "Your child"}'s new monthly storybook is being created right now. It'll be ready in your dashboard shortly.
+      </p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${appUrl}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
+          View Your Books
+        </a>
+      </div>
+    </div>
+    <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
+      <p style="margin:0;">Made with love by StorySpark</p>
+    </div>
+  </div>
+</body>
+</html>`,
+      });
+    } catch (emailErr) {
+      console.error("Failed to send subscription renewal email:", emailErr);
+    }
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const subId =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : (invoice.subscription as Stripe.Subscription | null)?.id ?? null;
+
+  if (!subId) return;
+
+  await supabaseAdmin
+    .from("subscriptions")
+    .update({
+      status: "past_due",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subId);
 }

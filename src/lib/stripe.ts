@@ -32,6 +32,8 @@ export const PRICING = {
   base: { cents: 999, label: "$9.99", name: "Digital Book" },
   mid: { cents: 1999, label: "$19.99", name: "Deluxe Digital" },
   premium: { cents: 3499, label: "$34.99", name: "Premium Bundle" },
+  subscription: { cents: 799, label: "$7.99", name: "Monthly Book Club", interval: "month" as const },
+  subscriberDiscount: 0.15,
 } as const;
 
 /** @deprecated Use PRICING object instead */

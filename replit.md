@@ -71,6 +71,7 @@ src/
     story-generation.ts   # GPT-4o-mini story generation (multi-language, dual-character)
     illustration.ts       # Replicate Flux illustration generation (supports second child)
     pdf-assembly.tsx      # PDF rendering with @react-pdf/renderer (Noto Sans fonts for CJK/Devanagari)
+    theme-rotation.ts     # Rotating theme selection for monthly subscribers
   data/                   # Theme definitions, languages config
     languages.ts          # Supported languages (en, es, fr, de, pt, it, hi, zh)
   types/                  # TypeScript types

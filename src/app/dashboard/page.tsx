@@ -9,7 +9,8 @@ import Navbar from "@/components/shared/Navbar";
 import ChildProfileCard from "@/components/dashboard/ChildProfileCard";
 import BookLibrary from "@/components/dashboard/BookLibrary";
 import OrderHistory from "@/components/dashboard/OrderHistory";
-import { Sparkles, Plus, UserPlus, BookOpen, Receipt } from "lucide-react";
+import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
+import { Sparkles, Plus, UserPlus, BookOpen, Receipt, Crown } from "lucide-react";
 
 export const metadata = {
   title: "Dashboard | StorySpark",
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
   }
 
   // Fetch data in parallel
-  const [childProfilesRes, booksRes, ordersRes] = await Promise.all([
+  const [childProfilesRes, booksRes, ordersRes, subscriptionsRes] = await Promise.all([
     supabase
       .from("child_profiles")
       .select("*")
@@ -50,6 +51,13 @@ export default async function DashboardPage() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .in("status", ["active", "paused", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
 
   // Map snake_case DB columns to camelCase types
@@ -103,6 +111,7 @@ export default async function DashboardPage() {
     emailDelivered: row.email_delivered,
     createdAt: row.created_at,
   }));
+  const activeSubscription = (subscriptionsRes.data ?? [])[0] ?? null;
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const navUser = {
@@ -127,6 +136,12 @@ export default async function DashboardPage() {
             <p className="text-gray-500 mt-1">
               Manage your storybooks and create new adventures.
             </p>
+            {activeSubscription && (
+              <span className="inline-flex items-center gap-1.5 mt-2 bg-gradient-to-r from-violet-100 to-pink-100 border border-violet-200 text-violet-700 text-xs font-semibold px-3 py-1 rounded-full">
+                <Crown className="h-3.5 w-3.5" />
+                Book Club Member
+              </span>
+            )}
           </div>
           <Link
             href="/create"
@@ -196,6 +211,37 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Subscription Section */}
+        {activeSubscription && (
+          <section className="mb-12">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100">
+                <Crown className="h-4 w-4 text-violet-600" />
+              </div>
+              <h2 className="font-heading text-xl font-bold text-gray-900">
+                My Subscription
+              </h2>
+            </div>
+            <div className="max-w-md">
+              <SubscriptionCard
+                subscription={{
+                  id: activeSubscription.id,
+                  status: activeSubscription.status,
+                  current_period_end: activeSubscription.current_period_end,
+                  cancel_at_period_end: activeSubscription.cancel_at_period_end,
+                  books_generated: activeSubscription.books_generated ?? 0,
+                  child_profile_id: activeSubscription.child_profile_id,
+                }}
+                childName={
+                  childProfiles.find(
+                    (c) => c.id === activeSubscription.child_profile_id
+                  )?.name ?? "Your child"
+                }
+              />
+            </div>
+          </section>
+        )}
 
         {/* Book Library Section */}
         <section className="mb-12">
