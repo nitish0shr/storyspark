@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { assemblePdf } from "@/services/pdf-assembly";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Database not configured." },
+        { status: 503 }
+      );
+    }
     // Authenticate user
     const supabase = await createClient();
     const {

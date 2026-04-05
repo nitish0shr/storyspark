@@ -2,11 +2,19 @@ import OpenAI from "openai";
 
 let _openai: OpenAI | null = null;
 
+export function isOpenAIConfigured(): boolean {
+  return !!process.env.OPENAI_API_KEY;
+}
+
 export function getOpenAI(): OpenAI {
   if (!_openai) {
-    _openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY!,
-    });
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) {
+      throw new Error(
+        "OpenAI is not configured. Set OPENAI_API_KEY to enable story generation."
+      );
+    }
+    _openai = new OpenAI({ apiKey: key });
   }
   return _openai;
 }
