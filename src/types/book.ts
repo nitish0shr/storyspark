@@ -15,6 +15,7 @@ export interface Book {
   id: string;
   userId: string;
   childProfileId: string;
+  secondChildProfileId: string | null;
   themeId: string;
   language: string;
   status: BookStatus;

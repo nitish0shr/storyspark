@@ -128,6 +128,13 @@ async function generateSingleIllustration(
  * @param params.pageNumbers - If provided, only generate for these page numbers (1-indexed)
  * @returns Array of image URLs in the same order as input pages/pageNumbers
  */
+export interface SecondChildAppearance {
+  name: string;
+  age: number;
+  gender: string;
+  appearanceProfile: AppearanceProfile;
+}
+
 export async function generateIllustrations(params: {
   storyPages: BookPage[];
   appearanceProfile: AppearanceProfile;
@@ -136,6 +143,7 @@ export async function generateIllustrations(params: {
   childGender: string;
   sceneDescriptions: string[];
   pageNumbers?: number[];
+  secondChild?: SecondChildAppearance;
 }): Promise<string[]> {
   const {
     storyPages,
@@ -145,6 +153,7 @@ export async function generateIllustrations(params: {
     childGender,
     sceneDescriptions,
     pageNumbers,
+    secondChild,
   } = params;
 
   const outfit =
@@ -152,22 +161,19 @@ export async function generateIllustrations(params: {
   const genderLabel = childGender === "neutral" ? "child" : childGender;
   const ageLabel = childAge < 0 ? "baby" : String(childAge);
 
-  // Determine which pages to generate illustrations for
   const targetPages = pageNumbers
     ? storyPages.filter((p) => pageNumbers.includes(p.pageNumber))
     : storyPages;
 
-  // Build prompts for each target page
   const prompts: string[] = targetPages.map((page) => {
-    // Use the scene description from skeleton, falling back to a generic one
     const sceneIdx = page.pageNumber - 1;
     const scene =
       sceneDescriptions[sceneIdx] ||
       `A scene from the story: ${page.text.substring(0, 100)}`;
 
-    return fillPromptTemplate(ILLUSTRATION_PROMPT_TEMPLATE, {
+    let prompt = fillPromptTemplate(ILLUSTRATION_PROMPT_TEMPLATE, {
       scene_description: scene,
-      name: "the child", // Keep generic in image prompts for better generation
+      name: secondChild ? "the first child" : "the child",
       age: ageLabel,
       gender: genderLabel,
       skin_tone: appearanceProfile.skinTone,
@@ -176,6 +182,15 @@ export async function generateIllustrations(params: {
       eye_color: appearanceProfile.eyeColor,
       outfit_for_theme: outfit,
     });
+
+    if (secondChild) {
+      const g2 = secondChild.gender === "neutral" ? "child" : secondChild.gender;
+      const a2 = secondChild.age < 0 ? "baby" : String(secondChild.age);
+      const ap = secondChild.appearanceProfile;
+      prompt += `\n\nSecond main character: A ${a2}-year-old ${g2} with ${ap.skinTone} skin, ${ap.hairColor} ${ap.hairStyle} hair, and ${ap.eyeColor} eyes. Also wearing ${outfit}. Both children should appear together in every scene, interacting and adventuring side by side.`;
+    }
+
+    return prompt;
   });
 
   // Generate illustrations in parallel with concurrency limit of 3

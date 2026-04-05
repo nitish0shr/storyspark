@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Baby, User, Smile, ArrowRight } from "lucide-react";
+import { Baby, User, Smile, ArrowRight, UserPlus, X } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
 const ageOptions = [
@@ -31,62 +31,53 @@ const genderOptions = [
   { value: "neutral" as const, label: "Prefer not to say", icon: User },
 ];
 
-export function StepChildInfo() {
-  const {
-    childName,
-    childAge,
-    childGender,
-    setChildName,
-    setChildAge,
-    setChildGender,
-    nextStep,
-  } = useWizardStore();
-
-  const posthog = usePostHog();
-
-  const isValid = childName.trim().length > 0 && childAge !== -1 && childGender !== "";
-
+function ChildForm({
+  label,
+  name,
+  age,
+  gender,
+  onNameChange,
+  onAgeChange,
+  onGenderChange,
+}: {
+  label: string;
+  name: string;
+  age: number;
+  gender: string;
+  onNameChange: (n: string) => void;
+  onAgeChange: (a: number) => void;
+  onGenderChange: (g: "boy" | "girl" | "neutral") => void;
+}) {
   return (
-    <div className="mx-auto max-w-lg space-y-8">
-      <div className="text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
-          Tell us about your little one
-        </h2>
-        <p className="mt-2 text-gray-500">
-          We&apos;ll use this to personalize every page of the story.
-        </p>
-      </div>
-
-      {/* Name */}
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="childName" className="text-sm font-medium text-gray-700">
-          Child&apos;s first name
+        <Label htmlFor={`${label}-name`} className="text-sm font-medium text-gray-700">
+          {label}&apos;s first name
         </Label>
         <Input
-          id="childName"
+          id={`${label}-name`}
           type="text"
           placeholder="e.g. Emma"
-          value={childName}
-          onChange={(e) => setChildName(e.target.value)}
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
           className="h-12 rounded-xl border-gray-200 bg-white px-4 text-base focus-visible:border-violet-400 focus-visible:ring-violet-200"
         />
       </div>
 
-      {/* Age */}
       <div className="space-y-2">
-        <Label htmlFor="childAge" className="text-sm font-medium text-gray-700">
+        <Label htmlFor={`${label}-age`} className="text-sm font-medium text-gray-700">
           Age{" "}
           <span className="font-normal text-gray-400">(adjusts story reading level)</span>
         </Label>
         <div className="relative">
           <select
-            id="childAge"
-            value={childAge}
-            onChange={(e) => setChildAge(Number(e.target.value))}
+            id={`${label}-age`}
+            value={age}
+            onChange={(e) => onAgeChange(Number(e.target.value))}
             className={cn(
               "h-12 w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 pr-10 text-base outline-none transition-colors",
               "focus:border-violet-400 focus:ring-2 focus:ring-violet-200",
-              childAge === -1 && "text-gray-400"
+              age === -1 && "text-gray-400"
             )}
           >
             <option value={-1} disabled>
@@ -99,35 +90,24 @@ export function StepChildInfo() {
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg
-              className="h-4 w-4 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
+            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </div>
       </div>
 
-      {/* Gender */}
       <div className="space-y-3">
         <Label className="text-sm font-medium text-gray-700">Gender</Label>
         <div className="grid grid-cols-3 gap-3">
           {genderOptions.map((option) => {
             const Icon = option.icon;
-            const isSelected = childGender === option.value;
+            const isSelected = gender === option.value;
             return (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setChildGender(option.value)}
+                onClick={() => onGenderChange(option.value)}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200",
                   "hover:border-violet-300 hover:bg-violet-50/50",
@@ -139,9 +119,7 @@ export function StepChildInfo() {
                 <div
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                    isSelected
-                      ? "bg-violet-600 text-white"
-                      : "bg-gray-100 text-gray-500"
+                    isSelected ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-500"
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -159,11 +137,108 @@ export function StepChildInfo() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Next */}
+export function StepChildInfo() {
+  const {
+    childName,
+    childAge,
+    childGender,
+    setChildName,
+    setChildAge,
+    setChildGender,
+    hasSecondChild,
+    secondChildName,
+    secondChildAge,
+    secondChildGender,
+    setHasSecondChild,
+    setSecondChildName,
+    setSecondChildAge,
+    setSecondChildGender,
+    nextStep,
+  } = useWizardStore();
+
+  const posthog = usePostHog();
+
+  const firstValid = childName.trim().length > 0 && childAge !== -1 && childGender !== "";
+  const secondValid = !hasSecondChild || (
+    secondChildName.trim().length > 0 && secondChildAge !== -1 && secondChildGender !== ""
+  );
+  const isValid = firstValid && secondValid;
+
+  return (
+    <div className="mx-auto max-w-lg space-y-8">
+      <div className="text-center">
+        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
+          Tell us about your little one{hasSecondChild ? "s" : ""}
+        </h2>
+        <p className="mt-2 text-gray-500">
+          We&apos;ll use this to personalize every page of the story.
+        </p>
+      </div>
+
+      <ChildForm
+        label="Child"
+        name={childName}
+        age={childAge}
+        gender={childGender}
+        onNameChange={setChildName}
+        onAgeChange={setChildAge}
+        onGenderChange={setChildGender}
+      />
+
+      {!hasSecondChild ? (
+        <button
+          type="button"
+          onClick={() => setHasSecondChild(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-sm font-medium text-gray-500 transition-all hover:border-violet-300 hover:bg-violet-50/30 hover:text-violet-600"
+        >
+          <UserPlus className="h-4 w-4" />
+          Add a sibling or friend as co-hero
+        </button>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-violet-500" />
+              <span className="text-sm font-semibold text-gray-700">
+                Sibling / Friend
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setHasSecondChild(false)}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <X className="h-3 w-3" />
+              Remove
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-violet-100 bg-violet-50/30 p-5">
+            <ChildForm
+              label="Second child"
+              name={secondChildName}
+              age={secondChildAge}
+              gender={secondChildGender}
+              onNameChange={setSecondChildName}
+              onAgeChange={setSecondChildAge}
+              onGenderChange={setSecondChildGender}
+            />
+          </div>
+        </div>
+      )}
+
       <Button
         onClick={() => {
-          posthog.capture("wizard_step_completed", { step: "child_info", child_age: childAge, child_gender: childGender });
+          posthog.capture("wizard_step_completed", {
+            step: "child_info",
+            child_age: childAge,
+            child_gender: childGender,
+            has_second_child: hasSecondChild,
+          });
           nextStep();
         }}
         disabled={!isValid}

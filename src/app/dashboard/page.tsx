@@ -71,6 +71,7 @@ export default async function DashboardPage() {
     id: row.id,
     userId: row.user_id,
     childProfileId: row.child_profile_id,
+    secondChildProfileId: row.second_child_profile_id ?? null,
     themeId: row.theme_id,
     language: row.language ?? "en",
     status: row.status,
