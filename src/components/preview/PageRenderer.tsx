@@ -26,10 +26,7 @@ export default function PageRenderer({
   if (isCover) {
     return (
       <div
-        className={cn(
-          "relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl",
-          "animate-in fade-in slide-in-from-bottom-4 duration-700"
-        )}
+        className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl"
       >
         {/* Cover background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#7C3AED] via-[#9333EA] to-[#EC4899]" />
@@ -92,7 +89,6 @@ export default function PageRenderer({
     <div
       className={cn(
         "relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-[#FFFBF5] shadow-2xl",
-        "animate-in fade-in slide-in-from-right-4 duration-500",
         isBlurred && "select-none"
       )}
     >

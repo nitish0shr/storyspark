@@ -211,6 +211,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
             book.is_purchased ? sortedPages.length : PREVIEW_PAGE_COUNT
           }
           childName={book.child_name}
+          themeId={book.theme_id}
           themeTitle={book.theme_title}
           bookId={book.id}
           price={priceDollars}
