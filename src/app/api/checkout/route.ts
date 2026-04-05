@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { stripe, PRICE_BASE, PRICE_MID, PRICE_PREMIUM } from "@/lib/stripe";
+import { stripe, isStripeConfigured, PRICE_BASE, PRICE_MID, PRICE_PREMIUM } from "@/lib/stripe";
 import { PricingTier } from "@/types/order";
 import { getAppUrl } from "@/lib/utils";
 
@@ -13,6 +13,18 @@ const TIER_CONFIG: Record<PricingTier, { price: number; name: string }> = {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Database not configured. Please add Supabase environment variables." },
+        { status: 503 }
+      );
+    }
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        { error: "Payments not configured. Please add STRIPE_SECRET_KEY." },
+        { status: 503 }
+      );
+    }
     // Authenticate user
     const supabase = await createClient();
     const {

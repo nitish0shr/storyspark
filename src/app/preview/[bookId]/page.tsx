@@ -11,10 +11,13 @@ interface PreviewPageProps {
   params: Promise<{ bookId: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 // Number of free preview pages (including cover)
 const PREVIEW_PAGE_COUNT = 3;
 
 async function getBook(bookId: string) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
   const supabase = await createClient();
 
   const { data: book, error } = await supabase
@@ -44,6 +47,7 @@ async function getBook(bookId: string) {
 }
 
 async function getUser() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
   const supabase = await createClient();
   const {
     data: { user },

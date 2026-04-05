@@ -13,11 +13,14 @@ export const metadata: Metadata = {
   description: "Your personalized storybook is being created!",
 };
 
+export const dynamic = "force-dynamic";
+
 interface SuccessPageProps {
   searchParams: Promise<{ session_id?: string; book_id?: string }>;
 }
 
 async function getUser() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
   const supabase = await createClient();
   const {
     data: { user },

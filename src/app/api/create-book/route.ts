@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { getThemeById } from "@/data/themes";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Database not configured. Please add Supabase environment variables." },
+        { status: 503 }
+      );
+    }
     const supabase = await createClient();
     const {
       data: { user },

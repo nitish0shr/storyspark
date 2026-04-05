@@ -2,9 +2,19 @@ import { Resend } from "resend";
 
 let _resend: Resend | null = null;
 
+export function isResendConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY;
+}
+
 export function getResend(): Resend {
   if (!_resend) {
-    _resend = new Resend(process.env.RESEND_API_KEY!);
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      throw new Error(
+        "Resend is not configured. Set RESEND_API_KEY to enable email delivery."
+      );
+    }
+    _resend = new Resend(key);
   }
   return _resend;
 }

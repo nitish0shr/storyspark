@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
+  if (!isAdminConfigured()) {
+    return NextResponse.json(
+      { error: "Database not configured." },
+      { status: 503 }
+    );
+  }
   const bookId = request.nextUrl.searchParams.get("bookId");
 
   if (!bookId) {

@@ -50,7 +50,11 @@ export default function CreatePage() {
     }
 
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    if (!supabase) {
+      setAuthChecked(true);
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => {
       if (!user) {
         router.replace("/auth/login?redirectTo=/create");
       } else {

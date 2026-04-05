@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -13,6 +13,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured() || !isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "Storage not configured. Please add Supabase environment variables." },
+        { status: 503 }
+      );
+    }
     // Authenticate user
     const supabase = await createClient();
     const {

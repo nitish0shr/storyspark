@@ -6,6 +6,8 @@ import { Gift, BookOpen, Download, Sparkles, Heart } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 interface GiftPageProps {
   params: Promise<{ bookId: string }>;
 }
@@ -13,6 +15,9 @@ interface GiftPageProps {
 export async function generateMetadata({
   params,
 }: GiftPageProps): Promise<Metadata> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { title: "StorySpark Gift" };
+  }
   const { bookId } = await params;
   const supabase = await createClient();
   const { data: book } = await supabase
@@ -30,6 +35,9 @@ export async function generateMetadata({
 }
 
 export default async function GiftPage({ params }: GiftPageProps) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    redirect("/");
+  }
   const { bookId } = await params;
   const supabase = await createClient();
 

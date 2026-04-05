@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resend, RESEND_FROM_EMAIL } from "@/lib/resend";
+import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { getAppUrl } from "@/lib/utils";
 
 type EmailType = "order_confirmation" | "gift_notification" | "preview_reminder";
@@ -45,6 +45,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "type and data are required" },
         { status: 400 }
+      );
+    }
+
+    if (!isResendConfigured()) {
+      return NextResponse.json(
+        { error: "Email service not configured. Set RESEND_API_KEY to enable emails." },
+        { status: 503 }
       );
     }
 

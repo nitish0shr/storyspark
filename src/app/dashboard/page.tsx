@@ -15,7 +15,13 @@ export const metadata = {
   title: "Dashboard | StorySpark",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    redirect("/");
+  }
+
   const supabase = await createClient();
 
   const {

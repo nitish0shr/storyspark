@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Database not configured." },
+      { status: 503 }
+    );
+  }
   const supabase = await createClient();
   const {
     data: { user },
