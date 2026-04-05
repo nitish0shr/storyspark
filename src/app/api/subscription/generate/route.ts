@@ -6,7 +6,7 @@ import { generatePreview, generateFullBook } from "@/services/book-pipeline";
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization");
-    const expectedToken = process.env.CRON_SECRET || process.env.STRIPE_WEBHOOK_SECRET;
+    const expectedToken = process.env.CRON_SECRET;
 
     if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

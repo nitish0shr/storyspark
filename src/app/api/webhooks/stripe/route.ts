@@ -452,9 +452,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   if (!subId) return;
 
-  if (invoice.billing_reason === "subscription_create") {
-    return;
-  }
+  const isInitialPayment = invoice.billing_reason === "subscription_create";
 
   const invoiceId = invoice.id;
   if (invoiceId) {
@@ -470,29 +468,46 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     }
   }
 
-  const { data: sub } = await supabaseAdmin
-    .from("subscriptions")
-    .select("*")
-    .eq("stripe_subscription_id", subId)
-    .single();
+  let sub: Record<string, unknown> | null = null;
 
-  if (!sub || sub.status !== "active") return;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("stripe_subscription_id", subId)
+      .single();
+    if (data) {
+      sub = data;
+      break;
+    }
+    if (isInitialPayment && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
 
-  const nextTheme = getNextThemeForSubscriber(sub.used_theme_ids || []);
+  if (!sub || (sub.status !== "active" && !isInitialPayment)) return;
+
+  const nextTheme = getNextThemeForSubscriber((sub.used_theme_ids as string[]) || []);
   if (!nextTheme) {
     console.warn(`No available themes for subscription ${sub.id}`);
     return;
   }
 
+  const subId_ = sub.id as string;
+  const subUserId = sub.user_id as string;
+  const subChildId = sub.child_profile_id as string;
+  const subUsedThemes = (sub.used_theme_ids as string[]) || [];
+  const subBooksGenerated = (sub.books_generated as number) || 0;
+
   const { data: book, error: bookError } = await supabaseAdmin
     .from("books")
     .insert({
-      user_id: sub.user_id,
-      child_profile_id: sub.child_profile_id,
+      user_id: subUserId,
+      child_profile_id: subChildId,
       theme_id: nextTheme,
       status: "draft",
       language: "en",
-      subscription_id: sub.id,
+      subscription_id: subId_,
       stripe_invoice_id: invoice.id || null,
       contextual_answers: {},
     })
@@ -507,11 +522,11 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   await supabaseAdmin
     .from("subscriptions")
     .update({
-      used_theme_ids: [...(sub.used_theme_ids || []), nextTheme],
-      books_generated: (sub.books_generated || 0) + 1,
+      used_theme_ids: [...subUsedThemes, nextTheme],
+      books_generated: subBooksGenerated + 1,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", sub.id);
+    .eq("id", subId_);
 
   generatePreview(book.id)
     .then(() => generateFullBook(book.id))
@@ -527,13 +542,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("email, full_name")
-    .eq("id", sub.user_id)
+    .eq("id", subUserId)
     .single();
 
   const { data: child } = await supabaseAdmin
     .from("child_profiles")
     .select("name")
-    .eq("id", sub.child_profile_id)
+    .eq("id", subChildId)
     .single();
 
   if (profile?.email && isResendConfigured()) {
