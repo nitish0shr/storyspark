@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { themes } from "@/data/themes";
 import Navbar from "@/components/shared/Navbar";
 import Hero from "@/components/landing/Hero";
+import Stats from "@/components/landing/Stats";
 import HowItWorks from "@/components/landing/HowItWorks";
 import ThemeShowcase from "@/components/landing/ThemeShowcase";
 import SampleBookViewer from "@/components/landing/SampleBookViewer";
@@ -40,6 +41,7 @@ export default async function HomePage() {
     <div className="min-h-screen bg-[#FFFBF5]">
       <Navbar user={navUser} />
       <Hero />
+      <Stats />
       <HowItWorks />
       <ThemeShowcase themes={themes} />
       <SampleBookViewer />
