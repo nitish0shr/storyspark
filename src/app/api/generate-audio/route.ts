@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const eligibleStatuses = ["generating", "complete", "completed"];
+    if (!eligibleStatuses.includes(book.status)) {
+      return NextResponse.json(
+        { error: "Book is not ready for audio generation" },
+        { status: 409 }
+      );
+    }
+
     const { data: pages, error: pagesError } = await supabaseAdmin
       .from("book_pages")
       .select("page_number, text, audio_url")
