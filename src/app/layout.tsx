@@ -1,9 +1,22 @@
 import type { Metadata } from "next";
-import { Nunito, Baloo_2 } from "next/font/google";
+import { Inter, Playfair_Display, Nunito, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { ThemeProvider } from "@/context/ThemeContext";
+import ThemeToggle from "@/components/shared/ThemeToggle";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  weight: ["400", "600", "700", "800"],
+});
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -42,12 +55,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(nunito.variable, baloo.variable)}>
-      <body className="font-sans antialiased bg-[#FFFBF0] text-[#1a1a2e]">
-        <PostHogProvider>
-          {children}
-          <Toaster />
-        </PostHogProvider>
+    <html
+      lang="en"
+      className={cn(
+        inter.variable,
+        playfair.variable,
+        nunito.variable,
+        baloo.variable
+      )}
+    >
+      <body className="antialiased">
+        <ThemeProvider>
+          <PostHogProvider>
+            {children}
+            <ThemeToggle />
+            <Toaster />
+          </PostHogProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
