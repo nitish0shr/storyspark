@@ -23,6 +23,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Every night, {name} looked up at the sky and counted the stars. One, two, three... so many! The moon winked down like an old friend. \"Someday,\" {name} whispered, \"I'm going to visit every single one.\" Little did {name} know, someday was closer than {pronoun} thought.",
       sceneDescription:
         "Child standing in their backyard at night, gazing up at a sky full of twinkling stars, wearing pajamas with little rocket ships on them",
+      dualCharacterSceneDescription:
+        "Two children standing together in their backyard at night, gazing up at a sky full of twinkling stars, wearing pajamas with little rocket ships on them",
     },
     {
       pageNumber: 2,
@@ -37,6 +39,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} climbed inside {spaceship_name} and gasped. The cockpit was full of blinking buttons in every color -- red, blue, green, and one big sparkly gold one. {name} pressed the gold button. WHOOOOSH! The rocket lifted off the ground, up past the clouds, up past the birds, up, up, up into the great dark sky!",
       sceneDescription:
         "Child inside a colorful rocket ship cockpit, pressing a big gold button, looking amazed as Earth shrinks in the window behind them",
+      dualCharacterSceneDescription:
+        "Two children inside a colorful rocket ship cockpit, one pressing a big gold button while the other watches amazed, Earth shrinking in the window behind them",
     },
     {
       pageNumber: 4,
@@ -51,6 +55,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{planet} was even more amazing than {name} had imagined. The ground shimmered in swirls of color, and the sky had not one but two suns! Strange, beautiful flowers sang soft melodies, and tiny glowing creatures floated like living lanterns. Everything smelled like warm cinnamon and starlight.",
       sceneDescription:
         "Child stepping out of the rocket onto a beautiful alien planet with swirling colorful ground, two suns in the sky, and glowing floating creatures",
+      dualCharacterSceneDescription:
+        "Two children stepping out of the rocket together onto a beautiful alien planet with swirling colorful ground, two suns in the sky, and glowing floating creatures",
     },
     {
       pageNumber: 6,
@@ -72,6 +78,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "\"You can do it,\" {name} said softly to the little star. \"I believe in you. Even when things feel dark, there's always light inside.\" {name} placed {possessive} hands around the star and hummed a gentle lullaby. Slowly, warmly, the star began to glow -- first a flicker, then a blaze of golden light!",
       sceneDescription:
         "Child cradling a glowing star in their hands, golden light spreading outward, crystal flowers beginning to light up all around",
+      dualCharacterSceneDescription:
+        "Two children cradling a glowing star together in their hands, golden light spreading outward, crystal flowers beginning to light up all around",
     },
     {
       pageNumber: 9,
@@ -86,6 +94,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The creatures gave {name} a tiny star in a glass jar. \"So you'll always have a piece of our sky,\" they said. {name} hugged each one goodbye, climbed back into {spaceship_name}, and set a course for home. The stars outside the window seemed to wave as {pronoun} passed.",
       sceneDescription:
         "Child holding a small glowing star in a jar, waving goodbye to alien friends from the rocket ship door",
+      dualCharacterSceneDescription:
+        "Two children each holding a tiny star in a glass jar, waving goodbye to alien friends from the rocket ship door",
     },
     {
       pageNumber: 11,
@@ -100,6 +110,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "That night, {name} placed the tiny star on the nightstand. It glowed softly, filling the room with a warm golden light. \"Goodnight, stars,\" {name} whispered. And somewhere far, far away on {planet}, a little purple creature whispered back, \"Goodnight, {name}. Thank you for believing.\"",
       sceneDescription:
         "Child tucked in bed, a glowing star jar on the nightstand casting warm golden light across a cozy bedroom",
+      dualCharacterSceneDescription:
+        "Two children tucked in bed together, a glowing star jar on the nightstand casting warm golden light across a cozy bedroom",
     },
   ],
 
@@ -110,6 +122,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} loved dinosaurs more than anything in the whole wide world. {possessive} room was full of dinosaur books, dinosaur toys, and even dinosaur pajamas. But {name} had a secret wish -- to meet a real, living dinosaur. \"If only,\" {pronoun} sighed, hugging {possessive} stuffed {favorite_dinosaur}.",
       sceneDescription:
         "Child in a bedroom filled with dinosaur posters, toys, and books, hugging a stuffed dinosaur while looking wistfully out the window",
+      dualCharacterSceneDescription:
+        "Two children in a bedroom filled with dinosaur posters, toys, and books, one hugging a stuffed dinosaur while both look wistfully out the window",
     },
     {
       pageNumber: 2,
@@ -124,6 +138,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Out tumbled a baby {favorite_dinosaur}, no bigger than a puppy! It blinked its big round eyes at {name} and let out a squeaky little roar. Then it nuzzled right into {name}'s arms. \"I'll call you Pebble,\" {name} laughed as the baby dinosaur licked {possessive} cheek.",
       sceneDescription:
         "Child holding a tiny adorable baby dinosaur that is licking their cheek, both surrounded by garden flowers and sunshine",
+      dualCharacterSceneDescription:
+        "Two children holding a tiny adorable baby dinosaur together, both laughing as it licks their cheeks, surrounded by garden flowers and sunshine",
     },
     {
       pageNumber: 4,
@@ -138,6 +154,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "A friendly Brontosaurus lowered its long, long neck and blinked at {name}. \"Hop on,\" it seemed to say. {name} climbed up carefully, settling between the great dinosaur's shoulders. Pebble scrambled up too. Together they rode above the treetops, seeing rivers of silver and mountains of green stretching on forever.",
       sceneDescription:
         "Child riding high on a gentle Brontosaurus above the treetops of a prehistoric jungle, baby dinosaur sitting beside them, vast landscape visible",
+      dualCharacterSceneDescription:
+        "Two children riding high on a gentle Brontosaurus above the treetops of a prehistoric jungle, baby dinosaur sitting beside them, vast landscape visible",
     },
     {
       pageNumber: 6,
@@ -159,6 +177,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "But then the ground began to rumble. BOOM. BOOM. BOOM. Through the trees came the biggest dinosaur of all -- a towering T-Rex! {name}'s heart beat fast. But the T-Rex looked down with soft, kind eyes and let out a low, gentle rumble. It wasn't scary at all. It was saying hello!",
       sceneDescription:
         "A massive but gentle-looking T-Rex bending down toward the child, who stands bravely looking up with wonder rather than fear",
+      dualCharacterSceneDescription:
+        "A massive but gentle-looking T-Rex bending down toward two children, who stand bravely together looking up with wonder rather than fear",
     },
     {
       pageNumber: 9,
@@ -173,6 +193,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Pebble looked at {name}, then at the other dinosaurs, then back at {name}. The little dinosaur pressed its head against {name}'s chest and rumbled softly. \"I know,\" {name} whispered, hugging Pebble tight. \"This is where you belong. But I'll never forget you. Not ever.\"",
       sceneDescription:
         "Emotional scene of child hugging the baby dinosaur close, both looking at each other with love, other dinosaurs watching gently in the background",
+      dualCharacterSceneDescription:
+        "Emotional scene of two children hugging the baby dinosaur close together, other dinosaurs watching gently in the background",
     },
     {
       pageNumber: 11,
@@ -187,6 +209,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} put the little shell on {possessive} nightstand, right next to the stuffed {favorite_dinosaur}. \"Goodnight, Pebble,\" {name} whispered. And if {pronoun} listened very, very carefully through the open window, {pronoun} could almost hear a tiny, happy roar carried on the evening breeze.",
       sceneDescription:
         "Child in bed, a small green eggshell on the nightstand next to a stuffed dinosaur toy, window open to a starry night sky",
+      dualCharacterSceneDescription:
+        "Two children in bed together, a small green eggshell on the nightstand next to a stuffed dinosaur toy, window open to a starry night sky",
     },
   ],
 
@@ -197,6 +221,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} stood at the edge of the ocean, letting the waves tickle {possessive} toes. The water was the bluest blue {pronoun} had ever seen -- bluer than the sky, bluer than blueberries. \"I wonder what's down there,\" {name} said, peering into the sparkling sea. Something shimmered just below the surface.",
       sceneDescription:
         "Child standing barefoot at the water's edge on a beautiful sunny beach, peering curiously into crystal-clear turquoise water",
+      dualCharacterSceneDescription:
+        "Two children standing barefoot at the waters edge on a beautiful sunny beach, both peering curiously into crystal-clear turquoise water",
     },
     {
       pageNumber: 2,
@@ -211,6 +237,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "SPLASH! {name} dove in. The ocean wrapped around {object} like a warm blanket. Fish in every color of the rainbow swam past -- orange and purple and electric blue. The {sea_creature} swam beside {name}, and together they glided through a coral reef that looked like an underwater garden.",
       sceneDescription:
         "Child swimming joyfully underwater beside their sea creature friend, surrounded by colorful coral reef and tropical fish",
+      dualCharacterSceneDescription:
+        "Two children swimming joyfully underwater beside their sea creature friend, surrounded by colorful coral reef and tropical fish",
     },
     {
       pageNumber: 4,
@@ -225,6 +253,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Deeper they swam, past jellyfish that glowed like floating lanterns and starfish that waved from every rock. An old wise turtle paddled up slowly. \"Young {name},\" it said, \"there's trouble below. The Sunken Palace has lost its light. Will you help us find it again?\"",
       sceneDescription:
         "Child floating beside a large wise sea turtle, surrounded by glowing jellyfish and waving starfish in deeper blue water",
+      dualCharacterSceneDescription:
+        "Two children floating beside a large wise sea turtle, surrounded by glowing jellyfish and waving starfish in deeper blue water",
     },
     {
       pageNumber: 6,
@@ -246,6 +276,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "But a grumpy octopus was guarding it, arms crossed and frowning. \"That's MY shiny thing,\" it huffed. {name} sat down on the sandy floor. \"I understand,\" {name} said gently. \"It IS beautiful. But the whole ocean needs its light. What if we find you something even shinier?\"",
       sceneDescription:
         "Child sitting on the ocean floor having a friendly conversation with a grumpy but cute octopus who is hugging the golden pearl",
+      dualCharacterSceneDescription:
+        "Two children sitting on the ocean floor having a friendly conversation with a grumpy but cute octopus who is hugging the golden pearl",
     },
     {
       pageNumber: 9,
@@ -260,6 +292,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} swam up to the Sunken Palace and placed the pearl on top. WHOOOOSH! Light exploded outward like an underwater sunrise. The whole ocean floor lit up in gold and blue and green. Every creature cheered -- the fish, the seahorses, the turtle, even the octopus wearing its new sparkly necklace.",
       sceneDescription:
         "Child placing the golden pearl on top of the palace, brilliant light radiating outward, sea creatures celebrating all around",
+      dualCharacterSceneDescription:
+        "Two children together placing the golden pearl on top of the palace, brilliant light radiating outward, sea creatures celebrating all around",
     },
     {
       pageNumber: 11,
@@ -274,6 +308,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Back on the shore, {name} held the little shell to {possessive} ear. Sure enough -- the sound of the ocean was there, but also something more: tiny voices, singing {name}'s name. {name} smiled, toes in the warm sand, watching the waves sparkle. The sea would always hold a special place in {possessive} heart.",
       sceneDescription:
         "Child sitting on the beach at sunset, holding a shell to their ear and smiling, waves sparkling with magical light in the background",
+      dualCharacterSceneDescription:
+        "Two children sitting on the beach at sunset, each holding a shell to their ear and smiling, waves sparkling with magical light in the background",
     },
   ],
 
@@ -284,6 +320,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Once upon a time, in a kingdom where sunflowers grew as tall as houses and rivers sparkled like diamonds, there lived a young {role} named {name}. {name} was kind to every creature, brave in every storm, and had a laugh that made flowers bloom. But today, the kingdom needed {object} more than ever.",
       sceneDescription:
         "Child wearing a royal crown and cape standing in a magical kingdom with oversized sunflowers and sparkling rivers, a grand castle in the distance",
+      dualCharacterSceneDescription:
+        "Two children wearing royal crowns and capes standing together in a magical kingdom with oversized sunflowers and sparkling rivers",
     },
     {
       pageNumber: 2,
@@ -298,6 +336,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} put on {possessive} finest traveling cloak and packed a bag with bread, cheese, and a compass that always pointed toward home. At the castle gate, a beautiful white horse waited, its mane braided with tiny bells. \"Let's ride, friend,\" {name} said, and off they galloped into the Enchanted Forest.",
       sceneDescription:
         "Child in a royal traveling cloak mounting a beautiful white horse with bells in its mane, at the gates of a sparkling castle",
+      dualCharacterSceneDescription:
+        "Two children in royal traveling cloaks mounting a beautiful white horse with bells in its mane, at the gates of a sparkling castle",
     },
     {
       pageNumber: 4,
@@ -312,6 +352,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "But the path ended at a deep, rushing river with no bridge. {name} looked around thoughtfully. Then {pronoun} remembered {possessive} special gift -- {magical_power}! {name} closed {possessive} eyes, took a deep breath, and used {possessive} power. The river calmed, and stepping stones rose from the water, one by one.",
       sceneDescription:
         "Child using magical power at the edge of a rushing river, glowing stepping stones rising from the water, magical energy swirling around them",
+      dualCharacterSceneDescription:
+        "Two children using magical power together at the edge of a rushing river, glowing stepping stones rising from the water",
     },
     {
       pageNumber: 6,
@@ -333,6 +375,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "At the very top sat the Enchanted Crystal on a stone pedestal. It pulsed with a warm, golden light. But wrapped around it was a shadow creature, dark and swirling. \"This crystal is mine now,\" it hissed. {name}'s heart beat fast, but {pronoun} did not run. A true {role} never gives up.",
       sceneDescription:
         "Child facing a dark swirling shadow creature wrapped around a golden glowing crystal on a mountain peak, standing brave and determined",
+      dualCharacterSceneDescription:
+        "Two children facing a dark swirling shadow creature wrapped around a golden glowing crystal on a mountain peak, standing brave together",
     },
     {
       pageNumber: 9,
@@ -347,6 +391,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} lifted the Enchanted Crystal high above {possessive} head. Its light streamed down the mountainside like liquid gold, racing across the kingdom. Flowers opened. Stars appeared. The rivers sparkled again. From far below, {name} could hear the people cheering. The kingdom was saved!",
       sceneDescription:
         "Child holding the glowing crystal triumphantly above their head on the mountain peak, golden light streaming down across the entire kingdom below",
+      dualCharacterSceneDescription:
+        "Two children together holding the glowing crystal triumphantly above their heads on the mountain peak, golden light streaming down",
     },
     {
       pageNumber: 11,
@@ -361,6 +407,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "That night, the Enchanted Crystal glowed from the highest tower, bathing the kingdom in warm light. And in the coziest room of the castle, {name} curled up under a blanket of stars. \"Being brave isn't about not being scared,\" {name} thought. \"It's about being kind even when things are hard.\" And with that, the bravest {role} in the land fell fast asleep.",
       sceneDescription:
         "Child curled up in a cozy castle bedroom, warm starlight from the crystal tower spilling through the window, looking peaceful and content",
+      dualCharacterSceneDescription:
+        "Two children curled up together in a cozy castle bedroom, warm starlight from the crystal tower spilling through the window",
     },
   ],
 
@@ -371,6 +419,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} was an ordinary kid who did ordinary things: ate cereal in the morning, played outside after school, and always remembered to brush {possessive} teeth. But sometimes, late at night, {name} felt a tiny buzz in {possessive} fingers and wondered: \"What if I'm meant for something... extraordinary?\"",
       sceneDescription:
         "Child in their everyday bedroom looking at their hands with curiosity, a faint sparkle visible at their fingertips in the evening light",
+      dualCharacterSceneDescription:
+        "Two children sitting together on a bedroom floor reading comic books, superhero posters covering the walls, both looking dreamy",
     },
     {
       pageNumber: 2,
@@ -385,6 +435,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} felt the power flow through {possessive} whole body like warm sunshine. {pronoun} jumped -- and floated! {pronoun} stretched {possessive} hands -- and they glowed! {name} had a superpower: {superpower}! \"This is AMAZING!\" {name} laughed, spinning around the room. Every superhero needs a beginning, and this was {possessive}.",
       sceneDescription:
         "Child floating in their bedroom, hands glowing with power, laughing with pure joy, bedroom items gently floating around them",
+      dualCharacterSceneDescription:
+        "Two children in matching superhero costumes discovering their powers together, energy glowing around their hands",
     },
     {
       pageNumber: 4,
@@ -399,6 +451,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} zoomed into town just in time. The sky had turned a funny shade of green, and a mischievous villain called the Jelly Giant was bouncing through the streets! It was made entirely of wobbly, jiggly purple jelly, and it was bumping into everything, making a sticky mess of the whole town square.",
       sceneDescription:
         "A silly purple jelly giant bouncing through a colorful town square, knocking things around, people looking up in surprise, child arriving heroically",
+      dualCharacterSceneDescription:
+        "Two young superheroes flying together over a colorful city skyline, capes billowing in the wind, working as a team",
     },
     {
       pageNumber: 6,
@@ -420,6 +474,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} thought for a moment. \"What if we find a place where being big and bouncy is perfect?\" {name} led the Jelly Giant to the empty park, where it could bounce all it wanted without bumping into anything. BOING! BOING! BOING! The Giant laughed with joy. Soon other kids came to bounce with it too!",
       sceneDescription:
         "Child leading the happy jelly giant to a park, children bouncing and playing with it, everyone laughing and having fun together",
+      dualCharacterSceneDescription:
+        "Two children in superhero costumes facing a challenge together, combining their powers to create a brilliant beam of light",
     },
     {
       pageNumber: 9,
@@ -434,6 +490,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The whole town gathered in the square. The mayor stepped forward. \"Today, we witnessed something truly special. Not just {superpower}, but something greater -- kindness, bravery, and heart.\" The crowd cheered: \"{name}! {name}! {name}!\" Confetti rained down like colorful snow.",
       sceneDescription:
         "Child standing on a small stage in the town square, mayor presenting them to cheering crowds, colorful confetti falling from the sky",
+      dualCharacterSceneDescription:
+        "Two children being celebrated as heroes by grateful citizens, standing together on a stage with medals around their necks",
     },
     {
       pageNumber: 11,
@@ -448,6 +506,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Back in {possessive} room, {name} placed the star gem on the windowsill. It pulsed gently, like a heartbeat. {name} knew that being a superhero wasn't really about the powers. It was about choosing to be kind, choosing to be brave, and always, always standing up for others. And that's a power everyone has inside.",
       sceneDescription:
         "Child in their cozy bedroom, star gem glowing on the windowsill, child smiling peacefully as stars twinkle outside, cape folded neatly on a chair",
+      dualCharacterSceneDescription:
+        "Two children in bed, superhero costumes hanging on the closet door, a glowing emblem nightlight casting hero-shaped shadows",
     },
   ],
 
@@ -458,6 +518,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "This is the story of {name}, who is {age} years old and already one of the most remarkable people in the world. You might wonder: how can someone so young be so remarkable? Well, it's not because of magic powers or special gadgets. It's because of something even better. Let me show you.",
       sceneDescription:
         "Child sitting under a big sunlit tree in a meadow full of wildflowers, looking warm and content, holding a small glowing heart in their hands",
+      dualCharacterSceneDescription:
+        "Two children walking together through their neighborhood, one helping carry groceries for a neighbor, the other petting a friendly dog",
     },
     {
       pageNumber: 2,
@@ -472,6 +534,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Did you know that every act of kindness sends a little ripple out into the world? Like a pebble dropped in a pond, one kind thing leads to another, and another, and another. When {name} was kind, it made someone else feel brave enough to be kind too. And on it went, rippling outward.",
       sceneDescription:
         "Beautiful visual of golden ripples spreading outward from the child like rings in a pond, touching other people who then glow warmly too",
+      dualCharacterSceneDescription:
+        "Two children discovering a magical garden gate together, both reaching for the handle with excitement, flowers blooming around them",
     },
     {
       pageNumber: 4,
@@ -486,6 +550,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Courage doesn't mean you're not scared. It means you feel the butterflies in your tummy, the wobble in your knees, and the racing of your heart -- and you take a deep breath and try anyway. {name} knows this feeling. And every time {pronoun} tries, {pronoun} gets a little bit braver.",
       sceneDescription:
         "Child with a determined expression, visible butterflies around their tummy area transforming into little golden stars as they step forward bravely",
+      dualCharacterSceneDescription:
+        "Two children comforting a sad creature together in a magical garden, one offering a hug while the other offers a flower",
     },
     {
       pageNumber: 6,
@@ -507,6 +573,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "There are so many ways {name} makes the world brighter. A smile in the morning. A hug when someone's sad. Saying \"thank you\" and really meaning it. Sharing the last cookie. Picking a flower for someone just because. These aren't little things -- they're everything.",
       sceneDescription:
         "A montage-style scene of the child doing various kind things -- hugging, sharing, picking flowers -- each act creating little bursts of warm light",
+      dualCharacterSceneDescription:
+        "Two children working together to build a bridge for lost animals, teamwork and determination on their faces",
     },
     {
       pageNumber: 9,
@@ -521,6 +589,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "If you could see {name} the way I see {object}, you'd see something incredible. Not just a {age}-year-old kid. But a person who is already changing the world, one kind moment and one brave step at a time. And that is the most extraordinary thing of all.",
       sceneDescription:
         "Child looking at their reflection in a calm pond, but the reflection shows them wearing a crown of golden light, looking noble and strong",
+      dualCharacterSceneDescription:
+        "Two children being thanked by all the magical creatures they helped, standing together surrounded by flowers and grateful friends",
     },
     {
       pageNumber: 11,
@@ -535,6 +605,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Goodnight, sweet {name}. Tomorrow there will be new chances to be kind, new chances to be brave, and new chances to be exactly the wonderful person you already are. And no matter what, you are loved -- bigger than the sky, deeper than the ocean, and more than all the stars you can count. Always and forever.",
       sceneDescription:
         "Child tucked into bed, warm golden light surrounding them, stars visible through the window, looking peaceful and deeply loved",
+      dualCharacterSceneDescription:
+        "Two children tucked into bed together, a warm glow from their kindness still lingering in the room, both smiling in their sleep",
     },
   ],
 
@@ -545,6 +617,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} had always dreamed of the open sea. Every night, {pronoun} would sit by the window and imagine sailing to faraway islands full of treasure and adventure. \"Someday,\" {name} whispered to {possessive} toy telescope, \"I'll be the greatest pirate captain the world has ever seen!\"",
       sceneDescription:
         "Child sitting by a window at sunset, holding a toy telescope, looking out at a distant ocean with a dreamy expression",
+      dualCharacterSceneDescription:
+        "Two children playing pirates together on a beach, one looking through a toy telescope while the other holds a toy sword",
     },
     {
       pageNumber: 2,
@@ -559,6 +633,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "At the harbor, a magnificent ship bobbed in the water, its sails shimmering like silk. A banner on the mast read \"{ship_name}\" in gold letters. {pirate_pet} was already on deck, waiting with a pirate hat. \"Welcome aboard, Captain {name}!\" {pirate_pet} seemed to say. Together, they raised the anchor and set sail!",
       sceneDescription:
         "Child dressed as a pirate captain boarding a colorful wooden ship at a sunny harbor, their animal sidekick waiting on deck",
+      dualCharacterSceneDescription:
+        "Two young pirates aboard a colorful ship together, one at the helm and the other climbing the rigging, seas sparkling",
     },
     {
       pageNumber: 4,
@@ -573,6 +649,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "\"Land ho!\" {name} called out. A tropical island appeared, covered in palm trees and ringed by white sand beaches. But as they got closer, they heard music -- someone was singing! A crew of friendly pirates was having a beach party, roasting marshmallows and dancing a silly jig.",
       sceneDescription:
         "Child arriving at a tropical island where friendly pirates are dancing around a campfire on the beach, palm trees swaying",
+      dualCharacterSceneDescription:
+        "Two children on a tropical island together following a treasure map, pointing in different directions and laughing",
     },
     {
       pageNumber: 6,
@@ -594,6 +672,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The third riddle was the trickiest of all. \"What treasure is worth more than gold?\" {name} thought and thought. Then {pronoun} looked at {pirate_pet}, at the friendly pirates, at the beautiful island. \"Friendship!\" {name} shouted. \"The treasure worth more than gold is friendship!\" The ground beneath them began to glow.",
       sceneDescription:
         "Child having a moment of realization on a glowing hilltop, arms spread wide, their animal friend beside them, pirates cheering below",
+      dualCharacterSceneDescription:
+        "Two children working together to solve a treasure puzzle in a cave, torchlight illuminating ancient symbols on the walls",
     },
     {
       pageNumber: 9,
@@ -608,6 +688,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} shared the treasure with every pirate on the island. They divided the gems and coins fairly, and each pirate got a beautiful seashell to remember the day. The jolly pirate with the red beard wiped a tear from his eye. \"You're the best captain we've ever met, {name}.\"",
       sceneDescription:
         "Child sharing treasure with the friendly pirate crew on the beach, everyone smiling and holding seashells and gems",
+      dualCharacterSceneDescription:
+        "Two children opening a treasure chest together, golden light spilling onto both their amazed faces, jewels glittering",
     },
     {
       pageNumber: 11,
@@ -622,6 +704,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "That night, {name} placed the crystal globe on {possessive} nightstand. It glowed softly, showing tiny images of {pirate_pet}, the friendly pirates, and the beautiful island. \"Goodnight, crew,\" {name} whispered. And if {pronoun} listened carefully, {pronoun} could hear the gentle sound of waves and a distant pirate song, just for {object}.",
       sceneDescription:
         "Child tucked in bed, a glowing crystal globe on the nightstand showing tiny pirate scenes, moonlight streaming through the window",
+      dualCharacterSceneDescription:
+        "Two children asleep on a porch swing together, treasure map spread between them, the ocean twinkling in the background",
     },
   ],
 
@@ -632,6 +716,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} loved the garden more than any place in the world. Every flower was a friend, every butterfly a visitor, and every raindrop a tiny gift from the sky. But {name} had always wondered: what if the garden had secrets too small for human eyes to see?",
       sceneDescription:
         "Child kneeling in a beautiful garden full of colorful flowers, peering curiously at the base of a large sunflower",
+      dualCharacterSceneDescription:
+        "Two children discovering a tiny fairy door together at the base of a tree, both kneeling down and peering inside with wonder",
     },
     {
       pageNumber: 2,
@@ -646,6 +732,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "When the sparkles cleared, everything was ENORMOUS. The rosebush towered like a skyscraper. Blades of grass reached high above {name}'s head. A ladybug the size of a car trundled by. {name} looked down and gasped -- {pronoun} had wings! Beautiful {fairy_wing_color} wings that shimmered in the sunlight.",
       sceneDescription:
         "Child fairy-sized with beautiful wings, standing among towering blades of grass and enormous flowers, looking amazed at their tiny hands",
+      dualCharacterSceneDescription:
+        "Two children shrunk to fairy size together, riding on a butterfly through a garden of enormous flowers",
     },
     {
       pageNumber: 4,
@@ -660,6 +748,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Dewdrop led {name} through the Fairy Garden -- and oh, what a garden it was! Mushroom houses glowed with warm light. Snail-shell slides spiraled between the roots. Fairy children played tag on spider-silk trampolines, and a caterpillar band played the tiniest music {name} had ever heard.",
       sceneDescription:
         "A magical miniature fairy village among flower roots with mushroom houses, glowing windows, fairy children playing, and a caterpillar band",
+      dualCharacterSceneDescription:
+        "Two tiny children meeting a fairy queen together on a mushroom throne, both curtsying and bowing respectfully",
     },
     {
       pageNumber: 6,
@@ -681,6 +771,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} closed {possessive} eyes and used {possessive} gift of {fairy_power}. Magic flowed from {possessive} fingertips like warm honey. The tree's roots untangled. Its branches lifted. Color rushed back into every petal -- pink, gold, blue, and violet. The whole garden held its breath.",
       sceneDescription:
         "Child pouring magical energy into the Great Blossom Tree, colorful magic flowing from their hands, the tree beginning to bloom brilliantly",
+      dualCharacterSceneDescription:
+        "Two children working with fairies to repair a broken rainbow, each holding different colored light in their hands",
     },
     {
       pageNumber: 9,
@@ -695,6 +787,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The fairies threw the grandest party the garden had ever seen. They danced on lily pads, ate honeycomb cake, and drank dewdrop lemonade. {name} was the guest of honor, wearing a crown of living flowers that Dewdrop had woven. \"You saved our home,\" Dewdrop said, hugging {name} tight.",
       sceneDescription:
         "Grand fairy celebration on lily pads with fairy lights, child wearing a flower crown, eating tiny cakes with fairy friends",
+      dualCharacterSceneDescription:
+        "Two children being given fairy wings by grateful fairies, both lifting off the ground with delighted expressions",
     },
     {
       pageNumber: 11,
@@ -709,6 +803,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} was back to full size in the garden, the sun warm on {possessive} face. Was it all a dream? But there in {possessive} palm was the tiny seed, glowing faintly. {name} planted it right there by the rosebush. And every morning after that, {pronoun} would check on it -- and sometimes, just sometimes, {pronoun} could hear tiny fairy laughter on the breeze.",
       sceneDescription:
         "Child back to normal size, planting a tiny glowing seed beside the rosebush, a faint sparkle visible at the base of the flowers",
+      dualCharacterSceneDescription:
+        "Two children back to normal size, asleep under a tree together, tiny fairy lights twinkling around them like a blessing",
     },
   ],
 
@@ -719,6 +815,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} had a map on {possessive} bedroom wall with all the places {pronoun} dreamed of visiting. But one place had a golden star next to it, circled three times: Africa. {name} wanted to see the great wide savanna where {favorite_animal}s roamed free under endless blue skies.",
       sceneDescription:
         "Child in their bedroom pointing at a colorful world map on the wall, a golden star marking Africa, safari books on the bed",
+      dualCharacterSceneDescription:
+        "Two children looking through binoculars together on an African savanna, both wearing safari hats, giraffes visible in the distance",
     },
     {
       pageNumber: 2,
@@ -733,6 +831,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} was standing on a vast golden savanna! Tall grass swayed in the warm breeze as far as {pronoun} could see. The sky was the biggest sky {name} had ever imagined, painted in soft blues and golds. A colorful safari jeep waited nearby with a note on the steering wheel: \"For {name} -- the bravest explorer.\"",
       sceneDescription:
         "Child standing on a golden African savanna wearing a safari hat, a colorful jeep nearby, vast grasslands stretching to the horizon",
+      dualCharacterSceneDescription:
+        "Two children riding on the back of a gentle elephant together, crossing a river on the savanna, birds flying alongside",
     },
     {
       pageNumber: 4,
@@ -747,6 +847,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Together, {name} and the baby {favorite_animal} drove across the savanna in the jeep. They saw zebras painted in perfect stripes, flamingos standing in a pink lake, and hippos blowing bubbles in a muddy river. Every animal waved or nodded as {name} passed. This was the friendliest place on Earth!",
       sceneDescription:
         "Child driving a colorful jeep across the savanna with their baby animal friend, zebras and flamingos visible nearby, a warm golden scene",
+      dualCharacterSceneDescription:
+        "Two children meeting a family of lions together, one reaching out while the other watches in awe, golden savanna light",
     },
     {
       pageNumber: 6,
@@ -768,6 +870,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The mother bird sang the most beautiful song {name} had ever heard -- a thank-you melody that echoed across the whole savanna. Every animal stopped to listen. Even the wind seemed to pause. {name} felt warm inside, like the sun was glowing right in {possessive} chest.",
       sceneDescription:
         "Child standing beneath the acacia tree as a beautiful bird sings above, musical notes floating through the air, all animals listening peacefully",
+      dualCharacterSceneDescription:
+        "Two children helping a baby animal together, one holding it gently while the other prepares food, under an acacia tree",
     },
     {
       pageNumber: 9,
@@ -782,6 +886,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The oldest elephant, wise and gentle, placed a necklace of colorful beads around {name}'s neck. \"This is the Explorer's Heart,\" she said in a voice like a warm rumble. \"It means you carry the spirit of kindness wherever you go. The savanna will always remember you, {name}.\"",
       sceneDescription:
         "A wise old elephant placing a colorful beaded necklace around the child's neck, other animals watching respectfully in golden light",
+      dualCharacterSceneDescription:
+        "Two children watching a spectacular African sunset together from a hilltop, silhouettes of animals migrating in the distance",
     },
     {
       pageNumber: 11,
@@ -796,6 +902,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Back in {possessive} bedroom, {name} found the colorful bead necklace still around {possessive} neck. It was real! {name} hung it on the bedpost and looked at the map on the wall. The golden star over Africa glowed a little brighter now. \"Goodnight, savanna,\" {name} whispered. And far away, a baby {favorite_animal} looked up at the same stars and seemed to whisper back.",
       sceneDescription:
         "Child in bed wearing the bead necklace, the map on the wall glowing softly over Africa, stars visible through the window",
+      dualCharacterSceneDescription:
+        "Two children asleep in a safari tent together, animal friends peeking through the tent flap, stars visible above the savanna",
     },
   ],
 
@@ -806,6 +914,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} loved two things more than anything: questions and clocks. {possessive} bedroom had clocks of every kind -- digital ones, cuckoo clocks, even a sundial made from a paper plate. But {name}'s biggest question was one no clock could answer: \"What was yesterday REALLY like? And what will tomorrow bring?\"",
       sceneDescription:
         "Child in a bedroom filled with clocks of all kinds, holding a magnifying glass and looking curiously at an old pocket watch",
+      dualCharacterSceneDescription:
+        "Two children discovering a time machine together in an attic, both examining the strange device with curiosity and excitement",
     },
     {
       pageNumber: 2,
@@ -820,6 +930,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} pressed the tiny crown on top of the watch. WHOOOOSH! The room dissolved into ribbons of light -- gold and silver and every color in between. {name} felt like {pronoun} was flying through a tunnel made of clocks and calendars. Then everything went still, and {name} was standing somewhere completely different.",
       sceneDescription:
         "Child being pulled into a time portal made of swirling clockwork gears, golden light, and calendar pages flying around them",
+      dualCharacterSceneDescription:
+        "Two children emerging from the time machine together into a dinosaur era, looking around in amazement at the prehistoric world",
     },
     {
       pageNumber: 4,
@@ -834,6 +946,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name}'s guide showed {object} extraordinary things -- inventions that changed the world, buildings that reached for the sky, and art that made {possessive} heart sing. \"Every person here has a dream,\" the guide said. \"And every dream matters.\" {name} felt inspired. What would {possessive} own dream change someday?",
       sceneDescription:
         "Child being shown amazing inventions and architecture by their guide, eyes wide with wonder, taking in the incredible sights",
+      dualCharacterSceneDescription:
+        "Two children in ancient Egypt together, helping build alongside workers, pyramids towering behind them",
     },
     {
       pageNumber: 6,
@@ -855,6 +969,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The pocket watch hummed again. It was time to move on. {name} hugged the young inventor goodbye. \"Remember,\" {name} said, \"impossible things are just things that haven't happened YET.\" The watch glowed, and WHOOOOSH -- {name} was pulled through the time tunnel once more, spinning through stars and clockwork.",
       sceneDescription:
         "Child waving goodbye to the inventor friend as golden time-portal light begins to swirl around them again",
+      dualCharacterSceneDescription:
+        "Two children in a medieval castle together, one trying on armor while the other examines a sword, knights watching",
     },
     {
       pageNumber: 9,
@@ -869,6 +985,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "In the future city's museum, {name} saw something incredible -- a display about {time_souvenir}! Next to it was a tiny plaque: \"Inspired by a time traveler named {name}, who taught the world that believing in others changes everything.\" {name}'s eyes filled with happy tears. {possessive} kindness had echoed through time.",
       sceneDescription:
         "Child standing in a futuristic museum looking at a display with their name on it, golden light illuminating a plaque, tears of joy on their face",
+      dualCharacterSceneDescription:
+        "Two children back in the time machine together, a collage of all the eras they visited swirling in the windows",
     },
     {
       pageNumber: 11,
@@ -883,6 +1001,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "That night, {name} placed the golden pocket watch on {possessive} nightstand. Its hands moved gently -- forward, backward, always in motion. \"Goodnight, yesterday,\" {name} whispered. \"Goodnight, tomorrow.\" And as {pronoun} drifted off to sleep, {name} knew that every moment -- past, present, and future -- was a gift worth treasuring.",
       sceneDescription:
         "Child asleep in bed, the golden pocket watch glowing on the nightstand, tiny clockwork gears reflected on the ceiling like stars",
+      dualCharacterSceneDescription:
+        "Two children in bed together, souvenirs from different time periods scattered on their nightstand, a clock ticking nearby",
     },
   ],
 
@@ -893,6 +1013,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "It was Christmas Eve, and {name}'s house smelled like gingerbread and cinnamon. The tree sparkled with lights, stockings hung by the fireplace, and snowflakes danced outside the window. But {name} had something on {possessive} mind -- a wish so big, {pronoun} hadn't told anyone. Not even Santa.",
       sceneDescription:
         "Child in cozy pajamas looking at a beautiful Christmas tree in a warm living room, snow falling outside the window",
+      dualCharacterSceneDescription:
+        "Two children decorating a Christmas tree together, one placing a star on top while the other hangs ornaments, warm glow",
     },
     {
       pageNumber: 2,
@@ -907,6 +1029,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The letter began to GLOW! It floated up from under the tree, swirled around the room leaving a trail of golden sparkles, and zoomed straight up the chimney! {name} raced to the window and watched it fly into the snowy sky like a tiny shooting star, heading north.",
       sceneDescription:
         "Child watching a glowing letter fly up the chimney trailing golden sparkles, eyes wide with amazement, Christmas tree behind them",
+      dualCharacterSceneDescription:
+        "Two children riding in Santas sleigh together through a snowy sky, reindeer leading the way, Northern Lights above",
     },
     {
       pageNumber: 4,
@@ -921,6 +1045,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} climbed into the sleigh, which was warmer than it looked -- like sitting in a cup of hot cocoa. {reindeer_friend} the reindeer turned and winked. \"Hold on tight!\" Santa called. The sleigh shot into the sky, zooming over snowy rooftops and twinkling towns. {name} could see the whole world below!",
       sceneDescription:
         "Child sitting beside Santa in the flying sleigh high above a snowy village, reindeer galloping through starry sky, the child's face full of joy",
+      dualCharacterSceneDescription:
+        "Two children in Santas workshop together, both helping elves wrap presents, surrounded by toys and colorful wrapping paper",
     },
     {
       pageNumber: 6,
@@ -942,6 +1068,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} thought about all the kind things {pronoun} had done this year. Helping friends, sharing toys, giving hugs when someone was sad, being brave when things were hard. With every memory, {name}'s heart glowed a little brighter. {pronoun} placed {possessive} hands on the Great Gift Machine and poured all that kindness in.",
       sceneDescription:
         "Child placing glowing hands on the Great Gift Machine, golden light streaming from their heart, memories appearing as floating images around them",
+      dualCharacterSceneDescription:
+        "Two children meeting Santa Claus together, sitting with him while Mrs Claus brings cookies, a cozy North Pole cabin",
     },
     {
       pageNumber: 9,
@@ -956,6 +1084,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "As a thank-you, Santa gave {name} a very special gift -- the first present off the Great Gift Machine. It was wrapped in paper that changed colors and had a bow made of starlight. \"Don't open it until Christmas morning,\" Santa whispered with a wink. \"I think you'll like what's inside.\"",
       sceneDescription:
         "Santa handing the child a beautiful color-changing present with a starlight bow, both smiling warmly, the workshop glowing behind them",
+      dualCharacterSceneDescription:
+        "Two children delivering presents together to houses below, flying over a snowy village with sacks of gifts",
     },
     {
       pageNumber: 11,
@@ -970,6 +1100,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "{name} woke up on Christmas morning, warm and cozy in bed. Was it a dream? But there, under the tree, sat the color-changing present with the starlight bow. {name} opened it and smiled the biggest smile. Inside was exactly {christmas_wish} -- and a note in Santa's handwriting: \"For the child who saved Christmas. With love, S.C.\"",
       sceneDescription:
         "Child on Christmas morning opening the magical present under the tree, a look of pure joy and wonder, warm morning light streaming in",
+      dualCharacterSceneDescription:
+        "Two children asleep by the fireplace on Christmas Eve, stockings hung above them, cookies half-eaten, snow falling outside",
     },
   ],
 
@@ -980,6 +1112,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "It was the best night of the year -- Halloween! The air smelled like fallen leaves and candy corn. Jack-o'-lanterns grinned from every porch, and the full moon hung low and orange in the sky. {name} was almost ready. {possessive} costume was perfect: {costume}. Tonight was going to be AMAZING.",
       sceneDescription:
         "Child putting on their Halloween costume in front of a mirror, a carved pumpkin glowing on the windowsill, twilight sky outside",
+      dualCharacterSceneDescription:
+        "Two children in Halloween costumes together, walking down a spooky but fun street lined with jack-o-lanterns",
     },
     {
       pageNumber: 2,
@@ -994,6 +1128,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "\"The real adventure?\" {name} asked. {halloween_friend} grinned. \"Every Halloween, a magical portal opens behind the oldest jack-o'-lantern on Boo Lane. It leads to Monster Town, where all the friendly monsters celebrate together. And this year, YOU'RE invited!\" {name}'s eyes went wide. \"Let's GO!\"",
       sceneDescription:
         "Child and their friendly spooky friend running toward a glowing jack-o'-lantern at the end of a spooky but fun-looking street",
+      dualCharacterSceneDescription:
+        "Two children stepping through a glowing portal together inside a giant jack-o-lantern, both looking excited and brave",
     },
     {
       pageNumber: 4,
@@ -1008,6 +1144,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Monster Town was the most wonderfully spooky place {name} had ever seen! Cobblestone streets wound between crooked houses. Bat-shaped streetlights flickered with purple flames. A skeleton played the xylophone on his own ribs, and a group of mummies were trying to wrap each other up -- very badly.",
       sceneDescription:
         "Child arriving in a colorful, fun Monster Town with crooked buildings, bat streetlights, a skeleton musician, and silly mummies",
+      dualCharacterSceneDescription:
+        "Two children meeting friendly monsters in Monster Town together, shaking hands with a vampire while a mummy waves",
     },
     {
       pageNumber: 6,
@@ -1029,6 +1167,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "The Great Cauldron EXPLODED with candy! Chocolate bats, gummy eyeballs, lollipop skulls, and candy pumpkins flew into the air like a candy firework show! Every monster caught handfuls, cheering and laughing. {halloween_friend} caught a giant chocolate spider and shared half with {name}.",
       sceneDescription:
         "Candy exploding from the cauldron like fireworks, all kinds of Halloween candy flying through the air, monsters and the child catching them joyfully",
+      dualCharacterSceneDescription:
+        "Two children working together to fix the Great Cauldron of Candy, one reaching inside while the other holds a flashlight",
     },
     {
       pageNumber: 9,
@@ -1043,6 +1183,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "\"You're the bravest human we've ever met!\" the Mayor declared. All the monsters agreed -- the mummies clapped (though their bandages got tangled), the ghost did a happy loop-de-loop, and {halloween_friend} gave {name} the biggest, warmest hug. \"You'll always be an honorary monster, {name}.\"",
       sceneDescription:
         "All the friendly monsters hugging and celebrating the child, the Mayor giving a speech, monsters with tangled bandages and happy ghosts spinning",
+      dualCharacterSceneDescription:
+        "Two children being crowned honorary monsters together by the Mayor, all the friendly monsters cheering and hugging them",
     },
     {
       pageNumber: 11,
@@ -1057,6 +1199,8 @@ export const storySkeletons: Record<string, StorySkeletonPage[]> = {
         "Back on {possessive} own street, the moon was still full and the jack-o'-lanterns still glowed. {name} walked home with a candy bag bulging and a golden pumpkin trophy tucked under {possessive} arm. Best Halloween EVER. As {pronoun} drifted off to sleep, {name} could swear {pronoun} heard a friendly monster voice whisper: \"Happy Halloween, {name}. Sweet dreams.\"",
       sceneDescription:
         "Child in bed on Halloween night, golden pumpkin trophy glowing on the nightstand, candy bag nearby, a friendly monster shadow waving in the moonlight",
+      dualCharacterSceneDescription:
+        "Two children in bed on Halloween night together, golden pumpkin trophy glowing on the nightstand, candy bags nearby",
     },
   ],
 };
