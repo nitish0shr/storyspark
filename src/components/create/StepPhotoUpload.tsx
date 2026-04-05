@@ -17,126 +17,50 @@ import {
 import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
 
-export function StepPhotoUpload() {
-  const { childName, photoPreviewUrl, setPhoto, setPhotoUrl, nextStep } =
-    useWizardStore();
-  const posthog = usePostHog();
+function PhotoUploader({
+  label,
+  previewUrl,
+  onFile,
+  onClear,
+  uploading,
+}: {
+  label: string;
+  previewUrl: string | null;
+  onFile: (file: File) => void;
+  onClear: () => void;
+  uploading: boolean;
+}) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const uploadToServer = useCallback(async (file: File) => {
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("photo", file);
-
-      const res = await fetch("/api/upload-photo", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPhotoUrl(data.url);
-      }
-      // Non-blocking: if upload fails, we still have the local preview
-      // The photo URL is optional for book creation
-    } catch {
-      // Silent failure — photo upload is best-effort
-    } finally {
-      setUploading(false);
-    }
-  }, [setPhotoUrl]);
 
   const handleFile = useCallback(
     (file: File) => {
       setError(null);
-
       if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith(".heic")) {
         setError("Please upload a JPG, PNG, or HEIC image.");
         return;
       }
-
       if (file.size > MAX_FILE_SIZE) {
         setError("Image must be under 10MB.");
         return;
       }
-
-      const previewUrl = URL.createObjectURL(file);
-      setPhoto(file, previewUrl);
-
-      // Upload to server in background (non-blocking)
-      uploadToServer(file);
+      onFile(file);
     },
-    [setPhoto, uploadToServer]
+    [onFile]
   );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    },
-    [handleFile]
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
-    },
-    [handleFile]
-  );
-
-  const clearPhoto = () => {
-    useWizardStore.setState({
-      photoFile: null,
-      photoPreviewUrl: null,
-    });
-    if (inputRef.current) inputRef.current.value = "";
-  };
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <div className="text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
-          Upload a photo of {childName}
-        </h2>
-        <p className="mt-2 text-gray-500">
-          We&apos;ll use this to create illustrations that look like {childName}.
-        </p>
-      </div>
-
-      {/* Photo tips */}
-      <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-100 p-4">
-        <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-        <div className="text-sm text-amber-800">
-          <p className="font-medium">For best results:</p>
-          <ul className="mt-1 list-disc pl-4 space-y-0.5 text-amber-700">
-            <li>Clear view of face</li>
-            <li>Good lighting</li>
-            <li>No sunglasses or masks</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Dropzone or Preview */}
-      {photoPreviewUrl ? (
+    <div className="space-y-3">
+      {previewUrl ? (
         <div className="relative overflow-hidden rounded-2xl border-2 border-violet-200 bg-violet-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photoPreviewUrl}
-            alt={`Photo of ${childName}`}
-            className="mx-auto max-h-72 w-full object-contain p-4"
-          />
+          <img src={previewUrl} alt={label} className="mx-auto max-h-52 w-full object-contain p-4" />
           <button
-            onClick={clearPhoto}
+            onClick={() => { onClear(); if (inputRef.current) inputRef.current.value = ""; }}
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           >
             <X className="h-4 w-4" />
@@ -159,61 +83,164 @@ export function StepPhotoUpload() {
         </div>
       ) : (
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
-          onDrop={handleDrop}
+          onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            "group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-10 transition-all duration-200",
+            "group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 transition-all duration-200",
             isDragging
               ? "border-violet-500 bg-violet-50 scale-[1.02]"
               : "border-gray-300 bg-white hover:border-violet-300 hover:bg-violet-50/30"
           )}
         >
-          <div
-            className={cn(
-              "flex h-16 w-16 items-center justify-center rounded-2xl transition-colors",
-              isDragging
-                ? "bg-violet-600 text-white"
-                : "bg-violet-100 text-violet-600 group-hover:bg-violet-200"
-            )}
-          >
-            <ImageIcon className="h-8 w-8" />
+          <div className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
+            isDragging ? "bg-violet-600 text-white" : "bg-violet-100 text-violet-600 group-hover:bg-violet-200"
+          )}>
+            <ImageIcon className="h-6 w-6" />
           </div>
           <div className="text-center">
-            <p className="font-semibold text-gray-700">
-              <Upload className="mr-1.5 inline h-4 w-4 -mt-0.5" />
-              Drop photo here or click to browse
+            <p className="font-semibold text-gray-700 text-sm">
+              <Upload className="mr-1 inline h-3.5 w-3.5 -mt-0.5" />
+              Drop photo or click to browse
             </p>
-            <p className="mt-1 text-sm text-gray-400">
-              JPG, PNG, or HEIC -- up to 10MB
-            </p>
+            <p className="mt-0.5 text-xs text-gray-400">JPG, PNG, or HEIC — up to 10MB</p>
           </div>
         </div>
       )}
-
-      {/* Privacy reassurance */}
-      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-        <Shield className="h-3.5 w-3.5" />
-        <span>Your photo is encrypted and never shared with third parties.</span>
-      </div>
 
       <input
         ref={inputRef}
         type="file"
         accept=".jpg,.jpeg,.png,.heic,.heif"
-        onChange={handleChange}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
         className="hidden"
       />
 
-      {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+    </div>
+  );
+}
+
+export function StepPhotoUpload() {
+  const {
+    childName,
+    photoPreviewUrl,
+    setPhoto,
+    setPhotoUrl,
+    hasSecondChild,
+    secondChildName,
+    secondChildPhotoPreviewUrl,
+    setSecondChildPhoto,
+    setSecondChildPhotoUrl,
+    nextStep,
+  } = useWizardStore();
+  const posthog = usePostHog();
+  const [uploading, setUploading] = useState(false);
+  const [uploading2, setUploading2] = useState(false);
+
+  const uploadToServer = useCallback(
+    async (file: File, setUrl: (url: string) => void, setLoading: (b: boolean) => void) => {
+      setLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append("photo", file);
+        const res = await fetch("/api/upload-photo", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          setUrl(data.url);
+        }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const handleFirstFile = useCallback(
+    (file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      setPhoto(file, previewUrl);
+      uploadToServer(file, setPhotoUrl, setUploading);
+    },
+    [setPhoto, setPhotoUrl, uploadToServer]
+  );
+
+  const handleSecondFile = useCallback(
+    (file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      setSecondChildPhoto(file, previewUrl);
+      uploadToServer(file, setSecondChildPhotoUrl, setUploading2);
+    },
+    [setSecondChildPhoto, setSecondChildPhotoUrl, uploadToServer]
+  );
+
+  const clearFirst = () => {
+    useWizardStore.setState({ photoFile: null, photoPreviewUrl: null, photoUrl: null });
+  };
+
+  const clearSecond = () => {
+    useWizardStore.setState({
+      secondChildPhotoFile: null,
+      secondChildPhotoPreviewUrl: null,
+      secondChildPhotoUrl: null,
+    });
+  };
+
+  return (
+    <div className="mx-auto max-w-lg space-y-6">
+      <div className="text-center">
+        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
+          Upload photo{hasSecondChild ? "s" : ""} {hasSecondChild ? "" : `of ${childName}`}
+        </h2>
+        <p className="mt-2 text-gray-500">
+          We&apos;ll use {hasSecondChild ? "these" : "this"} to create illustrations that look like {hasSecondChild ? `${childName} and ${secondChildName}` : childName}.
+        </p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-100 p-4">
+        <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+        <div className="text-sm text-amber-800">
+          <p className="font-medium">For best results:</p>
+          <ul className="mt-1 list-disc pl-4 space-y-0.5 text-amber-700">
+            <li>Clear view of face</li>
+            <li>Good lighting</li>
+            <li>No sunglasses or masks</li>
+          </ul>
+        </div>
+      </div>
+
+      {hasSecondChild && (
+        <p className="text-sm font-medium text-gray-700">{childName}&apos;s photo</p>
+      )}
+      <PhotoUploader
+        label={`Photo of ${childName}`}
+        previewUrl={photoPreviewUrl}
+        onFile={handleFirstFile}
+        onClear={clearFirst}
+        uploading={uploading}
+      />
+
+      {hasSecondChild && (
+        <>
+          <p className="text-sm font-medium text-gray-700">{secondChildName || "Second child"}&apos;s photo</p>
+          <PhotoUploader
+            label={`Photo of ${secondChildName}`}
+            previewUrl={secondChildPhotoPreviewUrl}
+            onFile={handleSecondFile}
+            onClear={clearSecond}
+            uploading={uploading2}
+          />
+        </>
       )}
 
-      {/* Actions */}
+      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+        <Shield className="h-3.5 w-3.5" />
+        <span>Your photos are encrypted and never shared with third parties.</span>
+      </div>
+
       <div className="flex flex-col gap-3">
         <div
           onClick={() => {
@@ -224,7 +251,7 @@ export function StepPhotoUpload() {
         >
           <Button
             onClick={() => {
-              posthog.capture("wizard_step_completed", { step: "photo_upload" });
+              posthog.capture("wizard_step_completed", { step: "photo_upload", has_second_child: hasSecondChild });
               nextStep();
             }}
             disabled={!photoPreviewUrl}
@@ -246,7 +273,7 @@ export function StepPhotoUpload() {
           }}
           className="text-sm font-medium text-gray-400 hover:text-violet-600 transition-colors"
         >
-          Skip — illustrations won&apos;t match {childName}&apos;s appearance
+          Skip — illustrations won&apos;t match {hasSecondChild ? "their appearances" : `${childName}'s appearance`}
         </button>
       </div>
     </div>

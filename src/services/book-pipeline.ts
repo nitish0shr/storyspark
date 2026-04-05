@@ -9,10 +9,7 @@ import { assemblePdf } from "@/services/pdf-assembly";
 import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
 
-/**
- * Fetches a book record and its associated child profile from the database.
- */
-async function fetchBookWithChild(bookId: string) {
+async function fetchBookWithChildren(bookId: string) {
   const { data: book, error: bookError } = await supabaseAdmin
     .from("books")
     .select("*")
@@ -35,7 +32,22 @@ async function fetchBookWithChild(bookId: string) {
     );
   }
 
-  return { book, child };
+  let secondChild = null;
+  if (book.second_child_profile_id) {
+    const { data: sc, error: scError } = await supabaseAdmin
+      .from("child_profiles")
+      .select("*")
+      .eq("id", book.second_child_profile_id)
+      .single();
+
+    if (scError || !sc) {
+      console.warn(`Failed to fetch second child profile for book ${bookId}: ${scError?.message}`);
+    } else {
+      secondChild = sc;
+    }
+  }
+
+  return { book, child, secondChild };
 }
 
 /**
@@ -67,15 +79,19 @@ export async function generatePreview(bookId: string): Promise<void> {
   try {
     await updateBookStatus(bookId, "preview_generating");
 
-    const { book, child } = await fetchBookWithChild(bookId);
+    const { book, child, secondChild } = await fetchBookWithChildren(bookId);
 
-    // Step 1: Face analysis (if no appearance profile yet)
+    const defaultAppearance: AppearanceProfile = {
+      skinTone: "warm medium",
+      hairColor: "brown",
+      hairStyle: "short straight",
+      eyeColor: "brown",
+    };
+
     let appearanceProfile: AppearanceProfile = child.appearance_profile;
 
     if (!appearanceProfile && child.photo_url) {
       appearanceProfile = await analyzeFace(child.photo_url);
-
-      // Save the appearance profile back to the child record
       await supabaseAdmin
         .from("child_profiles")
         .update({
@@ -85,17 +101,42 @@ export async function generatePreview(bookId: string): Promise<void> {
         .eq("id", child.id);
     }
 
-    // Fallback if still no profile
     if (!appearanceProfile) {
-      appearanceProfile = {
-        skinTone: "warm medium",
-        hairColor: "brown",
-        hairStyle: "short straight",
-        eyeColor: "brown",
+      appearanceProfile = defaultAppearance;
+    }
+
+    let secondChildData = undefined;
+    let secondChildAppearance = undefined;
+    if (secondChild) {
+      let scAppearance: AppearanceProfile = secondChild.appearance_profile;
+      if (!scAppearance && secondChild.photo_url) {
+        scAppearance = await analyzeFace(secondChild.photo_url);
+        await supabaseAdmin
+          .from("child_profiles")
+          .update({
+            appearance_profile: scAppearance,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", secondChild.id);
+      }
+      if (!scAppearance) {
+        scAppearance = defaultAppearance;
+      }
+
+      secondChildData = {
+        name: secondChild.name,
+        age: secondChild.age,
+        gender: secondChild.gender,
+        appearanceProfile: scAppearance,
+      };
+      secondChildAppearance = {
+        name: secondChild.name,
+        age: secondChild.age,
+        gender: secondChild.gender,
+        appearanceProfile: scAppearance,
       };
     }
 
-    // Step 2: Generate the full story text
     const contextualAnswers: Record<string, string> =
       book.contextual_answers || {};
 
@@ -107,15 +148,15 @@ export async function generatePreview(bookId: string): Promise<void> {
       themeId: book.theme_id,
       contextualAnswers,
       language: book.language || "en",
+      secondChild: secondChildData,
     });
 
-    // Step 3: Generate preview illustrations (first 3 pages)
     const skeleton = storySkeletons[book.theme_id];
     const sceneDescriptions = skeleton
       ? skeleton.map((s) => s.sceneDescription)
       : [];
 
-    const previewPageNumbers = [1, 2, 3]; // cover + first 2 pages
+    const previewPageNumbers = [1, 2, 3];
 
     const previewIllustrationUrls = await generateIllustrations({
       storyPages,
@@ -125,6 +166,7 @@ export async function generatePreview(bookId: string): Promise<void> {
       childGender: child.gender,
       sceneDescriptions,
       pageNumbers: previewPageNumbers,
+      secondChild: secondChildAppearance,
     });
 
     // Build the full illustration_urls array with nulls for non-preview pages
@@ -161,7 +203,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
   try {
     await updateBookStatus(bookId, "generating");
 
-    const { book, child } = await fetchBookWithChild(bookId);
+    const { book, child, secondChild } = await fetchBookWithChildren(bookId);
 
     if (!book.story_text || !Array.isArray(book.story_text)) {
       throw new Error(
@@ -169,17 +211,28 @@ export async function generateFullBook(bookId: string): Promise<void> {
       );
     }
 
-    const storyPages: BookPage[] = book.story_text;
-    const existingUrls: (string | null)[] = book.illustration_urls || [];
-
-    const appearanceProfile: AppearanceProfile = child.appearance_profile || {
+    const defaultAppearance: AppearanceProfile = {
       skinTone: "warm medium",
       hairColor: "brown",
       hairStyle: "short straight",
       eyeColor: "brown",
     };
 
-    // Determine which pages still need illustrations
+    const storyPages: BookPage[] = book.story_text;
+    const existingUrls: (string | null)[] = book.illustration_urls || [];
+
+    const appearanceProfile: AppearanceProfile = child.appearance_profile || defaultAppearance;
+
+    let secondChildAppearance = undefined;
+    if (secondChild) {
+      secondChildAppearance = {
+        name: secondChild.name,
+        age: secondChild.age,
+        gender: secondChild.gender,
+        appearanceProfile: (secondChild.appearance_profile || defaultAppearance) as AppearanceProfile,
+      };
+    }
+
     const remainingPageNumbers: number[] = [];
     storyPages.forEach((page, idx) => {
       if (!existingUrls[idx]) {
@@ -203,6 +256,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
         childGender: child.gender,
         sceneDescriptions,
         pageNumbers: remainingPageNumbers,
+        secondChild: secondChildAppearance,
       });
 
       // Merge new URLs into the full array

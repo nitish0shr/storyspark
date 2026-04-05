@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
       dedication,
       language,
       email,
+      secondChildName,
+      secondChildAge,
+      secondChildGender,
+      secondChildPhotoUrl,
     } = body;
 
     // Validate required fields
@@ -71,15 +75,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Create book record
+    let secondChildProfileId: string | null = null;
+
+    if (secondChildName && secondChildAge !== undefined && secondChildGender) {
+      const { data: secondProfile, error: secondError } = await supabase
+        .from("child_profiles")
+        .insert({
+          user_id: user.id,
+          name: secondChildName,
+          age: secondChildAge,
+          gender: secondChildGender,
+          photo_url: secondChildPhotoUrl || null,
+        })
+        .select("id")
+        .single();
+
+      if (secondError) {
+        console.error("Failed to create second child profile:", secondError);
+        return NextResponse.json(
+          { error: "Failed to create second child profile" },
+          { status: 500 }
+        );
+      }
+      secondChildProfileId = secondProfile.id;
+    }
+
+    const bookTitle = secondChildProfileId
+      ? `${childName} & ${secondChildName}'s ${theme.name}`
+      : theme.titleTemplate?.replace("[Child]", childName) || `${childName}'s ${theme.name}`;
+
     const { data: book, error: bookError } = await supabase
       .from("books")
       .insert({
         user_id: user.id,
         child_profile_id: childProfile.id,
+        second_child_profile_id: secondChildProfileId,
         theme_id: themeId,
-        child_name: childName,
-        theme_title: theme.name,
+        child_name: secondChildProfileId ? `${childName} & ${secondChildName}` : childName,
+        theme_title: bookTitle,
         contextual_answers: contextualAnswers || {},
         dedication: dedication?.trim() || null,
         language: isValidLanguageCode(language) ? language : "en",
@@ -106,6 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       childProfileId: childProfile.id,
+      secondChildProfileId,
       bookId: book.id,
     });
   } catch (error) {
