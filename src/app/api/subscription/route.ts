@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest) {
           cancel_at_period_end: false,
         };
         if (sub.status === "paused") {
-          updateParams.pause_collection = "";
+          updateParams.pause_collection = null;
         }
         await stripe.subscriptions.update(sub.stripe_subscription_id, updateParams);
 

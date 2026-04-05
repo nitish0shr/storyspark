@@ -387,7 +387,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return;
   }
 
-  const status = mapStripeSubStatus(subscription.status);
+  const hasPauseCollection = !!(subscription as Record<string, unknown>).pause_collection;
+  const status = hasPauseCollection ? "paused" : mapStripeSubStatus(subscription.status);
   const customerId =
     typeof subscription.customer === "string"
       ? subscription.customer

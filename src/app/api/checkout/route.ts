@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { stripe, isStripeConfigured, PRICE_BASE, PRICE_MID, PRICE_PREMIUM } from "@/lib/stripe";
+import { stripe, isStripeConfigured, PRICE_BASE, PRICE_MID, PRICE_PREMIUM, PRICING } from "@/lib/stripe";
 import { PricingTier } from "@/types/order";
 import { getAppUrl } from "@/lib/utils";
 
@@ -118,7 +118,21 @@ export async function POST(request: NextRequest) {
     const tierConfig = TIER_CONFIG[tier];
     const appUrl = getAppUrl();
 
-    // Create Stripe Checkout Session
+    let finalPrice = tierConfig.price;
+    let isSubscriber = false;
+
+    const { data: activeSub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, status")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (activeSub) {
+      isSubscriber = true;
+      finalPrice = Math.round(tierConfig.price * (1 - PRICING.subscriberDiscount));
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email,
@@ -127,10 +141,10 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `StorySpark Book - ${tierConfig.name}`,
-              description: `${book.child_name}'s personalized storybook`,
+              name: `StorySpark Book - ${tierConfig.name}${isSubscriber ? " (Subscriber Discount)" : ""}`,
+              description: `${book.child_name}'s personalized storybook${isSubscriber ? " — 15% subscriber discount applied" : ""}`,
             },
-            unit_amount: tierConfig.price,
+            unit_amount: finalPrice,
           },
           quantity: 1,
         },
@@ -153,7 +167,7 @@ export async function POST(request: NextRequest) {
       book_id: bookId,
       stripe_checkout_session_id: session.id,
       status: "pending",
-      amount_cents: tierConfig.price,
+      amount_cents: finalPrice,
       currency: "usd",
       tier,
       is_gift: isGift,
