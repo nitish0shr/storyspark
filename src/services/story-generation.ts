@@ -134,6 +134,13 @@ function validateStory(
  * Generates a complete story for a children's book using GPT-4o-mini.
  * Retries once on parse failure.
  */
+export interface SecondChild {
+  name: string;
+  age: number;
+  gender: string;
+  appearanceProfile: AppearanceProfile;
+}
+
 export async function generateStory(params: {
   childName: string;
   childAge: number;
@@ -142,6 +149,7 @@ export async function generateStory(params: {
   themeId: string;
   contextualAnswers: Record<string, string>;
   language?: string;
+  secondChild?: SecondChild;
 }): Promise<BookPage[]> {
   const {
     childName,
@@ -151,6 +159,7 @@ export async function generateStory(params: {
     themeId,
     contextualAnswers,
     language = "en",
+    secondChild,
   } = params;
 
   const skeleton = storySkeletons[themeId];
@@ -163,7 +172,6 @@ export async function generateStory(params: {
   const genderLabel =
     childGender === "neutral" ? "child" : childGender;
 
-  // Fill the skeleton with placeholders replaced
   const filledSkeleton = fillSkeletonPlaceholders(
     skeleton,
     childName,
@@ -171,7 +179,6 @@ export async function generateStory(params: {
     contextualAnswers
   );
 
-  // Build the hair description
   const hairDescription = `${appearanceProfile.hairStyle} ${appearanceProfile.hairColor} hair`;
   const appearanceNotes = `${appearanceProfile.skinTone} skin tone, ${appearanceProfile.eyeColor} eyes`;
 
@@ -200,12 +207,39 @@ export async function generateStory(params: {
     contextual_answers: formatContextualAnswers(contextualAnswers),
   });
 
+  let dualCharacterInstruction = "";
+  if (secondChild) {
+    const p2 = getPronouns(secondChild.gender);
+    const age2 = secondChild.age < 0 ? "baby (pre-birth)" : String(secondChild.age);
+    const gender2 = secondChild.gender === "neutral" ? "child" : secondChild.gender;
+    const hair2 = `${secondChild.appearanceProfile.hairStyle} ${secondChild.appearanceProfile.hairColor} hair`;
+    const appear2 = `${secondChild.appearanceProfile.skinTone} skin tone, ${secondChild.appearanceProfile.eyeColor} eyes`;
+
+    dualCharacterInstruction = `
+
+SECOND CHILD (CO-HERO):
+- Name: ${secondChild.name}
+- Age: ${age2}
+- Gender: ${gender2}
+- Pronouns: ${p2.pronoun}/${p2.possessive}/${p2.object}
+- Appearance: ${hair2}. ${appear2}
+
+DUAL-CHARACTER INSTRUCTIONS:
+- This is a story about TWO children adventuring TOGETHER as equal co-heroes.
+- Both ${childName} and ${secondChild.name} must appear prominently throughout the entire story.
+- They should complement each other: share dialogue, help each other, and celebrate together.
+- Alternate which child leads certain moments so both feel equally important.
+- Use both names frequently — each child should be mentioned by name on every page.
+- They discover things together, face challenges together, and triumph together.
+- The story title should reference both children (e.g., "${childName} & ${secondChild.name}'s [Adventure]").`;
+  }
+
   const languageInstruction =
     language !== "en"
-      ? `\n\nLANGUAGE: Write the entire story in ${languageName}. Keep the child's name "${childName}" unchanged. Use natural, fluent ${languageName} appropriate for children. The "Page N:" prefix must remain in English.`
+      ? `\n\nLANGUAGE: Write the entire story in ${languageName}. Keep the children's names unchanged. Use natural, fluent ${languageName} appropriate for children. The "Page N:" prefix must remain in English.`
       : "";
 
-  const fullSystemPrompt = systemPrompt + languageInstruction;
+  const fullSystemPrompt = systemPrompt + dualCharacterInstruction + languageInstruction;
 
   const expectedPageCount = skeleton.length;
   let lastError: Error | null = null;
@@ -218,7 +252,9 @@ export async function generateStory(params: {
           { role: "system", content: fullSystemPrompt },
           {
             role: "user",
-            content: `Write the complete ${expectedPageCount}-page story now in ${languageName}. Output ONLY the story pages in the format "Page N: <text>". No other commentary.`,
+            content: secondChild
+              ? `Write the complete ${expectedPageCount}-page story now in ${languageName}, featuring both ${childName} and ${secondChild.name} as co-heroes. Output ONLY the story pages in the format "Page N: <text>". No other commentary.`
+              : `Write the complete ${expectedPageCount}-page story now in ${languageName}. Output ONLY the story pages in the format "Page N: <text>". No other commentary.`,
           },
         ],
         temperature: 0.8,

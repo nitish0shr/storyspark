@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Loader2,
   Globe,
+  Users,
 } from "lucide-react";
 
 interface BookLibraryProps {
@@ -143,6 +144,15 @@ function BookCard({
           </Badge>
           {theme && (
             <span className="text-xs text-gray-400">{theme.name}</span>
+          )}
+          {book.secondChildProfileId && (
+            <Badge
+              variant="outline"
+              className="text-xs font-medium border-pink-200 bg-pink-50 text-pink-600 px-2 py-0.5"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Co-heroes
+            </Badge>
           )}
           {book.language && book.language !== "en" && (
             <Badge

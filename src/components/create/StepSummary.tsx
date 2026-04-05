@@ -38,6 +38,11 @@ export function StepSummary() {
     childAge,
     childGender,
     photoPreviewUrl,
+    hasSecondChild,
+    secondChildName,
+    secondChildAge,
+    secondChildGender,
+    secondChildPhotoPreviewUrl,
     selectedThemeId,
     contextualAnswers,
     dedication,
@@ -47,6 +52,7 @@ export function StepSummary() {
     email,
     setEmail,
     setChildProfileId,
+    setSecondChildProfileId,
     setBookId,
     setGenerating,
     nextStep,
@@ -88,6 +94,12 @@ export function StepSummary() {
           dedication: dedication.trim() || undefined,
           language,
           email,
+          ...(hasSecondChild ? {
+            secondChildName,
+            secondChildAge,
+            secondChildGender,
+            secondChildPhotoUrl: useWizardStore.getState().secondChildPhotoUrl || undefined,
+          } : {}),
         }),
       });
 
@@ -98,9 +110,11 @@ export function StepSummary() {
         );
       }
 
-      const { childProfileId, bookId } = await createRes.json();
-      setChildProfileId(childProfileId);
-      setBookId(bookId);
+      const resData = await createRes.json();
+      setChildProfileId(resData.childProfileId);
+      if (resData.secondChildProfileId) setSecondChildProfileId(resData.secondChildProfileId);
+      setBookId(resData.bookId);
+      const bookId = resData.bookId;
 
       const genRes = await fetch("/api/generate-preview", {
         method: "POST",
@@ -202,11 +216,35 @@ export function StepSummary() {
           </div>
         )}
 
+        {/* Second child info */}
+        {hasSecondChild && secondChildName && (
+          <div className="flex items-center gap-4 p-4">
+            {secondChildPhotoPreviewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={secondChildPhotoPreviewUrl}
+                alt={secondChildName}
+                className="h-14 w-14 rounded-xl object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-pink-100">
+                <User className="h-6 w-6 text-pink-500" />
+              </div>
+            )}
+            <div>
+              <p className="font-semibold text-gray-900">{secondChildName}</p>
+              <p className="text-sm text-gray-500">
+                {secondChildAge === -1 ? "Not yet born" : `${secondChildAge} year${secondChildAge !== 1 ? "s" : ""} old`} · {genderLabel[secondChildGender] || secondChildGender} · Co-hero
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Photo indicator */}
         {photoPreviewUrl && (
           <div className="flex items-center gap-2 p-4 text-sm text-gray-500">
             <Camera className="h-4 w-4 text-violet-500" />
-            Photo uploaded
+            Photo{hasSecondChild ? "s" : ""} uploaded
           </div>
         )}
       </div>

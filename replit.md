@@ -67,9 +67,9 @@ src/
   lib/                    # Utilities, Supabase clients, Stripe
   services/               # AI generation services
     tts-narration.ts      # OpenAI TTS audio narration for book pages
-    book-pipeline.ts      # Book generation pipeline (preview + full + audio)
-    story-generation.ts   # GPT-4o-mini story generation (multi-language)
-    illustration.ts       # Replicate Flux illustration generation
+    book-pipeline.ts      # Book generation pipeline (preview + full + audio, supports dual-child)
+    story-generation.ts   # GPT-4o-mini story generation (multi-language, dual-character)
+    illustration.ts       # Replicate Flux illustration generation (supports second child)
     pdf-assembly.tsx      # PDF rendering with @react-pdf/renderer (Noto Sans fonts for CJK/Devanagari)
   data/                   # Theme definitions, languages config
     languages.ts          # Supported languages (en, es, fr, de, pt, it, hi, zh)

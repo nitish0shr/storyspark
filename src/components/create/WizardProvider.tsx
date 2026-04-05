@@ -11,12 +11,20 @@ interface WizardState {
   photoFile: File | null;
   photoPreviewUrl: string | null;
   photoUrl: string | null;
+  hasSecondChild: boolean;
+  secondChildName: string;
+  secondChildAge: number;
+  secondChildGender: "boy" | "girl" | "neutral" | "";
+  secondChildPhotoFile: File | null;
+  secondChildPhotoPreviewUrl: string | null;
+  secondChildPhotoUrl: string | null;
   selectedThemeId: string | null;
   contextualAnswers: Record<string, string>;
   dedication: string;
   language: string;
   email: string;
   childProfileId: string | null;
+  secondChildProfileId: string | null;
   bookId: string | null;
   isGenerating: boolean;
   generationStep: string;
@@ -28,12 +36,19 @@ interface WizardState {
   setChildGender: (gender: "boy" | "girl" | "neutral") => void;
   setPhoto: (file: File, previewUrl: string) => void;
   setPhotoUrl: (url: string) => void;
+  setHasSecondChild: (has: boolean) => void;
+  setSecondChildName: (name: string) => void;
+  setSecondChildAge: (age: number) => void;
+  setSecondChildGender: (gender: "boy" | "girl" | "neutral") => void;
+  setSecondChildPhoto: (file: File, previewUrl: string) => void;
+  setSecondChildPhotoUrl: (url: string) => void;
   setSelectedTheme: (themeId: string) => void;
   setContextualAnswer: (questionId: string, answer: string) => void;
   setDedication: (dedication: string) => void;
   setLanguage: (language: string) => void;
   setEmail: (email: string) => void;
   setChildProfileId: (id: string) => void;
+  setSecondChildProfileId: (id: string) => void;
   setBookId: (id: string) => void;
   setGenerating: (generating: boolean, step?: string) => void;
   reset: () => void;
@@ -47,12 +62,20 @@ const initialState = {
   photoFile: null,
   photoPreviewUrl: null,
   photoUrl: null,
+  hasSecondChild: false,
+  secondChildName: "",
+  secondChildAge: -1,
+  secondChildGender: "" as const,
+  secondChildPhotoFile: null,
+  secondChildPhotoPreviewUrl: null,
+  secondChildPhotoUrl: null,
   selectedThemeId: null,
   contextualAnswers: {},
   dedication: "",
   language: "en",
   email: "",
   childProfileId: null,
+  secondChildProfileId: null,
   bookId: null,
   isGenerating: false,
   generationStep: "",
@@ -72,6 +95,22 @@ export const useWizardStore = create<WizardState>()(
       setPhoto: (photoFile, photoPreviewUrl) =>
         set({ photoFile, photoPreviewUrl }),
       setPhotoUrl: (photoUrl) => set({ photoUrl }),
+      setHasSecondChild: (hasSecondChild) =>
+        set(hasSecondChild ? { hasSecondChild } : {
+          hasSecondChild: false,
+          secondChildName: "",
+          secondChildAge: -1,
+          secondChildGender: "" as const,
+          secondChildPhotoFile: null,
+          secondChildPhotoPreviewUrl: null,
+          secondChildPhotoUrl: null,
+        }),
+      setSecondChildName: (secondChildName) => set({ secondChildName }),
+      setSecondChildAge: (secondChildAge) => set({ secondChildAge }),
+      setSecondChildGender: (secondChildGender) => set({ secondChildGender }),
+      setSecondChildPhoto: (secondChildPhotoFile, secondChildPhotoPreviewUrl) =>
+        set({ secondChildPhotoFile, secondChildPhotoPreviewUrl }),
+      setSecondChildPhotoUrl: (secondChildPhotoUrl) => set({ secondChildPhotoUrl }),
       setSelectedTheme: (selectedThemeId) =>
         set({ selectedThemeId, contextualAnswers: {} }),
       setContextualAnswer: (questionId, answer) =>
@@ -85,6 +124,7 @@ export const useWizardStore = create<WizardState>()(
       setLanguage: (language) => set({ language }),
       setEmail: (email) => set({ email }),
       setChildProfileId: (childProfileId) => set({ childProfileId }),
+      setSecondChildProfileId: (secondChildProfileId) => set({ secondChildProfileId }),
       setBookId: (bookId) => set({ bookId }),
       setGenerating: (isGenerating, generationStep) =>
         set({ isGenerating, generationStep: generationStep ?? "" }),
@@ -99,12 +139,18 @@ export const useWizardStore = create<WizardState>()(
         childAge: state.childAge,
         childGender: state.childGender,
         photoUrl: state.photoUrl,
+        hasSecondChild: state.hasSecondChild,
+        secondChildName: state.secondChildName,
+        secondChildAge: state.secondChildAge,
+        secondChildGender: state.secondChildGender,
+        secondChildPhotoUrl: state.secondChildPhotoUrl,
         selectedThemeId: state.selectedThemeId,
         contextualAnswers: state.contextualAnswers,
         dedication: state.dedication,
         language: state.language,
         email: state.email,
         childProfileId: state.childProfileId,
+        secondChildProfileId: state.secondChildProfileId,
         bookId: state.bookId,
         // Exclude: photoFile (File object), photoPreviewUrl (blob URL),
         // isGenerating, generationStep (transient UI state)
