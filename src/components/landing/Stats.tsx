@@ -2,9 +2,9 @@
 
 const stats = [
   { emoji: "✨", value: "500+", label: "Books Created", bg: "bg-[#FFD166]" },
-  { emoji: "⭐", value: "4.9/5", label: "Star Rating", bg: "bg-[#FF6B6B] text-white" },
-  { emoji: "⚡", value: "< 2 min", label: "To Create", bg: "bg-[#06D6A0]" },
-  { emoji: "💯", value: "100%", label: "Happiness Guaranteed", bg: "bg-[#C3B1E1]" },
+  { emoji: "⚡", value: "~2 min", label: "Preview Ready", bg: "bg-[#06D6A0]" },
+  { emoji: "🔒", value: "Private", label: "Photo Stays Safe", bg: "bg-[#C3B1E1]" },
+  { emoji: "💳", value: "Free", label: "Preview First", bg: "bg-[#FF6B6B] text-white" },
 ];
 
 export default function Stats() {

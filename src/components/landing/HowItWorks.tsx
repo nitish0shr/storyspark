@@ -6,7 +6,7 @@ const steps = [
     emoji: "📸",
     title: "Upload a Photo",
     description:
-      "Just one clear, happy photo of your child's face. Our AI studies their features — hair color, eye color, skin tone — to make the book look just like them!",
+      "Provide just one clear photo of your child's face. Our AI studies their features — hair color, eye color, and skin tone — to make them the star of their own book.",
     bg: "bg-[#FFD166]",
     border: "border-[#1a1a2e]",
     numBg: "bg-[#FF9F1C]",
@@ -14,9 +14,9 @@ const steps = [
   {
     number: "2",
     emoji: "🗺️",
-    title: "Pick an Adventure",
+    title: "Pick Their Adventure",
     description:
-      "Choose from 6 magical worlds: Space Explorer, Dino Land, Ocean Adventure, Enchanted Castle, Superhero City, or Magic Forest. Then add your child's name and fun details!",
+      "Choose from magical worlds — a mission across the stars, an adventure with friendly dinosaurs, an underwater journey, a royal quest, a brave rescue mission, or a whimsical enchanted quest. Then add your child's name and a few fun details.",
     bg: "bg-[#C3B1E1]",
     border: "border-[#1a1a2e]",
     numBg: "bg-[#7B2D8B]",
@@ -26,7 +26,7 @@ const steps = [
     emoji: "🎉",
     title: "Get Their Book!",
     description:
-      "In just 2 minutes, AI writes a unique 12-page story and creates beautiful illustrations with your child as the star. Download, print, or share instantly!",
+      "In about 2 minutes, AI writes a unique 12-page story and creates beautiful illustrations with your child as the star. Download the PDF, print it, or share a link with family!",
     bg: "bg-[#DCFBF2]",
     border: "border-[#1a1a2e]",
     numBg: "bg-[#06D6A0]",
@@ -47,7 +47,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="font-body text-lg text-[#1a1a2e]/60 max-w-md mx-auto">
-            From upload to storybook in under 2 minutes. Promise! 🤞
+            From photo to personalized preview in about 2 minutes!
           </p>
         </div>
 

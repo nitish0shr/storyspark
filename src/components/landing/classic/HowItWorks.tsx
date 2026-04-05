@@ -21,7 +21,7 @@ const steps = [
     icon: Palette,
     title: "Pick an Adventure",
     description:
-      "Choose from 6 magical themes: Space Explorer, Dino World, Ocean Depths, Enchanted Castle, Superhero City, or Magic Forest. Then personalize the story with your child's details.",
+      "Choose from magical worlds — a mission across the stars, an adventure with friendly dinosaurs, an underwater journey, a royal quest, a brave rescue mission, or a whimsical enchanted quest. Then add your child's name and a few fun details.",
     accent: "from-pink-500 to-violet-600",
     glow: "shadow-pink-200",
     iconBg: "bg-pink-100",
@@ -34,7 +34,7 @@ const steps = [
     icon: BookOpen,
     title: "Get Their Book",
     description:
-      "AI writes a unique 12-page story and generates beautiful illustrations with your child as the star. Download, share, or print your personalized storybook instantly.",
+      "In about 2 minutes, AI writes a unique 12-page story and creates beautiful illustrations with your child as the star. Download the PDF, print it, or share a link with family!",
     accent: "from-amber-400 to-pink-500",
     glow: "shadow-amber-200",
     iconBg: "bg-amber-50",
@@ -69,7 +69,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="text-lg text-gray-500 max-w-lg mx-auto">
-            From photo to personalized storybook in under 2 minutes.
+            From photo to personalized preview in about 2 minutes.
           </p>
         </div>
 

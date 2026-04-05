@@ -6,9 +6,7 @@ import {
   Download,
   FolderHeart,
   Share2,
-  Printer,
   Check,
-  ShieldCheck,
   Crown,
   RefreshCw,
   Percent,
@@ -22,7 +20,7 @@ const oneTimeFeatures = [
   { icon: Paintbrush, text: "AI illustrations featuring your child" },
   { icon: Download, text: "Instant PDF download" },
   { icon: FolderHeart, text: "Saved to your account" },
-  { icon: Share2, text: "Share with family" },
+  { icon: Share2, text: "Share a link with family" },
 ];
 
 const subscriptionFeatures = [
@@ -60,21 +58,12 @@ export default function Pricing() {
               <span className="bg-white border-2 border-[#1a1a2e] rounded-full px-3 py-1 font-body font-bold text-xs text-[#1a1a2e] shadow-[2px_2px_0px_#1a1a2e]">
                 📱 Digital Delivery
               </span>
-              <span className="bg-[#C3B1E1] border-2 border-[#1a1a2e] rounded-full px-3 py-1 font-body font-bold text-xs text-[#1a1a2e] shadow-[2px_2px_0px_#1a1a2e]">
-                <Printer className="inline h-3 w-3 mr-1" />
-                Print soon — $24.99
-              </span>
             </div>
 
             <div className="text-center mb-6 bg-white rounded-2xl border-2 border-[#1a1a2e] p-5 shadow-[3px_3px_0px_#1a1a2e]">
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="font-heading text-2xl font-bold text-[#1a1a2e]/50">$</span>
-                <span className="font-heading text-7xl font-bold text-[#1a1a2e]">
-                  {Math.floor(PRICING.base.cents / 100)}
-                </span>
-                <span className="font-heading text-3xl font-bold text-[#1a1a2e]">
-                  .{String(PRICING.base.cents % 100).padStart(2, "0")}
-                </span>
+              <div className="flex items-start justify-center">
+                <span className="font-heading text-5xl font-bold text-[#1a1a2e] leading-none">$9</span>
+                <span className="font-heading text-xl font-bold text-[#1a1a2e] mt-0.5">.99</span>
               </div>
               <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per storybook</p>
             </div>
@@ -99,16 +88,15 @@ export default function Pricing() {
               </button>
             </Link>
 
-            <div className="flex items-center justify-center gap-2 mt-4 text-xs text-[#1a1a2e]/60 font-body font-bold">
-              <ShieldCheck className="h-4 w-4 text-[#06D6A0]" />
-              <span>100% happiness guarantee · 30-day refund</span>
-            </div>
+            <p className="text-center mt-4 text-xs text-[#1a1a2e]/50 font-body font-bold">
+              Free preview first — no credit card needed
+            </p>
           </div>
 
           {/* Subscription Card */}
           <div className="relative bg-gradient-to-br from-[#C3B1E1] to-[#E8B4F8] card-chunky p-8">
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#FF6B6B] border-2 border-[#1a1a2e] rounded-full px-4 py-1.5 shadow-[3px_3px_0px_#1a1a2e] whitespace-nowrap">
-              <span className="font-body font-bold text-xs text-white">⭐ Best Value!</span>
+              <span className="font-body font-bold text-xs text-white">Best Value!</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mb-6 mt-2">
@@ -119,12 +107,12 @@ export default function Pricing() {
             </div>
 
             <div className="text-center mb-6 bg-white rounded-2xl border-2 border-[#1a1a2e] p-5 shadow-[3px_3px_0px_#1a1a2e]">
-              <div className="flex items-baseline justify-center gap-1">
-                <span className="font-heading text-2xl font-bold text-[#1a1a2e]/50">$</span>
-                <span className="font-heading text-7xl font-bold text-[#1a1a2e]">
+              <div className="flex items-start justify-center">
+                <span className="font-heading text-3xl font-bold text-[#1a1a2e] mt-1">$</span>
+                <span className="font-heading text-7xl font-bold text-[#1a1a2e] leading-none">
                   {subDollars}
                 </span>
-                <span className="font-heading text-3xl font-bold text-[#1a1a2e]">
+                <span className="font-heading text-2xl font-bold text-[#1a1a2e] mt-1">
                   .{subCents}
                 </span>
               </div>
@@ -149,10 +137,9 @@ export default function Pricing() {
 
             <SubscribeButton />
 
-            <div className="flex items-center justify-center gap-2 mt-4 text-xs text-[#1a1a2e]/60 font-body font-bold">
-              <ShieldCheck className="h-4 w-4 text-[#06D6A0]" />
-              <span>Cancel anytime · No commitment</span>
-            </div>
+            <p className="text-center mt-4 text-xs text-[#1a1a2e]/50 font-body font-bold">
+              Cancel anytime — no commitment
+            </p>
           </div>
         </div>
       </div>

@@ -87,9 +87,8 @@ export default function Hero() {
             </h1>
 
             <p className="font-body text-lg sm:text-xl text-[#1a1a2e]/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
-              Upload one photo of your child, pick a magical adventure, and watch AI
-              create a <strong>beautiful personalized storybook</strong> with them
-              as the hero — ready in minutes! 🚀
+              Create a magical, personalized storybook your child will treasure
+              forever. <strong>Free preview — no credit card needed!</strong>
             </p>
 
             {/* CTAs */}
@@ -110,9 +109,9 @@ export default function Hero() {
             {/* Trust dots */}
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 justify-center lg:justify-start">
               {[
+                { emoji: "⚡", text: "Preview in about 2 min" },
                 { emoji: "🔒", text: "Photo stays private" },
-                { emoji: "⚡", text: "Ready in 2 min" },
-                { emoji: "💯", text: "30-day guarantee" },
+                { emoji: "💳", text: "No credit card needed" },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-1.5">
                   <span>{item.emoji}</span>

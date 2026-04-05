@@ -162,8 +162,8 @@ export default function Hero() {
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 justify-center lg:justify-start">
               {[
                 { label: "No signup required" },
-                { label: "Ready in 2 minutes" },
-                { label: "30-day guarantee" },
+                { label: "Preview in about 2 min" },
+                { label: "Photo stays private" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
