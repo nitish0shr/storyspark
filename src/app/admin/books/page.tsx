@@ -1,5 +1,7 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 const statusColor: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -11,6 +13,7 @@ const statusColor: Record<string, string> = {
 };
 
 async function getBooks() {
+  if (!isAdminConfigured()) return null;
   const supabase = createAdminClient();
 
   const { data: books } = await supabase
@@ -36,7 +39,11 @@ async function getBooks() {
 }
 
 export default async function AdminBooksPage() {
-  const { books, statusCounts } = await getBooks();
+  const result = await getBooks();
+  if (!result) {
+    return <div className="p-8 text-center text-gray-500">Books page requires Supabase configuration.</div>;
+  }
+  const { books, statusCounts } = result;
 
   return (
     <div className="space-y-6">

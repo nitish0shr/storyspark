@@ -1,6 +1,9 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
 
 async function getUsers() {
+  if (!isAdminConfigured()) return null;
   const supabase = createAdminClient();
 
   // Get child profiles grouped by user_id as a proxy for "users with activity"
@@ -73,7 +76,11 @@ function formatCents(cents: number) {
 }
 
 export default async function AdminUsersPage() {
-  const { users, emailCaptures } = await getUsers();
+  const result = await getUsers();
+  if (!result) {
+    return <div className="p-8 text-center text-gray-500">Users page requires Supabase configuration.</div>;
+  }
+  const { users, emailCaptures } = result;
 
   return (
     <div className="space-y-6">

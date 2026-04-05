@@ -1,7 +1,10 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { Users, BookOpen, DollarSign, AlertTriangle } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 async function getStats() {
+  if (!isAdminConfigured()) return null;
   const supabase = createAdminClient();
 
   const [usersRes, booksRes, ordersRes, failedRes, recentBooksRes] =
@@ -53,6 +56,9 @@ const statusColor: Record<string, string> = {
 
 export default async function AdminOverviewPage() {
   const stats = await getStats();
+  if (!stats) {
+    return <div className="p-8 text-center text-gray-500">Admin dashboard requires Supabase configuration.</div>;
+  }
 
   const cards = [
     {

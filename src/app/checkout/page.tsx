@@ -12,11 +12,14 @@ export const metadata: Metadata = {
   description: "Complete your personalized storybook order.",
 };
 
+export const dynamic = "force-dynamic";
+
 interface CheckoutPageProps {
   searchParams: Promise<{ bookId?: string }>;
 }
 
 async function getUser() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
   const supabase = await createClient();
   const {
     data: { user },

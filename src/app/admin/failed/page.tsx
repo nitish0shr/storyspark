@@ -1,5 +1,7 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 function timeAgo(date: string) {
   const seconds = Math.floor(
@@ -15,6 +17,7 @@ function timeAgo(date: string) {
 }
 
 async function getFailedBooks() {
+  if (!isAdminConfigured()) return [];
   const supabase = createAdminClient();
 
   const { data: books } = await supabase
