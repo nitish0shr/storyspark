@@ -35,7 +35,8 @@ async function getBook(bookId: string) {
       pages:book_pages(
         page_number,
         text,
-        illustration_url
+        illustration_url,
+        audio_url
       )
     `
     )
@@ -204,6 +205,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
             pageNumber: p.page_number,
             text: p.text,
             illustrationUrl: p.illustration_url,
+            audioUrl: p.audio_url || null,
           }))}
           previewPageCount={
             book.is_purchased ? sortedPages.length : PREVIEW_PAGE_COUNT
