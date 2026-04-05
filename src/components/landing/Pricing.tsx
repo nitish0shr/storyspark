@@ -62,8 +62,8 @@ export default function Pricing() {
 
             <div className="text-center mb-6 bg-white rounded-2xl border-2 border-[#1a1a2e] p-5 shadow-[3px_3px_0px_#1a1a2e]">
               <div className="flex items-start justify-center">
-                <span className="font-heading text-5xl font-bold text-[#1a1a2e] leading-none">$9</span>
-                <span className="font-heading text-xl font-bold text-[#1a1a2e] mt-0.5">.99</span>
+                <span className="font-heading text-6xl font-bold text-[#1a1a2e] leading-none">$9</span>
+                <span className="font-heading text-2xl font-bold text-[#1a1a2e] leading-none">.99</span>
               </div>
               <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per storybook</p>
             </div>
