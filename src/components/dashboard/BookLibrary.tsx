@@ -222,14 +222,23 @@ export default function BookLibrary({ books, childProfiles, themes }: BookLibrar
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-      {books.map((book) => (
-        <BookCard
-          key={book.id}
-          book={book}
-          childName={getChildName(childProfiles, book.childProfileId)}
-          theme={getTheme(themes, book.themeId)}
-        />
-      ))}
+      {books.map((book) => {
+        const primaryName = getChildName(childProfiles, book.childProfileId);
+        const secondName = book.secondChildProfileId
+          ? getChildName(childProfiles, book.secondChildProfileId)
+          : null;
+        const displayName = secondName
+          ? `${primaryName} & ${secondName}`
+          : primaryName;
+        return (
+          <BookCard
+            key={book.id}
+            book={book}
+            childName={displayName}
+            theme={getTheme(themes, book.themeId)}
+          />
+        );
+      })}
     </div>
   );
 }
