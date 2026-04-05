@@ -1,7 +1,7 @@
 import { openai } from "@/lib/openai";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
-import { storySkeletons } from "@/data/story-skeletons";
+import { storySkeletons, getTemplate } from "@/data/story-skeletons";
 import {
   STORY_GENERATION_SYSTEM_PROMPT,
   fillPromptTemplate,
@@ -42,21 +42,30 @@ function formatContextualAnswers(answers: Record<string, string>): string {
  * Fills all placeholders in the story skeleton pages.
  */
 function fillSkeletonPlaceholders(
-  skeletonPages: { pageNumber: number; template: string; sceneDescription: string }[],
+  skeletonPages: { pageNumber: number; template: string; dualTemplate?: string; sceneDescription: string }[],
   childName: string,
   pronouns: { pronoun: string; possessive: string; object: string },
-  contextualAnswers: Record<string, string>
+  contextualAnswers: Record<string, string>,
+  secondChild?: { name: string; gender: string } | null
 ): string {
-  const filledPages = skeletonPages.map((page) => {
-    let filled = page.template;
+  const hasTwoChildren = !!secondChild;
+  const p2 = secondChild ? getPronouns(secondChild.gender) : null;
 
-    // Replace standard placeholders
+  const filledPages = skeletonPages.map((page) => {
+    let filled = getTemplate(page, hasTwoChildren);
+
     filled = filled.replaceAll("{name}", childName);
     filled = filled.replaceAll("{pronoun}", pronouns.pronoun);
     filled = filled.replaceAll("{possessive}", pronouns.possessive);
     filled = filled.replaceAll("{object}", pronouns.object);
 
-    // Replace contextual answer placeholders
+    if (secondChild && p2) {
+      filled = filled.replaceAll("{name2}", secondChild.name);
+      filled = filled.replaceAll("{pronoun2}", p2.pronoun);
+      filled = filled.replaceAll("{possessive2}", p2.possessive);
+      filled = filled.replaceAll("{object2}", p2.object);
+    }
+
     for (const [key, value] of Object.entries(contextualAnswers)) {
       filled = filled.replaceAll(`{${key}}`, value);
     }
@@ -176,7 +185,8 @@ export async function generateStory(params: {
     skeleton,
     childName,
     pronouns,
-    contextualAnswers
+    contextualAnswers,
+    secondChild ? { name: secondChild.name, gender: secondChild.gender } : null
   );
 
   const hairDescription = `${appearanceProfile.hairStyle} ${appearanceProfile.hairColor} hair`;
