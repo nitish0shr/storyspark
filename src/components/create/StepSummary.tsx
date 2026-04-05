@@ -16,6 +16,7 @@ import {
   Palette,
   Camera,
   MessageCircle,
+  Heart,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
@@ -37,6 +38,8 @@ export function StepSummary() {
     photoPreviewUrl,
     selectedThemeId,
     contextualAnswers,
+    dedication,
+    setDedication,
     email,
     setEmail,
     setChildProfileId,
@@ -78,6 +81,7 @@ export function StepSummary() {
           photoUrl: useWizardStore.getState().photoUrl || undefined,
           themeId: selectedThemeId,
           contextualAnswers,
+          dedication: dedication.trim() || undefined,
           email,
         }),
       });
@@ -200,6 +204,29 @@ export function StepSummary() {
             Photo uploaded
           </div>
         )}
+      </div>
+
+      {/* Dedication */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Heart className="h-4 w-4 text-pink-500" />
+          <Label htmlFor="dedication" className="text-sm font-medium text-gray-700">
+            Add a dedication{" "}
+            <span className="text-gray-400 font-normal">(optional)</span>
+          </Label>
+        </div>
+        <textarea
+          id="dedication"
+          placeholder={`e.g. "To ${childName}, with all my love — Grandma"`}
+          value={dedication}
+          onChange={(e) => setDedication(e.target.value)}
+          maxLength={300}
+          rows={2}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent resize-none"
+        />
+        <p className="text-xs text-gray-400">
+          This will appear as a special page right after the cover.
+        </p>
       </div>
 
       {/* Value prop */}

@@ -115,6 +115,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#9ca3af",
   },
+  dedicationPage: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    padding: 60,
+  },
+  dedicationOrnament: {
+    fontSize: 32,
+    textAlign: "center",
+    marginBottom: 20,
+    opacity: 0.3,
+  },
+  dedicationText: {
+    fontSize: 18,
+    textAlign: "center",
+    fontStyle: "italic",
+    lineHeight: 1.8,
+    maxWidth: 360,
+  },
+  dedicationOrnamentBottom: {
+    fontSize: 32,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.3,
+  },
   backPage: {
     flexDirection: "column",
     alignItems: "center",
@@ -158,6 +185,7 @@ interface BookPdfProps {
   themeName: string;
   storyPages: BookPage[];
   illustrationUrls: (string | null)[];
+  dedication?: string | null;
 }
 
 function BookPdfDocument({
@@ -166,6 +194,7 @@ function BookPdfDocument({
   themeName,
   storyPages,
   illustrationUrls,
+  dedication,
 }: BookPdfProps) {
   const colors = THEME_COLORS[themeId] || THEME_COLORS["kindness-courage"];
 
@@ -191,6 +220,27 @@ function BookPdfDocument({
         )
       )
     ),
+
+    // Dedication Page (if provided)
+    ...(dedication
+      ? [
+          h(
+            Page,
+            { key: "dedication", size: "A4", style: styles.page },
+            h(
+              View,
+              { style: [styles.dedicationPage, { backgroundColor: colors.primary }] },
+              h(Text, { style: [styles.dedicationOrnament, { color: colors.text }] }, "\u2766"),
+              h(
+                Text,
+                { style: [styles.dedicationText, { color: colors.text }] },
+                `\u201C${dedication}\u201D`
+              ),
+              h(Text, { style: [styles.dedicationOrnamentBottom, { color: colors.text }] }, "\u2766")
+            )
+          ),
+        ]
+      : []),
 
     // Interior Pages
     ...storyPages.map((page, idx) => {
@@ -299,6 +349,7 @@ export async function assemblePdf(
     themeName,
     storyPages,
     illustrationUrls,
+    dedication: book.dedication || null,
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfBuffer = await renderToBuffer(pdfElement as any);

@@ -24,13 +24,14 @@ interface CheckoutFormProps {
   bookId: string;
   childName: string;
   tiers: TierOption[];
+  dedication?: string | null;
 }
 
 export default function CheckoutForm({
   bookId,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   childName,
   tiers,
+  dedication: initialDedication,
 }: CheckoutFormProps) {
   const posthog = usePostHog();
   const [selectedTier, setSelectedTier] = useState<PricingTier>("mid");
@@ -38,6 +39,7 @@ export default function CheckoutForm({
   const [giftRecipientName, setGiftRecipientName] = useState("");
   const [giftRecipientEmail, setGiftRecipientEmail] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
+  const [dedication, setDedication] = useState(initialDedication || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +55,7 @@ export default function CheckoutForm({
           bookId,
           tier: selectedTier,
           isGift,
+          dedication: dedication.trim() || undefined,
           ...(isGift
             ? {
                 giftRecipientName,
@@ -217,6 +220,28 @@ export default function CheckoutForm({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Dedication */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Gift className="h-4 w-4 text-pink-500" />
+          <span className="text-sm font-medium text-gray-700">
+            Add a dedication{" "}
+            <span className="text-gray-400 font-normal">(optional)</span>
+          </span>
+        </div>
+        <textarea
+          placeholder={`e.g. "To ${childName}, with all my love — Grandma"`}
+          value={dedication}
+          onChange={(e) => setDedication(e.target.value)}
+          maxLength={300}
+          rows={2}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent resize-none"
+        />
+        <p className="mt-2 text-xs text-gray-400">
+          Appears as a special page right after the cover.
+        </p>
       </div>
 
       {/* Error */}
