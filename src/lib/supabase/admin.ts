@@ -6,8 +6,16 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
  * (API routes, background jobs, webhooks).
  *
  * Lazy-initialized to avoid errors during build when env vars are not set.
+ * Returns null if env vars are missing (graceful degradation).
  */
 let _supabaseAdmin: SupabaseClient | null = null;
+
+export function isAdminConfigured(): boolean {
+  return !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {

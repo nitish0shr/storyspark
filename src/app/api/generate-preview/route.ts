@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generatePreview } from "@/services/book-pipeline";
+import { isOpenAIConfigured } from "@/lib/openai";
+import { isReplicateConfigured } from "@/lib/replicate";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Database not configured. Please add Supabase environment variables." },
+        { status: 503 }
+      );
+    }
+    if (!isOpenAIConfigured() || !isReplicateConfigured()) {
+      return NextResponse.json(
+        { error: "AI services not configured. Please add OPENAI_API_KEY and REPLICATE_API_TOKEN." },
+        { status: 503 }
+      );
+    }
     // Authenticate user
     const supabase = await createClient();
     const {

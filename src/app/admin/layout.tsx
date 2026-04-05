@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -8,6 +9,8 @@ import {
   AlertTriangle,
   ArrowLeft,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -31,6 +34,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (!isSupabaseConfigured()) {
+    redirect("/");
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

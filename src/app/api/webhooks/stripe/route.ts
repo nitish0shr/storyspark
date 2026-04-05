@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { resend, RESEND_FROM_EMAIL } from "@/lib/resend";
+import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { generateFullBook } from "@/services/book-pipeline";
 import { getAppUrl } from "@/lib/utils";
 
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured() || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json(
+      { error: "Stripe webhook not configured" },
+      { status: 503 }
+    );
+  }
+
+  const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   let event: Stripe.Event;
 
   try {
@@ -128,7 +134,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   });
 
   // 5. Send order confirmation email to buyer
-  if (buyerEmail) {
+  if (buyerEmail && isResendConfigured()) {
     try {
       await resend.emails.send({
         from: RESEND_FROM_EMAIL,
@@ -154,7 +160,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // 6. If gift, send notification to recipient
-  if (isGift && giftRecipientEmail) {
+  if (isGift && giftRecipientEmail && isResendConfigured()) {
     try {
       // Fetch gift message from order
       const { data: order } = await supabaseAdmin
