@@ -3,75 +3,64 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import StoryPageOverlay from "./StoryPageOverlay";
+import { FullPageOverlay } from "./StoryPageOverlay";
 import type { TextBlock } from "./StoryPageOverlay";
 
 const samplePages: {
   image: string;
+  title: string;
   theme: string;
   color: string;
-  textBlocks: TextBlock[];
+  fullPageTextBlocks: TextBlock[];
 }[] = [
   {
     image: "/images/demo/spread-space.png",
+    title: "Mission to the Moon!",
     theme: "Space Adventure",
     color: "bg-indigo-500",
-    textBlocks: [
+    fullPageTextBlocks: [
       {
         type: "narration",
-        text: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty beneath his boots.",
+        text: "He took his very first step on the moon. The ground was soft and dusty beneath his boots.",
       },
       {
         type: "dialogue",
         speaker: "Aarav",
-        text: "Wow! I\u2019m really on the moon! I can see the whole Earth from here!",
-      },
-      {
-        type: "dialogue",
-        speaker: "Mission Control",
-        text: "Great job, explorer! Now look for the glowing moon crystals.",
+        text: "I can see the whole Earth from here!",
       },
     ],
   },
   {
     image: "/images/demo/spread-dino.png",
+    title: "The Dinosaur Valley",
     theme: "Dinosaur Discovery",
     color: "bg-emerald-500",
-    textBlocks: [
+    fullPageTextBlocks: [
       {
         type: "narration",
-        text: "Deep in the jungle, the volcano rumbled softly as Aarav and his new dinosaur friend stepped into the valley.",
-      },
-      {
-        type: "dialogue",
-        speaker: "Aarav",
-        text: "Do you think we should keep going?",
+        text: "The volcano rumbled softly as they stepped into the valley together.",
       },
       {
         type: "dialogue",
         speaker: "Dino",
-        text: "Yes! Adventure is waiting for us. Follow me!",
+        text: "Follow me! Adventure is waiting!",
       },
     ],
   },
   {
     image: "/images/demo/spread-castle.png",
+    title: "The Royal Adventure",
     theme: "Enchanted Castle",
     color: "bg-pink-500",
-    textBlocks: [
+    fullPageTextBlocks: [
       {
         type: "narration",
-        text: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze.",
+        text: "A golden carriage arrived as butterflies danced in the warm breeze.",
       },
       {
         type: "dialogue",
         speaker: "Princess Emma",
-        text: "The grand ball is about to begin! Are you ready?",
-      },
-      {
-        type: "dialogue",
-        speaker: "Aarav",
-        text: "I\u2019ve never been to a castle before. This is magical!",
+        text: "The grand ball is about to begin!",
       },
     ],
   },
@@ -105,24 +94,18 @@ export default function SampleBookViewer() {
 
         <div className="max-w-3xl mx-auto">
           <div className="relative">
-            <div className="relative bg-white rounded-3xl overflow-hidden border-2 border-[#1a1a2e] shadow-[6px_6px_0px_#1a1a2e]">
+            <div className="relative rounded-3xl overflow-hidden border-2 border-[#1a1a2e] shadow-[6px_6px_0px_#1a1a2e]">
               <div className="relative aspect-[16/9] overflow-hidden">
                 <Image
                   src={page.image}
-                  alt={`Sample storybook spread from ${page.theme} adventure`}
+                  alt={`${page.title} — ${page.theme} storybook page`}
                   fill
-                  className="object-cover transition-opacity duration-500"
+                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, 720px"
                   priority
                 />
 
-                <StoryPageOverlay textBlocks={page.textBlocks} />
-
-                <div className="absolute top-4 right-4 z-20">
-                  <div className={`${page.color} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
-                    <span className="font-body font-bold text-xs text-white">{page.theme}</span>
-                  </div>
-                </div>
+                <FullPageOverlay textBlocks={page.fullPageTextBlocks} />
               </div>
             </div>
 
@@ -144,19 +127,26 @@ export default function SampleBookViewer() {
             </button>
           </div>
 
-          <div className="flex items-center justify-center gap-3 mt-8">
-            {samplePages.map((p, index) => (
-              <button
-                key={index}
-                onClick={() => goTo(index)}
-                className={`rounded-full transition-all duration-300 border-2 border-[#1a1a2e] ${
-                  index === currentPage
-                    ? `w-10 h-3 ${p.color} shadow-[2px_2px_0px_#1a1a2e]`
-                    : "w-3 h-3 bg-white hover:bg-[#FFD166]"
-                }`}
-                aria-label={`Go to ${p.theme}`}
-              />
-            ))}
+          <div className="mt-5 flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-lg font-bold text-[#1a1a2e]">{page.title}</h3>
+              <span className="font-body text-sm text-[#1a1a2e]/50">{page.theme}</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {samplePages.map((p, index) => (
+                <button
+                  key={index}
+                  onClick={() => goTo(index)}
+                  className={`rounded-full transition-all duration-300 border-2 border-[#1a1a2e] ${
+                    index === currentPage
+                      ? `w-10 h-3 ${p.color} shadow-[2px_2px_0px_#1a1a2e]`
+                      : "w-3 h-3 bg-white hover:bg-[#FFD166]"
+                  }`}
+                  aria-label={`Go to ${p.theme}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
