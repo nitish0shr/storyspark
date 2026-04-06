@@ -8,29 +8,23 @@ const samplePages = [
   {
     image: "/images/demo/spread-space.png",
     theme: "Space Adventure",
-    text: "He stepped off the spaceship onto the moon\u2019s surface. \u201CWow! I\u2019m really on the moon!\u201D he said with excitement. He looked up at the Earth and stars, ready for his big adventure.",
     color: "bg-indigo-500",
     overlayTitle: "Mission to the Moon!",
     overlayBody: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
-    overlayStyle: "left" as const,
   },
   {
     image: "/images/demo/spread-dino.png",
     theme: "Dinosaur Discovery",
-    text: "He explored the jungle with his new dino friend. \u201CLook, a volcano!\u201D he shouted. \u201CLet\u2019s go on a dino adventure!\u201D The friendly dinosaur wagged its tail with glee.",
     color: "bg-emerald-500",
     overlayTitle: "The Dinosaur Valley",
     overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
-    overlayStyle: "left" as const,
   },
   {
     image: "/images/demo/spread-castle.png",
     theme: "Enchanted Castle",
-    text: "The royal carriage arrived to take them to the grand ball. With butterflies dancing in the breeze, the castle towers sparkled in the golden sunlight.",
     color: "bg-pink-500",
     overlayTitle: "The Royal Adventure",
     overlayBody: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
-    overlayStyle: "left" as const,
   },
 ];
 
@@ -91,18 +85,12 @@ export default function SampleBookViewer() {
                   </div>
                 </div>
               </div>
-
-              <div className="p-6 sm:p-8 border-t-2 border-[#1a1a2e]/10">
-                <p className="font-heading text-base sm:text-lg text-[#1a1a2e] leading-relaxed text-center italic">
-                  &ldquo;{page.text}&rdquo;
-                </p>
-              </div>
             </div>
 
             <button
               onClick={() => goTo(currentPage - 1)}
               disabled={currentPage === 0}
-              className="absolute left-2 sm:-left-14 top-1/3 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] flex items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] disabled:opacity-30 disabled:cursor-not-allowed transition-all z-10"
+              className="absolute left-2 sm:-left-14 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] flex items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] disabled:opacity-30 disabled:cursor-not-allowed transition-all z-10"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -110,7 +98,7 @@ export default function SampleBookViewer() {
             <button
               onClick={() => goTo(currentPage + 1)}
               disabled={currentPage === samplePages.length - 1}
-              className="absolute right-2 sm:-right-14 top-1/3 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] flex items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] disabled:opacity-30 disabled:cursor-not-allowed transition-all z-10"
+              className="absolute right-2 sm:-right-14 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-[#1a1a2e] shadow-[3px_3px_0px_#1a1a2e] flex items-center justify-center text-[#1a1a2e] hover:bg-[#FFD166] disabled:opacity-30 disabled:cursor-not-allowed transition-all z-10"
               aria-label="Next page"
             >
               <ChevronRight className="h-5 w-5" />
