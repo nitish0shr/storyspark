@@ -1,0 +1,123 @@
+Stop patching the current layout. The current result is unacceptable because it still looks like a card UI with floating labels and random text pasted on top of the image.
+
+I do NOT want:
+- a top title bar stretched across the image
+- a gradient strip behind text
+- floating UI pills on top of the artwork
+- random speech bubbles placed without composition
+- duplicate or fragmented text
+- any leftover split-card behavior
+
+I want the page to be redesigned as a true illustrated story page.
+
+Core goal:
+Make each story page look like a real children’s storybook/comic panel, where text is intentionally composed into the artwork, not layered on as a UI hack.
+
+Hard layout rules:
+1. Remove the existing card-style overlay system completely
+2. Remove the long dark top strip / banner entirely
+3. Remove the floating title pill from on top of the artwork
+4. Do not use any UI-looking headers, chips, pills, badges, or stretched bars over the image
+5. The image should be the hero
+6. Text should be composed into the page in a clean editorial/storytelling way
+
+Desired composition:
+- The full spread image remains dominant
+- The page title, if shown, should be small and elegantly placed outside the artwork or subtly integrated, not as a giant pill over the image
+- Narration should appear in a proper narration box, similar to comic caption boxes
+- Dialogue should appear only when needed, in a clean speech bubble or dialogue box
+- Speaker name must be clearly labeled
+- Text boxes must feel like part of the page design, not app UI elements
+
+Visual style direction:
+- premium children’s storybook
+- comic-inspired storytelling
+- clean editorial composition
+- cinematic and immersive
+- minimal UI chrome
+- not “mobile app card with stickers on top”
+
+Specific design rules:
+- No giant overlay banner at the top of the image
+- No title pill overlapping the image
+- No dark translucent strip containing text
+- No more than 1 narration box and 1 dialogue bubble on a preview card
+- Keep text very short in preview cards
+- Position text only in safe negative space
+- Never cover the character’s face, body, or main focal object
+- Never place text over the book spine/rings
+- Use generous margins from edges
+
+Content hierarchy:
+For preview cards:
+- show only 1 short narration OR 1 short dialogue moment, not the full story
+- if dialogue is shown, label the speaker clearly
+- if narration is shown, use a compact caption box
+- preview cards should tease the story, not display all content
+
+For full story pages:
+- support a structured combination of:
+  - narration
+  - dialogue with speaker names
+  - optional thought/SFX
+- place them intentionally based on the image composition
+
+Implementation change required:
+Refactor this as a composition system, not an overlay toggle.
+
+Create separate render modes:
+1. preview mode
+   - one visual focal moment
+   - at most one small caption or one dialogue bubble
+   - very clean composition
+
+2. full page mode
+   - can support multiple text blocks
+   - narration + dialogue + thoughts if needed
+   - layout based on image safe zones
+
+Important:
+If no safe zone is available in the generated image, add a subtle text panel INSIDE the artwork area as part of the illustration composition, not outside it and not as a separate left-side UI panel.
+
+Structured data model:
+Use content like this:
+{
+  "title": "Dinosaur Discovery",
+  "image": "page-image.jpg",
+  "previewText": {
+    "type": "dialogue",
+    "speaker": "Dino",
+    "text": "Follow me! Adventure is waiting!"
+  },
+  "fullPageTextBlocks": [
+    {
+      "type": "narration",
+      "text": "Aarav and his dinosaur friend stepped carefully toward the glowing volcano."
+    },
+    {
+      "type": "dialogue",
+      "speaker": "Dino",
+      "text": "Follow me! Adventure is waiting!"
+    }
+  ]
+}
+
+Rendering rules:
+- preview cards should render only previewText
+- full story pages should render fullPageTextBlocks
+- do not dump full narration onto preview cards
+- do not place narration in a top strip
+- do not use app-style UI components as text containers
+
+What to change in the current implementation:
+- remove the top overlay banner entirely
+- remove the current title pill overlay
+- remove any text container that stretches across the width of the image
+- replace with a small, intentional caption box or speech bubble placed in negative space
+- make preview cards much cleaner and simpler
+
+Success criteria:
+- the page should look like a designed story composition
+- the image should stay beautiful and readable
+- text should feel authored, not auto-pasted
+- nothing should look like random stickers
