@@ -387,18 +387,19 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return;
   }
 
-  const hasPauseCollection = !!(subscription as Record<string, unknown>).pause_collection;
+  const hasPauseCollection = !!(subscription as unknown as Record<string, unknown>).pause_collection;
   const status = hasPauseCollection ? "paused" : mapStripeSubStatus(subscription.status);
   const customerId =
     typeof subscription.customer === "string"
       ? subscription.customer
       : subscription.customer?.id ?? null;
 
-  const periodStart = subscription.current_period_start
-    ? new Date(subscription.current_period_start * 1000).toISOString()
+  const sub = subscription as unknown as Record<string, unknown>;
+  const periodStart = sub.current_period_start
+    ? new Date((sub.current_period_start as number) * 1000).toISOString()
     : null;
-  const periodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000).toISOString()
+  const periodEnd = sub.current_period_end
+    ? new Date((sub.current_period_end as number) * 1000).toISOString()
     : null;
 
   const { data: existing } = await supabaseAdmin
@@ -445,14 +446,16 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const inv = invoice as unknown as Record<string, unknown>;
+  const rawSub = inv.subscription;
   const subId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : (invoice.subscription as Stripe.Subscription | null)?.id ?? null;
+    typeof rawSub === "string"
+      ? rawSub
+      : (rawSub as Stripe.Subscription | null)?.id ?? null;
 
   if (!subId) return;
 
-  const isInitialPayment = invoice.billing_reason === "subscription_create";
+  const isInitialPayment = (inv.billing_reason as string) === "subscription_create";
 
   const invoiceId = invoice.id;
   if (invoiceId) {
@@ -592,10 +595,12 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const inv2 = invoice as unknown as Record<string, unknown>;
+  const rawSub2 = inv2.subscription;
   const subId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : (invoice.subscription as Stripe.Subscription | null)?.id ?? null;
+    typeof rawSub2 === "string"
+      ? rawSub2
+      : (rawSub2 as Stripe.Subscription | null)?.id ?? null;
 
   if (!subId) return;
 
