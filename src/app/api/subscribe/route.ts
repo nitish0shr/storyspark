@@ -72,6 +72,10 @@ export async function POST(request: NextRequest) {
 
     const appUrl = getAppUrl();
 
+    const minMonths = PRICING.subscription.minCommitmentMonths;
+    const minCommitmentEnd = new Date();
+    minCommitmentEnd.setMonth(minCommitmentEnd.getMonth() + minMonths);
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer_email: user.email,
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
             currency: "usd",
             product_data: {
               name: PRICING.subscription.name,
-              description: `Monthly personalized storybook for ${child.name}`,
+              description: `Monthly personalized storybook for ${child.name} (${minMonths}-month minimum)`,
             },
             unit_amount: PRICING.subscription.cents,
             recurring: {
@@ -95,11 +99,13 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         child_profile_id: childProfileId,
         type: "subscription",
+        min_commitment_end: minCommitmentEnd.toISOString(),
       },
       subscription_data: {
         metadata: {
           user_id: user.id,
           child_profile_id: childProfileId,
+          min_commitment_end: minCommitmentEnd.toISOString(),
         },
       },
       success_url: `${appUrl}/dashboard?subscription=success`,

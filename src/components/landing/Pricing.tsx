@@ -11,6 +11,8 @@ import {
   RefreshCw,
   Percent,
   Gift,
+  Lock,
+  Headphones,
 } from "lucide-react";
 import { PRICING } from "@/lib/stripe";
 import SubscribeButton from "./SubscribeButton";
@@ -27,8 +29,9 @@ const subscriptionFeatures = [
   { icon: BookOpen, text: "1 new personalized book every month" },
   { icon: RefreshCw, text: "Theme picked for you automatically" },
   { icon: Percent, text: "15% off any extra books" },
+  { icon: Lock, text: "Exclusive subscriber-only themes" },
   { icon: Crown, text: "Subscriber badge on your account" },
-  { icon: Gift, text: "Pause or cancel anytime" },
+  { icon: Gift, text: `Cancel anytime after ${PRICING.subscription.minCommitmentMonths}-month minimum` },
 ];
 
 export default function Pricing() {
@@ -115,7 +118,7 @@ export default function Pricing() {
                   .{subCents}
                 </span>
               </div>
-              <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per month — 1 book included</p>
+              <p className="font-body font-bold text-sm text-[#1a1a2e]/60 mt-1">per month — 1 book included ({PRICING.subscription.minCommitmentMonths}-month min.)</p>
               <p className="font-body text-xs text-[#06D6A0] font-bold mt-1">
                 Save 20% vs buying one at a time
               </p>
@@ -137,7 +140,7 @@ export default function Pricing() {
             <SubscribeButton />
 
             <p className="text-center mt-4 text-xs text-[#1a1a2e]/50 font-body font-bold">
-              Cancel anytime — no commitment
+              {PRICING.subscription.minCommitmentMonths}-month commitment, then cancel anytime
             </p>
           </div>
         </div>

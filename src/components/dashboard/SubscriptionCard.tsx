@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Crown, Calendar, Pause, Play, X, AlertCircle, Loader2 } from "lucide-react";
+import { Crown, Calendar, Pause, Play, X, AlertCircle, Loader2, Lock, Sparkles } from "lucide-react";
+import { PRICING } from "@/lib/stripe";
 
 interface SubscriptionData {
   id: string;
@@ -10,11 +11,30 @@ interface SubscriptionData {
   cancel_at_period_end: boolean;
   books_generated: number;
   child_profile_id: string;
+  created_at?: string | null;
 }
 
 interface SubscriptionCardProps {
   subscription: SubscriptionData;
   childName: string;
+}
+
+function getCommitmentInfo(createdAt: string | null | undefined) {
+  const minMonths = PRICING.subscription.minCommitmentMonths;
+  if (!createdAt) return { withinCommitment: false, commitmentEndDate: null, monthsRemaining: 0 };
+  const start = new Date(createdAt);
+  const commitmentEnd = new Date(start);
+  commitmentEnd.setMonth(commitmentEnd.getMonth() + minMonths);
+  const now = new Date();
+  const withinCommitment = now < commitmentEnd;
+  const monthsRemaining = withinCommitment
+    ? Math.ceil((commitmentEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30))
+    : 0;
+  return {
+    withinCommitment,
+    commitmentEndDate: commitmentEnd.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+    monthsRemaining,
+  };
 }
 
 export default function SubscriptionCard({
@@ -24,6 +44,8 @@ export default function SubscriptionCard({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [sub, setSub] = useState(subscription);
+
+  const commitment = getCommitmentInfo(sub.created_at);
 
   const nextBillingDate = sub.current_period_end
     ? new Date(sub.current_period_end).toLocaleDateString("en-US", {
@@ -121,6 +143,29 @@ export default function SubscriptionCard({
               {nextBillingDate}
             </p>
           </div>
+        )}
+      </div>
+
+      <div className="mb-4 rounded-xl bg-white/70 p-3 border border-violet-100">
+        <p className="text-xs font-semibold text-violet-600 mb-2 flex items-center gap-1">
+          <Sparkles className="h-3 w-3" />
+          Subscriber Perks
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          <p className="text-[11px] text-gray-600 flex items-center gap-1">
+            <Lock className="h-3 w-3 text-violet-400" />
+            Exclusive themes
+          </p>
+          <p className="text-[11px] text-gray-600 flex items-center gap-1">
+            <Crown className="h-3 w-3 text-violet-400" />
+            15% off extra books
+          </p>
+        </div>
+        {commitment.withinCommitment && (
+          <p className="text-[11px] text-amber-600 mt-2 flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {commitment.monthsRemaining} month{commitment.monthsRemaining !== 1 ? "s" : ""} left on commitment (until {commitment.commitmentEndDate})
+          </p>
         )}
       </div>
 
