@@ -3,28 +3,77 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import StoryPageOverlay from "./StoryPageOverlay";
+import type { TextBlock } from "./StoryPageOverlay";
 
-const samplePages = [
+const samplePages: {
+  image: string;
+  theme: string;
+  color: string;
+  textBlocks: TextBlock[];
+}[] = [
   {
     image: "/images/demo/spread-space.png",
     theme: "Space Adventure",
     color: "bg-indigo-500",
-    overlayTitle: "Mission to the Moon!",
-    overlayBody: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
+    textBlocks: [
+      {
+        type: "narration",
+        text: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty beneath his boots.",
+      },
+      {
+        type: "dialogue",
+        speaker: "Aarav",
+        text: "Wow! I\u2019m really on the moon! I can see the whole Earth from here!",
+      },
+      {
+        type: "dialogue",
+        speaker: "Mission Control",
+        text: "Great job, explorer! Now look for the glowing moon crystals.",
+      },
+    ],
   },
   {
     image: "/images/demo/spread-dino.png",
     theme: "Dinosaur Discovery",
     color: "bg-emerald-500",
-    overlayTitle: "The Dinosaur Valley",
-    overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
+    textBlocks: [
+      {
+        type: "narration",
+        text: "Deep in the jungle, the volcano rumbled softly as Aarav and his new dinosaur friend stepped into the valley.",
+      },
+      {
+        type: "dialogue",
+        speaker: "Aarav",
+        text: "Do you think we should keep going?",
+      },
+      {
+        type: "dialogue",
+        speaker: "Dino",
+        text: "Yes! Adventure is waiting for us. Follow me!",
+      },
+    ],
   },
   {
     image: "/images/demo/spread-castle.png",
     theme: "Enchanted Castle",
     color: "bg-pink-500",
-    overlayTitle: "The Royal Adventure",
-    overlayBody: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
+    textBlocks: [
+      {
+        type: "narration",
+        text: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze.",
+      },
+      {
+        type: "dialogue",
+        speaker: "Princess Emma",
+        text: "The grand ball is about to begin! Are you ready?",
+      },
+      {
+        type: "dialogue",
+        speaker: "Aarav",
+        text: "I\u2019ve never been to a castle before. This is magical!",
+      },
+    ],
   },
 ];
 
@@ -67,22 +116,9 @@ export default function SampleBookViewer() {
                   priority
                 />
 
-                <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none p-[3%]">
-                  <h3
-                    className="font-heading text-[clamp(11px,2.2vw,20px)] font-extrabold text-white leading-tight mb-[3%] drop-shadow-lg"
-                    style={{ textShadow: "0 2px 6px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)" }}
-                  >
-                    {page.overlayTitle}
-                  </h3>
-                  <p
-                    className="font-body text-[clamp(7px,1.35vw,13px)] text-white/95 leading-relaxed font-medium drop-shadow-md"
-                    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.85), 0 0px 1px rgba(0,0,0,0.95)" }}
-                  >
-                    {page.overlayBody}
-                  </p>
-                </div>
+                <StoryPageOverlay textBlocks={page.textBlocks} />
 
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-20">
                   <div className={`${page.color} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
                     <span className="font-body font-bold text-xs text-white">{page.theme}</span>
                   </div>
