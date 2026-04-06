@@ -3,97 +3,64 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { PreviewOverlay } from "./StoryPageOverlay";
-import type { PreviewText } from "./StoryPageOverlay";
 
-const spreadData: {
-  src: string;
-  alt: string;
-  label: string;
-  labelColor: string;
-  previewText: PreviewText;
-  placement?: { position: React.CSSProperties; tailSide?: "left" | "right" | "center" };
-}[] = [
-  {
-    src: "/images/demo/spread-space.png",
-    alt: "Storybook spread showing the child as an astronaut on the moon",
-    label: "Space Adventure",
-    labelColor: "text-indigo-600",
-    previewText: {
-      type: "dialogue",
-      speaker: "Aarav",
-      text: "I can see the whole\nEarth from here!",
-      speakerColor: "#4F46E5",
-    },
-    placement: {
-      position: { bottom: "8%", right: "4%", maxWidth: "38%" },
-      tailSide: "left",
-    },
+const spreadOverlays: Record<string, { title: string; body: string }> = {
+  "/images/demo/spread-space.png": {
+    title: "Mission to the Moon!",
+    body: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
   },
-  {
-    src: "/images/demo/spread-dino.png",
-    alt: "Storybook spread showing the child on a dinosaur adventure",
-    label: "Dinosaur Discovery",
-    labelColor: "text-emerald-600",
-    previewText: {
-      type: "dialogue",
-      speaker: "Dino",
-      text: "Follow me!\nAdventure is waiting!",
-      speakerColor: "#059669",
-    },
-    placement: {
-      position: { bottom: "6%", left: "4%", maxWidth: "38%" },
-      tailSide: "right",
-    },
+  "/images/demo/spread-dino.png": {
+    title: "The Dinosaur Valley",
+    body: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano.",
   },
-  {
-    src: "/images/demo/spread-castle.png",
-    alt: "Storybook spread showing a royal castle adventure",
-    label: "Enchanted Castle",
-    labelColor: "text-pink-600",
-    previewText: {
-      type: "narration",
-      text: "Butterflies danced in the warm breeze\nas they rode toward the castle.",
-    },
-    placement: {
-      position: { bottom: "5%", left: "4%", maxWidth: "44%" },
-    },
+  "/images/demo/spread-castle.png": {
+    title: "The Royal Adventure",
+    body: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
   },
-];
+};
 
-function SpreadPreviewCard({
+function SpreadWithOverlay({
   src,
   alt,
   label,
   labelColor,
-  previewText,
-  placement,
 }: {
   src: string;
   alt: string;
   label: string;
   labelColor: string;
-  previewText: PreviewText;
-  placement?: { position: React.CSSProperties; tailSide?: "left" | "right" | "center" };
 }) {
+  const overlay = spreadOverlays[src];
   return (
-    <div>
-      <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e]">
-        <div className="relative">
-          <Image
-            src={src}
-            alt={alt}
-            width={800}
-            height={450}
-            className="w-full h-auto block"
-            priority
-          />
-          <PreviewOverlay previewText={previewText} placement={placement} />
+    <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e]">
+      <div className="absolute top-3 left-3 z-10">
+        <div className={`${labelColor} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
+          <span className="font-body font-bold text-xs text-white">{label}</span>
         </div>
       </div>
-      <p className={`font-heading text-sm font-bold mt-2.5 ml-1 ${labelColor}`}>
-        {label}
-      </p>
+      <div className="relative">
+        <Image
+          src={src}
+          alt={alt}
+          width={800}
+          height={450}
+          className="w-full h-auto"
+          priority
+        />
+        {overlay && (
+          <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none">
+            <div className="absolute inset-0 bg-[#FFF8EE]/90 backdrop-blur-sm rounded-lg" />
+            <div className="relative p-[8%] flex flex-col h-full">
+              <h3 className="font-heading text-[clamp(8px,1.6vw,16px)] font-bold text-[#1a1a2e] leading-tight mb-[4%]">
+                {overlay.title}
+              </h3>
+              <p className="font-body text-[clamp(6px,1.1vw,11px)] text-[#1a1a2e]/80 leading-relaxed">
+                {overlay.body}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -116,28 +83,44 @@ export default function PersonalizationShowcase() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
           <div className="grid grid-cols-1 gap-6">
-            <div>
-              <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e] bg-white">
-                <Image
-                  src="/images/demo/child-photo-boy.png"
-                  alt="Example child photo uploaded by a parent"
-                  width={512}
-                  height={512}
-                  className="w-full h-auto block"
-                  priority
-                />
+            <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e] bg-white">
+              <div className="absolute top-3 left-3 z-10">
+                <div className="bg-white border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]">
+                  <span className="font-body font-bold text-xs text-[#1a1a2e]">Upload a photo</span>
+                </div>
               </div>
-              <p className="font-heading text-sm font-bold mt-2.5 ml-1 text-[#1a1a2e]/60">
-                Upload a photo
-              </p>
+              <Image
+                src="/images/demo/child-photo-boy.png"
+                alt="Example child photo uploaded by a parent"
+                width={512}
+                height={512}
+                className="w-full h-auto"
+                priority
+              />
             </div>
 
-            <SpreadPreviewCard {...spreadData[1]} />
+            <SpreadWithOverlay
+              src="/images/demo/spread-dino.png"
+              alt="Storybook spread showing the child on a dinosaur adventure"
+              label="Dinosaur Discovery"
+              labelColor="bg-emerald-500"
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            <SpreadPreviewCard {...spreadData[0]} />
-            <SpreadPreviewCard {...spreadData[2]} />
+            <SpreadWithOverlay
+              src="/images/demo/spread-space.png"
+              alt="Storybook spread showing the child as an astronaut on the moon"
+              label="Space Adventure"
+              labelColor="bg-indigo-500"
+            />
+
+            <SpreadWithOverlay
+              src="/images/demo/spread-castle.png"
+              alt="Storybook spread showing a royal castle adventure"
+              label="Enchanted Castle"
+              labelColor="bg-pink-500"
+            />
           </div>
         </div>
 
