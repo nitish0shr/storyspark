@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
   ChevronRight,
+  Crown,
   Sparkles,
 } from "lucide-react";
 
@@ -47,7 +48,7 @@ function SpaceIllustration() {
       <ellipse cx="80" cy="30" rx="60" ry="30" fill="#3B82F6" opacity="0.05" />
       {/* Stars with twinkle effect */}
       {[[20,20,1.5],[55,42,1],[90,12,2],[140,35,1.2],[200,18,1.8],[250,48,1.5],[280,12,2],[35,82,1],[160,92,1.5],[272,78,1]].map(([x,y,r],i) => (
-        <g key={i}>
+        <g key={i} className={i % 4 === 0 ? "svg-twinkle" : i % 4 === 1 ? "svg-twinkle-d1" : i % 4 === 2 ? "svg-twinkle-d2" : "svg-twinkle-d3"}>
           <circle cx={x} cy={y} r={(r as number) * 2.5} fill="white" opacity="0.02" />
           <circle cx={x} cy={y} r={r as number} fill="white" opacity={0.4 + (i%3)*0.2} />
           {(r as number) > 1.5 && (
@@ -66,7 +67,7 @@ function SpaceIllustration() {
       {/* Planet shadow */}
       <circle cx="238" cy="56" r="22" fill="#1E1B4B" opacity="0.3" />
       {/* Rocket with 3D metallic look */}
-      <g transform="translate(105,32) rotate(-30)">
+      <g transform="translate(105,32) rotate(-30)" className="svg-bob">
         <ellipse cx="0" cy="0" rx="9" ry="20" fill="url(#rocketBody)" />
         <ellipse cx="-3" cy="0" rx="2" ry="18" fill="white" opacity="0.2" />
         <ellipse cx="0" cy="-16" rx="5" ry="7" fill="url(#rocketNose)" />
@@ -76,10 +77,12 @@ function SpaceIllustration() {
         <circle cx="0" cy="0" r="3" fill="#BFDBFE" />
         <circle cx="-1" cy="-1" r="1" fill="white" opacity="0.5" />
         {/* Flame with glow */}
-        <ellipse cx="0" cy="20" rx="5" ry="8" fill="#F97316" opacity="0.8" />
-        <ellipse cx="0" cy="22" rx="3" ry="6" fill="#FBBF24" opacity="0.9" />
-        <ellipse cx="0" cy="24" rx="1.5" ry="4" fill="#FEF3C7" />
-        <ellipse cx="0" cy="20" rx="7" ry="10" fill="#F97316" opacity="0.1" />
+        <g className="svg-flicker">
+          <ellipse cx="0" cy="20" rx="5" ry="8" fill="#F97316" opacity="0.8" />
+          <ellipse cx="0" cy="22" rx="3" ry="6" fill="#FBBF24" opacity="0.9" />
+          <ellipse cx="0" cy="24" rx="1.5" ry="4" fill="#FEF3C7" />
+          <ellipse cx="0" cy="20" rx="7" ry="10" fill="#F97316" opacity="0.1" />
+        </g>
       </g>
       {/* Moon with 3D craters */}
       <circle cx="48" cy="92" r="16" fill="url(#moonSurface)" />
@@ -124,34 +127,42 @@ function DinoIllustration() {
       <polygon points="225,128 258,35 295,128" fill="url(#volcanoGrad)" />
       <polygon points="258,35 276,80 295,128 258,128" fill="#78350F" opacity="0.3" />
       {/* Lava */}
-      <ellipse cx="258" cy="38" rx="8" ry="5" fill="url(#lavaGlow)" opacity="0.8" />
-      <circle cx="258" cy="36" r="4" fill="#FDE68A" opacity="0.5" />
+      <g className="svg-pulse">
+        <ellipse cx="258" cy="38" rx="8" ry="5" fill="url(#lavaGlow)" opacity="0.8" />
+        <circle cx="258" cy="36" r="4" fill="#FDE68A" opacity="0.5" />
+      </g>
       {/* Lava drip */}
-      <path d="M255,42 Q254,55 256,65" stroke="#F97316" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+      <path d="M255,42 Q254,55 256,65" stroke="#F97316" strokeWidth="2" strokeLinecap="round" opacity="0.4" className="svg-flicker" />
       {/* Palm trees with 3D trunks */}
       <rect x="38" y="75" width="7" height="40" rx="3" fill="url(#palmTrunk)" />
-      <path d="M42,75 Q30,65 18,72" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" />
-      <path d="M42,75 Q52,62 64,68" stroke="#15803D" strokeWidth="4" strokeLinecap="round" />
-      <path d="M42,75 Q40,60 38,52" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+      <g className="svg-sway" style={{ transformOrigin: "42px 75px" }}>
+        <path d="M42,75 Q30,65 18,72" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" />
+        <path d="M42,75 Q52,62 64,68" stroke="#15803D" strokeWidth="4" strokeLinecap="round" />
+        <path d="M42,75 Q40,60 38,52" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+      </g>
       <rect x="68" y="82" width="5" height="32" rx="2" fill="url(#palmTrunk)" />
-      <path d="M71,82 Q62,74 54,78" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
-      <path d="M71,82 Q78,72 86,76" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" />
+      <g className="svg-sway-d1" style={{ transformOrigin: "71px 82px" }}>
+        <path d="M71,82 Q62,74 54,78" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" />
+        <path d="M71,82 Q78,72 86,76" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" />
+      </g>
       {/* Dinosaur with 3D volume */}
       <ellipse cx="160" cy="88" rx="32" ry="22" fill="url(#dinoBody)" />
       {/* Belly highlight */}
       <ellipse cx="158" cy="92" rx="22" ry="14" fill="#86EFAC" opacity="0.25" />
       {/* Neck with 3D curve */}
-      <path d="M138,78 Q122,48 128,32" stroke="url(#dinoBody)" strokeWidth="16" strokeLinecap="round" fill="none" />
-      <path d="M133,75 Q120,50 124,35" stroke="#4ADE80" strokeWidth="4" fill="none" opacity="0.2" />
-      {/* Head */}
-      <ellipse cx="128" cy="28" rx="14" ry="10" fill="#22C55E" />
-      <ellipse cx="126" cy="26" rx="10" ry="7" fill="#4ADE80" opacity="0.3" />
-      {/* Eye with depth */}
-      <circle cx="122" cy="25" r="4" fill="white" />
-      <circle cx="123" cy="25" r="2.5" fill="#1F2937" />
-      <circle cx="122" cy="24" r="1" fill="white" opacity="0.7" />
-      {/* Smile */}
-      <path d="M118,32 Q123,37 128,32" stroke="#15803D" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <g className="svg-bob-d1">
+        <path d="M138,78 Q122,48 128,32" stroke="url(#dinoBody)" strokeWidth="16" strokeLinecap="round" fill="none" />
+        <path d="M133,75 Q120,50 124,35" stroke="#4ADE80" strokeWidth="4" fill="none" opacity="0.2" />
+        {/* Head */}
+        <ellipse cx="128" cy="28" rx="14" ry="10" fill="#22C55E" />
+        <ellipse cx="126" cy="26" rx="10" ry="7" fill="#4ADE80" opacity="0.3" />
+        {/* Eye with depth */}
+        <circle cx="122" cy="25" r="4" fill="white" />
+        <circle cx="123" cy="25" r="2.5" fill="#1F2937" />
+        <circle cx="122" cy="24" r="1" fill="white" opacity="0.7" />
+        {/* Smile */}
+        <path d="M118,32 Q123,37 128,32" stroke="#15803D" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      </g>
       {/* Spots on body */}
       <circle cx="150" cy="82" r="4" fill="#16A34A" opacity="0.3" />
       <circle cx="168" cy="86" r="3" fill="#16A34A" opacity="0.25" />
@@ -211,20 +222,24 @@ function OceanIllustration() {
       <polygon points="230,0 255,128 215,128" fill="white" opacity="0.03" />
       {/* Bubbles with 3D glass effect */}
       {[[30,22,5],[60,52,3.5],[250,28,6],[270,72,4],[140,18,3],[200,82,5],[100,75,3],[180,40,4]].map(([x,y,r],i) => (
-        <g key={i}>
+        <g key={i} className={i % 2 === 0 ? "svg-bob" : "svg-bob-d1"}>
           <circle cx={x} cy={y} r={r as number} fill="white" opacity={0.08 + (i%3)*0.03} />
           <circle cx={x} cy={y} r={r as number} fill="none" stroke="white" strokeWidth="0.5" opacity="0.15" />
           <circle cx={(x as number) - (r as number)*0.3} cy={(y as number) - (r as number)*0.3} r={(r as number)*0.25} fill="white" opacity="0.2" />
         </g>
       ))}
       {/* Seaweed with 3D depth */}
-      <path d="M18,128 Q24,100 18,78 Q12,56 20,38" stroke="#22C55E" strokeWidth="5" fill="none" opacity="0.5" />
-      <path d="M20,128 Q26,102 20,80 Q14,58 22,40" stroke="#4ADE80" strokeWidth="2" fill="none" opacity="0.3" />
-      <path d="M30,128 Q36,108 30,90 Q24,72 32,52" stroke="#16A34A" strokeWidth="4" fill="none" opacity="0.4" />
-      <path d="M270,128 Q276,100 270,78 Q264,60 272,48" stroke="#22C55E" strokeWidth="5" fill="none" opacity="0.4" />
-      <path d="M282,128 Q286,108 282,92" stroke="#16A34A" strokeWidth="3" fill="none" opacity="0.3" />
+      <g className="svg-sway" style={{ transformOrigin: "18px 128px" }}>
+        <path d="M18,128 Q24,100 18,78 Q12,56 20,38" stroke="#22C55E" strokeWidth="5" fill="none" opacity="0.5" />
+        <path d="M20,128 Q26,102 20,80 Q14,58 22,40" stroke="#4ADE80" strokeWidth="2" fill="none" opacity="0.3" />
+        <path d="M30,128 Q36,108 30,90 Q24,72 32,52" stroke="#16A34A" strokeWidth="4" fill="none" opacity="0.4" />
+      </g>
+      <g className="svg-sway-d1" style={{ transformOrigin: "270px 128px" }}>
+        <path d="M270,128 Q276,100 270,78 Q264,60 272,48" stroke="#22C55E" strokeWidth="5" fill="none" opacity="0.4" />
+        <path d="M282,128 Q286,108 282,92" stroke="#16A34A" strokeWidth="3" fill="none" opacity="0.3" />
+      </g>
       {/* Main fish with 3D body */}
-      <g transform="translate(120,55)">
+      <g transform="translate(120,55)" className="svg-swim">
         <ellipse cx="0" cy="0" rx="17" ry="11" fill="url(#fishBody1)" />
         <ellipse cx="-4" cy="-2" rx="8" ry="6" fill="#FDBA74" opacity="0.4" />
         <polygon points="-17,0 -28,-9 -28,9" fill="#EA580C" />
@@ -242,7 +257,7 @@ function OceanIllustration() {
         <path d="M-2,-10 Q2,-16 6,-10" fill="#FB923C" opacity="0.7" />
       </g>
       {/* Smaller fish */}
-      <g transform="translate(200,32) scale(0.75)">
+      <g transform="translate(200,32) scale(0.75)" className="svg-swim-d1">
         <ellipse cx="0" cy="0" rx="14" ry="9" fill="url(#fishBody2)" />
         <ellipse cx="-3" cy="-1" rx="7" ry="5" fill="#93C5FD" opacity="0.3" />
         <polygon points="-14,0 -22,-7 -22,7" fill="#2563EB" />
@@ -304,7 +319,7 @@ function CastleIllustration() {
       <rect width="300" height="128" fill="url(#castle-bg)" />
       {/* Stars with twinkling */}
       {[[25,12,1.5],[72,22,1],[175,8,1.8],[222,18,1.2],[268,28,1.5],[130,5,1]].map(([x,y,r],i) => (
-        <g key={i}>
+        <g key={i} className={i % 3 === 0 ? "svg-twinkle" : i % 3 === 1 ? "svg-twinkle-d1" : "svg-twinkle-d2"}>
           <circle cx={x} cy={y} r={(r as number)*2} fill="white" opacity="0.03" />
           <circle cx={x} cy={y} r={r as number} fill="white" opacity={0.3 + i*0.08} />
         </g>
@@ -355,8 +370,10 @@ function CastleIllustration() {
       <circle cx="178" cy="64" r="8" fill="#FDE68A" opacity="0.08" />
       {/* Flag with 3D fabric */}
       <line x1="150" y1="22" x2="150" y2="0" stroke="#78716C" strokeWidth="2" />
-      <polygon points="150,2 172,9 150,16" fill="#DC2626" />
-      <polygon points="150,2 172,9 150,9" fill="#EF4444" opacity="0.4" />
+      <g className="svg-sway" style={{ transformOrigin: "150px 2px" }}>
+        <polygon points="150,2 172,9 150,16" fill="#DC2626" />
+        <polygon points="150,2 172,9 150,9" fill="#EF4444" opacity="0.4" />
+      </g>
       <circle cx="150" cy="0" r="2" fill="#FBBF24" />
       {/* Enchanted forest with 3D trees */}
       <circle cx="48" cy="96" r="22" fill="#15803D" opacity="0.7" />
@@ -422,11 +439,13 @@ function SuperheroIllustration() {
         <rect x="278" y="86" width="4" height="4" fill="#FBBF24" opacity="0.3" />
       </g>
       {/* Sun burst with 3D glow */}
-      <circle cx="150" cy="28" r="28" fill="url(#sunBurst)" />
-      <circle cx="150" cy="28" r="14" fill="#FBBF24" opacity="0.4" />
-      <circle cx="150" cy="28" r="8" fill="#FEF3C7" opacity="0.5" />
+      <g className="svg-pulse">
+        <circle cx="150" cy="28" r="28" fill="url(#sunBurst)" />
+        <circle cx="150" cy="28" r="14" fill="#FBBF24" opacity="0.4" />
+        <circle cx="150" cy="28" r="8" fill="#FEF3C7" opacity="0.5" />
+      </g>
       {/* Hero child with 3D shading */}
-      <g>
+      <g className="svg-bob">
         {/* Cape with flow and 3D */}
         <path d="M140,64 Q126,82 122,112" fill="url(#capeGrad)" opacity="0.85" />
         <path d="M140,64 Q130,82 128,112" fill="#DC2626" opacity="0.4" />
@@ -474,9 +493,11 @@ function SuperheroIllustration() {
         <ellipse cx="157" cy="109" rx="3" ry="2" fill="#EF4444" opacity="0.4" />
       </g>
       {/* Power sparks with glow */}
-      <g>
+      <g className="svg-twinkle">
         <circle cx="122" cy="50" r="6" fill="#FBBF24" opacity="0.08" />
         <polygon points="122,46 123.5,49.5 127,49.5 124,52 125,55.5 122,53 119,55.5 120,52 117,49.5 120.5,49.5" fill="#FBBF24" opacity="0.8" />
+      </g>
+      <g className="svg-twinkle-d2">
         <circle cx="178" cy="50" r="6" fill="#FBBF24" opacity="0.08" />
         <polygon points="178,46 179.5,49.5 183,49.5 180,52 181,55.5 178,53 175,55.5 176,52 173,49.5 176.5,49.5" fill="#FBBF24" opacity="0.8" />
       </g>
@@ -561,19 +582,21 @@ function KindnessIllustration() {
       <circle cx="145" cy="78" r="4.5" fill="#FED7AA" />
       <circle cx="144" cy="77" r="1.5" fill="white" opacity="0.2" />
       {/* Main heart with 3D gradient */}
-      <path d="M145,32 Q145,24 138,24 Q131,24 131,32 Q131,40 145,50 Q159,40 159,32 Q159,24 152,24 Q145,24 145,32" fill="url(#heartGrad)" />
-      <path d="M145,34 Q145,28 140,28 Q135,28 135,34 Q135,38 145,46" fill="#FBCFE8" opacity="0.25" />
-      {/* Heart glow */}
-      <circle cx="145" cy="37" r="18" fill="#F472B6" opacity="0.08" />
+      <g className="svg-pulse">
+        <path d="M145,32 Q145,24 138,24 Q131,24 131,32 Q131,40 145,50 Q159,40 159,32 Q159,24 152,24 Q145,24 145,32" fill="url(#heartGrad)" />
+        <path d="M145,34 Q145,28 140,28 Q135,28 135,34 Q135,38 145,46" fill="#FBCFE8" opacity="0.25" />
+        {/* Heart glow */}
+        <circle cx="145" cy="37" r="18" fill="#F472B6" opacity="0.08" />
+      </g>
       {/* Small floating hearts with 3D */}
-      <g opacity="0.5">
+      <g opacity="0.5" className="svg-bob">
         <path d="M82,38 Q82,34 78,34 Q74,34 74,38 Q74,42 82,47 Q90,42 90,38 Q90,34 86,34 Q82,34 82,38" fill="#F472B6" />
         <path d="M82,39 Q82,36 80,36 Q77,36 77,39" fill="#FBCFE8" opacity="0.3" />
       </g>
-      <g opacity="0.35">
+      <g opacity="0.35" className="svg-bob-d1">
         <path d="M212,42 Q212,38 208,38 Q204,38 204,42 Q204,46 212,50 Q220,46 220,42 Q220,38 216,38 Q212,38 212,42" fill="#F472B6" />
       </g>
-      <g opacity="0.25">
+      <g opacity="0.25" className="svg-bob-d2">
         <path d="M95,65 Q95,62 92,62 Q89,62 89,65 Q89,68 95,72 Q101,68 101,65 Q101,62 98,62 Q95,62 95,65" fill="#FBCFE8" />
       </g>
       {/* Flowers with 3D petals */}
@@ -588,7 +611,7 @@ function KindnessIllustration() {
         </g>
       ))}
       {/* Butterfly with 3D wings */}
-      <g transform="translate(222,62)">
+      <g transform="translate(222,62)" className="svg-drift">
         <ellipse cx="-6" cy="0" rx="9" ry="6" fill="#C084FC" opacity="0.7" transform="rotate(-20)" />
         <ellipse cx="-4" cy="-1" rx="5" ry="3" fill="#E9D5FF" opacity="0.3" transform="rotate(-20)" />
         <ellipse cx="6" cy="0" rx="9" ry="6" fill="#DDD6FE" opacity="0.6" transform="rotate(20)" />
@@ -622,13 +645,15 @@ function PirateIllustration() {
       {[0, 60, 120, 180, 240].map((x, i) => (
         <path key={i} d={`M${x},${90 + (i % 2) * 4} Q${x + 15},${84 + (i % 2) * 4} ${x + 30},${90 + (i % 2) * 4}`} stroke="#93C5FD" strokeWidth="1.5" opacity="0.3" fill="none" />
       ))}
-      <g transform="translate(100,42)">
+      <g transform="translate(100,42)" className="svg-bob">
         <path d="M-30,38 Q-35,20 -20,15 L80,15 Q95,20 90,38 Z" fill="#92400E" />
         <path d="M-25,36 Q-30,22 -18,18 L78,18 Q90,22 85,36 Z" fill="#78350F" opacity="0.5" />
         <rect x="25" y="-40" width="3" height="55" fill="#78350F" />
-        <path d="M28,-35 L75,-20 L28,-5 Z" fill="white" opacity="0.9" />
-        <path d="M28,-33 L70,-20 L28,-8 Z" fill="#F5F5F4" opacity="0.3" />
-        <text x="42" y="-16" fontSize="10" fill="#1E1B4B" fontWeight="bold">☠</text>
+        <g className="svg-sway" style={{ transformOrigin: "28px -35px" }}>
+          <path d="M28,-35 L75,-20 L28,-5 Z" fill="white" opacity="0.9" />
+          <path d="M28,-33 L70,-20 L28,-8 Z" fill="#F5F5F4" opacity="0.3" />
+          <text x="42" y="-16" fontSize="10" fill="#1E1B4B" fontWeight="bold">☠</text>
+        </g>
       </g>
       <circle cx="50" cy="105" r="12" fill="#FFD166" opacity="0.4" />
       <circle cx="50" cy="105" r="6" fill="#FDE68A" opacity="0.5" />
@@ -665,7 +690,7 @@ function FairyIllustration() {
         </g>
       ))}
       <circle cx="150" cy="50" r="20" fill="url(#fairy-glow)" />
-      <g transform="translate(150,50)">
+      <g transform="translate(150,50)" className="svg-bob">
         <ellipse cx="-8" cy="-2" rx="10" ry="6" fill="#E9D5FF" opacity="0.7" transform="rotate(-25)" />
         <ellipse cx="8" cy="-2" rx="10" ry="6" fill="#DDD6FE" opacity="0.6" transform="rotate(25)" />
         <circle cx="0" cy="3" r="5" fill="#FED7AA" />
@@ -704,18 +729,20 @@ function SafariIllustration() {
           <ellipse cx={x + 15} cy={55 - i * 10} rx="20" ry="10" fill="#15803D" opacity="0.3" />
         </g>
       ))}
-      <g transform="translate(120,65)">
+      <g transform="translate(120,65)" className="svg-drift">
         <ellipse cx="0" cy="0" rx="20" ry="12" fill="#F59E0B" />
         <ellipse cx="0" cy="-2" rx="18" ry="10" fill="#FBBF24" opacity="0.5" />
-        <circle cx="-22" cy="-8" r="8" fill="#F59E0B" />
-        <circle cx="-22" cy="-8" r="6" fill="#FBBF24" opacity="0.4" />
-        <circle cx="-24" cy="-10" r="1.2" fill="#1E1B4B" />
-        <circle cx="-20" cy="-10" r="1.2" fill="#1E1B4B" />
+        <g className="svg-bob-d1">
+          <circle cx="-22" cy="-8" r="8" fill="#F59E0B" />
+          <circle cx="-22" cy="-8" r="6" fill="#FBBF24" opacity="0.4" />
+          <circle cx="-24" cy="-10" r="1.2" fill="#1E1B4B" />
+          <circle cx="-20" cy="-10" r="1.2" fill="#1E1B4B" />
+        </g>
         <rect x="-4" y="12" width="3" height="14" fill="#92400E" />
         <rect x="2" y="12" width="3" height="14" fill="#92400E" />
-        <path d="M16,0 Q28,-2 22,10" stroke="#F59E0B" strokeWidth="3" fill="none" />
+        <path d="M16,0 Q28,-2 22,10" stroke="#F59E0B" strokeWidth="3" fill="none" className="svg-sway" />
       </g>
-      <g transform="translate(190,72)">
+      <g transform="translate(190,72)" className="svg-drift-d1">
         <ellipse cx="0" cy="0" rx="8" ry="6" fill="#9CA3AF" />
         <circle cx="-10" cy="-4" r="5" fill="#9CA3AF" />
         <circle cx="-12" cy="-6" r="1" fill="#1E1B4B" />
@@ -751,7 +778,9 @@ function TimeTravelIllustration() {
           <animate attributeName="opacity" values="0.2;0.7;0.2" dur={`${2 + i * 0.5}s`} repeatCount="indefinite" />
         </circle>
       ))}
-      <circle cx="150" cy="64" r="38" fill="url(#portal)" opacity="0.8" />
+      <g className="svg-pulse">
+        <circle cx="150" cy="64" r="38" fill="url(#portal)" opacity="0.8" />
+      </g>
       <circle cx="150" cy="64" r="30" fill="#312E81" opacity="0.6" />
       <circle cx="150" cy="64" r="22" fill="#1E1B4B" opacity="0.7" />
       <circle cx="150" cy="64" r="28" fill="none" stroke="#C084FC" strokeWidth="2" opacity="0.5">
@@ -803,8 +832,10 @@ function ChristmasIllustration() {
         <polygon points="0,-35 -5,40 5,40" fill="#22C55E" opacity="0.3" />
         <polygon points="0,-20 -22,30 22,30" fill="#15803D" opacity="0.4" />
         <rect x="-5" y="40" width="10" height="12" fill="#78350F" />
-        <circle cx="0" cy="-35" r="4" fill="#FDE68A" />
-        <circle cx="0" cy="-35" r="2" fill="white" opacity="0.5" />
+        <g className="svg-twinkle">
+          <circle cx="0" cy="-35" r="4" fill="#FDE68A" />
+          <circle cx="0" cy="-35" r="2" fill="white" opacity="0.5" />
+        </g>
         {[[-8, 5, "#EF4444"], [10, 15, "#3B82F6"], [-5, 25, "#FBBF24"], [8, -5, "#EC4899"]].map(([x, y, c], i) => (
           <circle key={i} cx={x as number} cy={y as number} r="3" fill={c as string} />
         ))}
@@ -839,7 +870,7 @@ function HalloweenIllustration() {
         <circle key={i} cx={x} cy={8 + (i * 13) % 40} r="1" fill="white" opacity={0.3 + (i % 3) * 0.15} />
       ))}
       <ellipse cx="150" cy="140" rx="200" ry="28" fill="#1E1B4B" opacity="0.5" />
-      <g transform="translate(130,55)">
+      <g transform="translate(130,55)" className="svg-bob">
         <ellipse cx="0" cy="5" rx="22" ry="18" fill="#F97316" />
         <ellipse cx="0" cy="2" rx="20" ry="16" fill="#FB923C" opacity="0.4" />
         <rect x="-2" y="-15" width="4" height="10" rx="2" fill="#16A34A" />
@@ -901,6 +932,12 @@ function ThemeCard({ theme }: { theme: Theme }) {
             <Illustration />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${theme.colorScheme.gradient}`} />
+          )}
+          {theme.subscriberOnly && (
+            <div className="absolute top-2 right-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+              <Crown className="h-3 w-3" />
+              Subscribers Only
+            </div>
           )}
         </div>
 

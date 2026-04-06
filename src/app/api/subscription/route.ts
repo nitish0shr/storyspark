@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { stripe, isStripeConfigured } from "@/lib/stripe";
+import { stripe, isStripeConfigured, PRICING } from "@/lib/stripe";
 
 export async function GET(request: NextRequest) {
   try {
@@ -81,8 +81,27 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+    const minCommitmentEnd = stripeSub.metadata?.min_commitment_end;
+    const now = new Date();
+    const commitmentStillActive = minCommitmentEnd && new Date(minCommitmentEnd) > now;
+
     switch (action) {
       case "cancel": {
+        if (commitmentStillActive) {
+          const endDate = new Date(minCommitmentEnd).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+          return NextResponse.json(
+            {
+              error: `Your ${PRICING.subscription.minCommitmentMonths}-month minimum commitment runs until ${endDate}. You can cancel after that date.`,
+            },
+            { status: 400 }
+          );
+        }
+
         await stripe.subscriptions.update(sub.stripe_subscription_id, {
           cancel_at_period_end: true,
         });

@@ -20,6 +20,7 @@ import {
   Snowflake,
   Moon,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
@@ -151,6 +152,12 @@ export function StepThemeSelect() {
               </div>
 
               <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+                {theme.subscriberOnly && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-pink-100 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200/50">
+                    <Crown className="h-2.5 w-2.5 text-violet-500" />
+                    Subscribers Only
+                  </span>
+                )}
                 {theme.badge && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-amber-200/50">
                     <Sparkles className="h-2.5 w-2.5 text-amber-500" />

@@ -197,3 +197,28 @@
   background-size: 200% 100%;
   animation: shimmer 3s linear infinite;
 }
+
+/* ── SVG Theme card animations ── */
+@keyframes svg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes svg-sway { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } }
+@keyframes svg-twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@keyframes svg-pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes svg-swim { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+@keyframes svg-flicker { 0%, 100% { opacity: 0.7; transform: scaleY(1); } 50% { opacity: 1; transform: scaleY(1.1); } }
+@keyframes svg-drift-slow { 0%, 100% { transform: translateX(0) translateY(0); } 33% { transform: translateX(3px) translateY(-2px); } 66% { transform: translateX(-2px) translateY(1px); } }
+.svg-bob { animation: svg-bob 3s ease-in-out infinite; }
+.svg-bob-d1 { animation: svg-bob 3.5s ease-in-out infinite 0.3s; }
+.svg-bob-d2 { animation: svg-bob 4s ease-in-out infinite 0.7s; }
+.svg-sway { animation: svg-sway 4s ease-in-out infinite; }
+.svg-sway-d1 { animation: svg-sway 4.5s ease-in-out infinite 0.5s; }
+.svg-twinkle { animation: svg-twinkle 2s ease-in-out infinite; }
+.svg-twinkle-d1 { animation: svg-twinkle 2.5s ease-in-out infinite 0.4s; }
+.svg-twinkle-d2 { animation: svg-twinkle 1.8s ease-in-out infinite 0.8s; }
+.svg-twinkle-d3 { animation: svg-twinkle 3s ease-in-out infinite 1.2s; }
+.svg-pulse { animation: svg-pulse 3s ease-in-out infinite; }
+.svg-pulse-d1 { animation: svg-pulse 3.5s ease-in-out infinite 0.5s; }
+.svg-swim { animation: svg-swim 4s ease-in-out infinite; }
+.svg-swim-d1 { animation: svg-swim 5s ease-in-out infinite 0.6s; }
+.svg-flicker { animation: svg-flicker 1.5s ease-in-out infinite; }
+.svg-drift { animation: svg-drift-slow 6s ease-in-out infinite; }
+.svg-drift-d1 { animation: svg-drift-slow 7s ease-in-out infinite 1s; }

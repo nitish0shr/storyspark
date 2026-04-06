@@ -6,7 +6,7 @@ export const themes: Theme[] = [
     name: "Space Adventure",
     titleTemplate: "[Child] Explores the Galaxy",
     description:
-      "Blast off on an interstellar journey through stars, planets, and cosmic wonders!",
+      "Your little astronaut zooms past planets, meets friendly aliens, and plants a flag on a brand-new world!",
     icon: "Rocket",
     category: "adventure",
     colorScheme: {
@@ -43,7 +43,7 @@ export const themes: Theme[] = [
     name: "Dinosaur Discovery",
     titleTemplate: "[Child] and the Dinosaur Discovery",
     description:
-      "Travel back in time to meet gentle giants and roaring friends from the age of dinosaurs!",
+      "Hatch a baby dino, ride a gentle giant, and explore a jungle full of roaring new friends!",
     icon: "Egg",
     category: "adventure",
     colorScheme: {
@@ -82,7 +82,7 @@ export const themes: Theme[] = [
     name: "Under the Sea",
     titleTemplate: "[Child]'s Underwater Adventure",
     description:
-      "Dive into a sparkling ocean world filled with friendly sea creatures and hidden treasures!",
+      "Swim with dolphins, find a sunken treasure chest, and make friends in a colorful coral reef!",
     icon: "Fish",
     category: "adventure",
     colorScheme: {
@@ -121,7 +121,7 @@ export const themes: Theme[] = [
     name: "Royal Quest",
     titleTemplate: "[Child] and the Royal Quest",
     description:
-      "Enter a magical kingdom of castles, enchanted forests, and a quest only a true royal can complete!",
+      "Put on a crown, explore a magical castle, and go on a quest through an enchanted kingdom!",
     icon: "Crown",
     category: "fantasy",
     colorScheme: {
@@ -164,7 +164,7 @@ export const themes: Theme[] = [
     name: "Superhero Origin",
     titleTemplate: "[Child]: The Superhero Story",
     description:
-      "Every hero has an origin story. Discover the superpower within and save the day!",
+      "Get a super suit, discover an amazing power, and zoom off to save the city before bedtime!",
     icon: "Zap",
     category: "adventure",
     colorScheme: {
@@ -202,7 +202,7 @@ export const themes: Theme[] = [
     name: "Kindness & Courage",
     titleTemplate: "[Child]'s Book of Kindness and Courage",
     description:
-      "A heartfelt story celebrating the real-life bravery and kindness that makes your child special.",
+      "A warm story about standing up for a friend, being brave, and showing the world how kind your child is!",
     icon: "Heart",
     category: "heartfelt",
     colorScheme: {
@@ -238,9 +238,10 @@ export const themes: Theme[] = [
     name: "Pirate Treasure Hunt",
     titleTemplate: "Captain [Child] and the Lost Treasure",
     description:
-      "Set sail on the high seas to discover hidden islands, friendly pirates, and buried treasure!",
+      "Ahoy! Board a pirate ship, follow an old treasure map, and dig up gold on a secret island!",
     icon: "Compass",
     category: "adventure",
+    subscriberOnly: true,
     colorScheme: {
       gradient: "from-yellow-600 via-amber-600 to-orange-700",
       bg: "bg-yellow-50",
@@ -275,9 +276,10 @@ export const themes: Theme[] = [
     name: "Fairy Garden",
     titleTemplate: "[Child] and the Secret Fairy Garden",
     description:
-      "Shrink down to fairy size and discover a magical world hidden among the flowers!",
+      "Shrink to fairy size, ride a ladybug, and have tea with tiny friends inside a mushroom house!",
     icon: "Flower2",
     category: "fantasy",
+    subscriberOnly: true,
     colorScheme: {
       gradient: "from-violet-400 via-fuchsia-400 to-pink-400",
       bg: "bg-violet-50",
@@ -313,7 +315,7 @@ export const themes: Theme[] = [
     name: "Safari Adventure",
     titleTemplate: "[Child]'s Wild Safari Adventure",
     description:
-      "Explore the African savanna and make friends with amazing animals on a magical safari!",
+      "Hop in a jeep, spot lions and elephants, and make a baby giraffe your new best friend!",
     icon: "Binoculars",
     category: "adventure",
     colorScheme: {
@@ -351,7 +353,7 @@ export const themes: Theme[] = [
     name: "Time Travel",
     titleTemplate: "[Child] and the Time Travel Machine",
     description:
-      "Journey through time to meet amazing people and see incredible things from history and the future!",
+      "Step into a time machine, visit knights and castles, and peek at flying cars in the future!",
     icon: "Clock",
     category: "adventure",
     colorScheme: {
@@ -388,7 +390,7 @@ export const themes: Theme[] = [
     name: "Christmas Magic",
     titleTemplate: "[Child]'s Magical Christmas Eve",
     description:
-      "A heartwarming Christmas Eve adventure with Santa, reindeer, and the true magic of giving!",
+      "Help Santa load his sleigh, befriend a reindeer, and deliver presents on a snowy Christmas Eve!",
     icon: "Snowflake",
     category: "seasonal",
     badge: "Limited Edition",
@@ -427,7 +429,7 @@ export const themes: Theme[] = [
     name: "Halloween Adventure",
     titleTemplate: "[Child]'s Spooky Halloween Night",
     description:
-      "A not-too-scary Halloween adventure with friendly monsters, candy, and magical jack-o'-lanterns!",
+      "Pick a costume, trick-or-treat with friendly monsters, and find magical glowing jack-o'-lanterns!",
     icon: "Moon",
     category: "seasonal",
     badge: "Limited Edition",
