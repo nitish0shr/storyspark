@@ -3,111 +3,28 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { FullPageOverlay } from "./StoryPageOverlay";
-import type { TextBlock } from "./StoryPageOverlay";
 
-const samplePages: {
-  image: string;
-  title: string;
-  theme: string;
-  color: string;
-  fullPageTextBlocks: TextBlock[];
-  layout?: {
-    positions: React.CSSProperties[];
-    tailSides?: Array<"left" | "right" | "center">;
-  };
-}[] = [
+const samplePages = [
   {
     image: "/images/demo/spread-space.png",
-    title: "Mission to the Moon!",
     theme: "Space Adventure",
     color: "bg-indigo-500",
-    fullPageTextBlocks: [
-      {
-        type: "narration",
-        text: "He took his very first step on the moon.\nThe ground was soft and dusty\nbeneath his boots.",
-      },
-      {
-        type: "dialogue",
-        speaker: "Aarav",
-        text: "I can see the whole Earth from here!",
-        speakerColor: "#4F46E5",
-      },
-      {
-        type: "narration",
-        text: "It was the most amazing sight\nhe had ever seen.",
-      },
-    ],
-    layout: {
-      positions: [
-        { top: "4%", left: "3%", maxWidth: "38%" },
-        { top: "12%", right: "4%", maxWidth: "36%" },
-        { bottom: "5%", right: "3%", maxWidth: "38%" },
-      ],
-      tailSides: ["left"],
-    },
+    overlayTitle: "Mission to the Moon!",
+    overlayBody: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
   },
   {
     image: "/images/demo/spread-dino.png",
-    title: "The Dinosaur Valley",
     theme: "Dinosaur Discovery",
     color: "bg-emerald-500",
-    fullPageTextBlocks: [
-      {
-        type: "narration",
-        text: "The volcano rumbled softly\nas they stepped into the valley.",
-      },
-      {
-        type: "dialogue",
-        speaker: "Aarav",
-        text: "Do you think we should keep going?",
-        speakerColor: "#4F46E5",
-      },
-      {
-        type: "dialogue",
-        speaker: "Dino",
-        text: "Follow me!\nAdventure is waiting!",
-        speakerColor: "#059669",
-      },
-    ],
-    layout: {
-      positions: [
-        { top: "4%", left: "3%", maxWidth: "40%" },
-        { top: "14%", right: "4%", maxWidth: "34%" },
-        { bottom: "8%", left: "4%", maxWidth: "36%" },
-      ],
-      tailSides: ["left", "right"],
-    },
+    overlayTitle: "The Dinosaur Valley",
+    overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
   },
   {
     image: "/images/demo/spread-castle.png",
-    title: "The Royal Adventure",
     theme: "Enchanted Castle",
     color: "bg-pink-500",
-    fullPageTextBlocks: [
-      {
-        type: "narration",
-        text: "A golden carriage arrived\nas butterflies danced in the\nwarm breeze.",
-      },
-      {
-        type: "dialogue",
-        speaker: "Princess Emma",
-        text: "The grand ball is\nabout to begin!",
-        speakerColor: "#DB2777",
-      },
-      {
-        type: "narration",
-        text: "And so their magical adventure\nbegan at the enchanted castle.",
-      },
-    ],
-    layout: {
-      positions: [
-        { top: "4%", left: "3%", maxWidth: "38%" },
-        { top: "10%", right: "3%", maxWidth: "36%" },
-        { bottom: "4%", left: "3%", maxWidth: "40%" },
-      ],
-      tailSides: ["right"],
-    },
+    overlayTitle: "The Royal Adventure",
+    overlayBody: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
   },
 ];
 
@@ -139,18 +56,34 @@ export default function SampleBookViewer() {
 
         <div className="max-w-3xl mx-auto">
           <div className="relative">
-            <div className="relative rounded-3xl overflow-hidden border-2 border-[#1a1a2e] shadow-[6px_6px_0px_#1a1a2e]">
+            <div className="relative bg-white rounded-3xl overflow-hidden border-2 border-[#1a1a2e] shadow-[6px_6px_0px_#1a1a2e]">
               <div className="relative aspect-[16/9] overflow-hidden">
                 <Image
                   src={page.image}
-                  alt={`${page.title} — ${page.theme} storybook page`}
+                  alt={`Sample storybook spread from ${page.theme} adventure`}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-opacity duration-500"
                   sizes="(max-width: 768px) 100vw, 720px"
                   priority
                 />
 
-                <FullPageOverlay textBlocks={page.fullPageTextBlocks} layout={page.layout} />
+                <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none">
+                  <div className="absolute inset-0 bg-[#FFF8EE]/90 backdrop-blur-sm rounded-lg" />
+                  <div className="relative p-[8%] flex flex-col h-full">
+                    <h3 className="font-heading text-[clamp(10px,2vw,18px)] font-bold text-[#1a1a2e] leading-tight mb-[4%]">
+                      {page.overlayTitle}
+                    </h3>
+                    <p className="font-body text-[clamp(7px,1.3vw,13px)] text-[#1a1a2e]/80 leading-relaxed">
+                      {page.overlayBody}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="absolute top-4 right-4">
+                  <div className={`${page.color} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
+                    <span className="font-body font-bold text-xs text-white">{page.theme}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -172,26 +105,19 @@ export default function SampleBookViewer() {
             </button>
           </div>
 
-          <div className="mt-5 flex items-center justify-between">
-            <div>
-              <h3 className="font-heading text-lg font-bold text-[#1a1a2e]">{page.title}</h3>
-              <span className="font-body text-sm text-[#1a1a2e]/50">{page.theme}</span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {samplePages.map((p, index) => (
-                <button
-                  key={index}
-                  onClick={() => goTo(index)}
-                  className={`rounded-full transition-all duration-300 border-2 border-[#1a1a2e] ${
-                    index === currentPage
-                      ? `w-10 h-3 ${p.color} shadow-[2px_2px_0px_#1a1a2e]`
-                      : "w-3 h-3 bg-white hover:bg-[#FFD166]"
-                  }`}
-                  aria-label={`Go to ${p.theme}`}
-                />
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-3 mt-8">
+            {samplePages.map((p, index) => (
+              <button
+                key={index}
+                onClick={() => goTo(index)}
+                className={`rounded-full transition-all duration-300 border-2 border-[#1a1a2e] ${
+                  index === currentPage
+                    ? `w-10 h-3 ${p.color} shadow-[2px_2px_0px_#1a1a2e]`
+                    : "w-3 h-3 bg-white hover:bg-[#FFD166]"
+                }`}
+                aria-label={`Go to ${p.theme}`}
+              />
+            ))}
           </div>
         </div>
       </div>
