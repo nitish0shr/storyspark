@@ -20,7 +20,6 @@ import {
   Snowflake,
   Moon,
   Sparkles,
-  Lock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePostHog } from "posthog-js/react";

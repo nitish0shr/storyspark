@@ -12,7 +12,6 @@ import {
   Percent,
   Gift,
   Lock,
-  Headphones,
 } from "lucide-react";
 import { PRICING } from "@/lib/stripe";
 import SubscribeButton from "./SubscribeButton";

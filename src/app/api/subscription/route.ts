@@ -3,7 +3,8 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, PRICING } from "@/lib/stripe";
 
-export async function GET(request: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: NextRequest) {
   try {
     if (!isSupabaseConfigured()) {
       return NextResponse.json({ subscription: null });
