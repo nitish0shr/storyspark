@@ -4,23 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
 
-const spreads = [
-  {
-    image: "/images/demo/spread-space.png",
-    theme: "Space Adventure",
-    color: "bg-indigo-500",
-  },
-  {
-    image: "/images/demo/spread-dino.png",
-    theme: "Dinosaur Discovery",
-    color: "bg-emerald-500",
-  },
-  {
-    image: "/images/demo/spread-castle.png",
-    theme: "Enchanted Castle",
-    color: "bg-pink-500",
-  },
-];
 
 export default function PersonalizationShowcase() {
   return (
