@@ -3,20 +3,43 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
+import StoryPageOverlay from "./StoryPageOverlay";
+import type { TextBlock } from "./StoryPageOverlay";
 
-const spreadOverlays: Record<string, { title: string; body: string }> = {
-  "/images/demo/spread-space.png": {
-    title: "Mission to the Moon!",
-    body: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
-  },
-  "/images/demo/spread-dino.png": {
-    title: "The Dinosaur Valley",
-    body: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano.",
-  },
-  "/images/demo/spread-castle.png": {
-    title: "The Royal Adventure",
-    body: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
-  },
+const spreadData: Record<string, TextBlock[]> = {
+  "/images/demo/spread-space.png": [
+    {
+      type: "narration",
+      text: "He climbed out of the spaceship and took his very first step on the moon.",
+    },
+    {
+      type: "dialogue",
+      speaker: "Aarav",
+      text: "I can see the whole Earth from here!",
+    },
+  ],
+  "/images/demo/spread-dino.png": [
+    {
+      type: "narration",
+      text: "Deep in the jungle, he met a friendly dinosaur with bright green eyes.",
+    },
+    {
+      type: "dialogue",
+      speaker: "Dino",
+      text: "Follow me! Adventure is waiting!",
+    },
+  ],
+  "/images/demo/spread-castle.png": [
+    {
+      type: "narration",
+      text: "A golden carriage arrived to take them to the grand ball at the castle.",
+    },
+    {
+      type: "dialogue",
+      speaker: "Princess Emma",
+      text: "The ball is about to begin!",
+    },
+  ],
 };
 
 function SpreadWithOverlay({
@@ -30,10 +53,10 @@ function SpreadWithOverlay({
   label: string;
   labelColor: string;
 }) {
-  const overlay = spreadOverlays[src];
+  const blocks = spreadData[src];
   return (
     <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e]">
-      <div className="absolute top-3 left-3 z-10">
+      <div className="absolute top-3 left-3 z-20">
         <div className={`${labelColor} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
           <span className="font-body font-bold text-xs text-white">{label}</span>
         </div>
@@ -47,22 +70,7 @@ function SpreadWithOverlay({
           className="w-full h-auto"
           priority
         />
-        {overlay && (
-          <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none p-[3%]">
-            <h3
-              className="font-heading text-[clamp(9px,1.7vw,17px)] font-extrabold text-white leading-tight mb-[3%] drop-shadow-lg"
-              style={{ textShadow: "0 2px 6px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)" }}
-            >
-              {overlay.title}
-            </h3>
-            <p
-              className="font-body text-[clamp(6px,1.15vw,11px)] text-white/95 leading-relaxed font-medium drop-shadow-md"
-              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.85), 0 0px 1px rgba(0,0,0,0.95)" }}
-            >
-              {overlay.body}
-            </p>
-          </div>
-        )}
+        {blocks && <StoryPageOverlay textBlocks={blocks} />}
       </div>
     </div>
   );
