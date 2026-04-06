@@ -33,6 +33,7 @@ export interface Theme {
   category: ThemeCategory;
   seasonal?: SeasonalWindow;
   badge?: string;
+  subscriberOnly?: boolean;
 }
 
 export function isThemeAvailable(theme: Theme): boolean {

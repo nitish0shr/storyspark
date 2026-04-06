@@ -54,6 +54,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (theme.subscriberOnly) {
+      const { data: activeSub } = await supabase
+        .from("subscriptions")
+        .select("id, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!activeSub) {
+        return NextResponse.json(
+          { error: "This theme is exclusive to subscribers. Subscribe to the Monthly Book Club to unlock it!" },
+          { status: 403 }
+        );
+      }
+    }
+
     // 1. Create child profile
     const { data: childProfile, error: childError } = await supabase
       .from("child_profiles")

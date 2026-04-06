@@ -78,6 +78,15 @@ src/
   types/                  # TypeScript types
 ```
 
+## Subscription Model
+
+- **Price**: $7.99/month (1 book included)
+- **Minimum commitment**: 3 months — cancellation blocked via Stripe metadata (`min_commitment_end`)
+- **Subscriber perks**: 15% off extra books, access to exclusive subscriber-only themes
+- **Subscriber-only themes**: `pirate-treasure`, `fairy-garden` (enforced server-side in `/api/create-book`)
+- **Theme flag**: `subscriberOnly?: boolean` in `Theme` type (`src/types/theme.ts`)
+- **Commitment tracking**: `min_commitment_end` stored in Stripe subscription metadata, checked in `/api/subscription` PATCH (cancel action)
+
 ## Design System
 
 - **Colors**: Deep cosmic dark (`#0D0720`) for hero/nav, warm cream (`#FFFBF5`) for content
