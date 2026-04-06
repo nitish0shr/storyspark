@@ -173,6 +173,23 @@ export default function Hero() {
                     priority
                   />
 
+                  {/* Title overlay to replace baked-in image text */}
+                  <div className="absolute top-0 left-0 right-0 h-[35%] flex flex-col items-center justify-center px-4 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#1a0e08] via-[#2a1810]/95 to-transparent" />
+                    <span
+                      className="relative font-heading text-[#FFD166] text-[11px] sm:text-sm tracking-[0.2em] uppercase drop-shadow-lg"
+                      style={{ textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}
+                    >
+                      Emma&apos;s Adventure
+                    </span>
+                    <span
+                      className="relative font-heading text-white text-lg sm:text-2xl font-bold tracking-wide leading-tight mt-1 drop-shadow-lg text-center"
+                      style={{ textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}
+                    >
+                      The Enchanted Castle
+                    </span>
+                  </div>
+
                   {/* Glossy sheen */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/12 to-transparent" />
                 </div>
