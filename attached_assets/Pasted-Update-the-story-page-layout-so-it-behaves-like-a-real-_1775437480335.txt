@@ -1,0 +1,107 @@
+Update the story page layout so it behaves like a real illustrated story/comic page, not a split card layout.
+
+Current problem:
+- The page is incorrectly showing text twice:
+  1. inside a separate text box/panel
+  2. again as text over the image
+- This looks broken and cluttered.
+
+What I want instead:
+- Remove the old left-side text panel completely for this mode
+- Show the illustration as the main full-page visual
+- Render the story text only once, on top of the image
+- The final look should feel like a comic panel / cinematic storybook page
+
+Layout requirements:
+1. Use the image as the dominant background or full spread
+2. Overlay text directly on the image in styled text boxes
+3. Never render duplicate text
+4. Do not show a separate left text area when overlay mode is active
+5. Text placement should feel intentional and readable, like a comic/story page
+
+Text styling requirements:
+- Narration should appear in a distinct narration box/caption box
+- Dialogue should clearly show who is speaking
+- If a character is talking, the text should explicitly indicate the speaker name
+- Different text types should be visually distinct
+
+Storytelling format:
+Support 3 text presentation types:
+
+1. Narration
+- Used for scene-setting, action, transitions, and storytelling
+- Example:
+  NARRATION: The little explorer stepped carefully into the glowing forest.
+
+2. Character dialogue
+- Used when a specific character is speaking
+- Must explicitly show the speaker name
+- Example:
+  MIA: “Wow, look at that dinosaur!”
+  DINO: “Don’t worry, I’m friendly.”
+
+3. Thoughts / emphasis / sound moments (optional if supported)
+- Used for inner thoughts, magical moments, sound effects, or dramatic emphasis
+- Example:
+  THOUGHT: “I hope I’m brave enough.”
+  SFX: ROAR!
+  NOTE: A golden light shimmered around them.
+
+Rendering rules:
+- If the content is narration, show it in a caption-style box near the top or another safe area
+- If the content is dialogue, show it in a dialogue bubble / speech box with speaker name included
+- If multiple people are speaking, render them as separate dialogue blocks, clearly labeled by speaker
+- If both narration and dialogue exist on the same page, narration should appear separately from dialogue
+- Keep text short enough to remain readable on mobile
+- Text should not cover faces or important visual focal points when possible
+- Use smart placement to avoid blocking the most important parts of the illustration
+
+Important logic rules:
+- Only one text rendering system should be active
+- If overlay mode is enabled, disable the side text panel entirely
+- Do not leave hidden duplicated DOM/content behind
+- Do not render the same story text in both a side panel and overlay layer
+
+Desired visual direction:
+- Feels like a modern children’s storybook mixed with comic storytelling
+- Clean, premium, readable, emotionally engaging
+- Mobile-first
+- More immersive and cinematic than the current split layout
+
+Implementation expectation:
+- Refactor the page component so overlay mode is a true layout mode, not an add-on layered over the old design
+- Use a structured content model where each page can contain:
+  - narration blocks
+  - dialogue blocks with speaker names
+  - optional thought/SFX blocks
+- Render each block according to its type
+
+Example desired page structure:
+{
+  "image": "storybook-page-image.jpg",
+  "textBlocks": [
+    {
+      "type": "narration",
+      "text": "The volcano rumbled softly as Aarav and his dinosaur friend stepped into the valley."
+    },
+    {
+      "type": "dialogue",
+      "speaker": "Aarav",
+      "text": "Do you think we should keep going?"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "Dino",
+      "text": "Yes! Adventure is waiting for us."
+    }
+  ]
+}
+
+Expected rendering result:
+- Full image visible
+- One narration box at the top or another readable safe zone
+- Separate labeled dialogue boxes for each speaker
+- No left-side text panel
+- No duplicate text anywhere
+
+Please update the UI and rendering logic accordingly.
