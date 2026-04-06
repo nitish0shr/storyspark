@@ -48,16 +48,19 @@ function SpreadWithOverlay({
           priority
         />
         {overlay && (
-          <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none">
-            <div className="absolute inset-0 bg-[#FFF8EE]/90 backdrop-blur-sm rounded-lg" />
-            <div className="relative p-[8%] flex flex-col h-full">
-              <h3 className="font-heading text-[clamp(8px,1.6vw,16px)] font-bold text-[#1a1a2e] leading-tight mb-[4%]">
-                {overlay.title}
-              </h3>
-              <p className="font-body text-[clamp(6px,1.1vw,11px)] text-[#1a1a2e]/80 leading-relaxed">
-                {overlay.body}
-              </p>
-            </div>
+          <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none p-[3%]">
+            <h3
+              className="font-heading text-[clamp(9px,1.7vw,17px)] font-extrabold text-white leading-tight mb-[3%] drop-shadow-lg"
+              style={{ textShadow: "0 2px 6px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)" }}
+            >
+              {overlay.title}
+            </h3>
+            <p
+              className="font-body text-[clamp(6px,1.15vw,11px)] text-white/95 leading-relaxed font-medium drop-shadow-md"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.85), 0 0px 1px rgba(0,0,0,0.95)" }}
+            >
+              {overlay.body}
+            </p>
           </div>
         )}
       </div>
