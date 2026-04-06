@@ -12,6 +12,7 @@ const spreadData: {
   label: string;
   labelColor: string;
   previewText: PreviewText;
+  placement?: { position: React.CSSProperties; tailSide?: "left" | "right" | "center" };
 }[] = [
   {
     src: "/images/demo/spread-space.png",
@@ -21,7 +22,12 @@ const spreadData: {
     previewText: {
       type: "dialogue",
       speaker: "Aarav",
-      text: "I can see the whole Earth from here!",
+      text: "I can see the whole\nEarth from here!",
+      speakerColor: "#4F46E5",
+    },
+    placement: {
+      position: { bottom: "8%", right: "4%", maxWidth: "38%" },
+      tailSide: "left",
     },
   },
   {
@@ -32,7 +38,12 @@ const spreadData: {
     previewText: {
       type: "dialogue",
       speaker: "Dino",
-      text: "Follow me! Adventure is waiting!",
+      text: "Follow me!\nAdventure is waiting!",
+      speakerColor: "#059669",
+    },
+    placement: {
+      position: { bottom: "6%", left: "4%", maxWidth: "38%" },
+      tailSide: "right",
     },
   },
   {
@@ -42,7 +53,10 @@ const spreadData: {
     labelColor: "text-pink-600",
     previewText: {
       type: "narration",
-      text: "Butterflies danced in the warm breeze as they rode toward the castle.",
+      text: "Butterflies danced in the warm breeze\nas they rode toward the castle.",
+    },
+    placement: {
+      position: { bottom: "5%", left: "4%", maxWidth: "44%" },
     },
   },
 ];
@@ -53,12 +67,14 @@ function SpreadPreviewCard({
   label,
   labelColor,
   previewText,
+  placement,
 }: {
   src: string;
   alt: string;
   label: string;
   labelColor: string;
   previewText: PreviewText;
+  placement?: { position: React.CSSProperties; tailSide?: "left" | "right" | "center" };
 }) {
   return (
     <div>
@@ -72,7 +88,7 @@ function SpreadPreviewCard({
             className="w-full h-auto block"
             priority
           />
-          <PreviewOverlay previewText={previewText} />
+          <PreviewOverlay previewText={previewText} placement={placement} />
         </div>
       </div>
       <p className={`font-heading text-sm font-bold mt-2.5 ml-1 ${labelColor}`}>

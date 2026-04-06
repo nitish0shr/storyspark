@@ -2,11 +2,12 @@
 
 export type PreviewText =
   | { type: "narration"; text: string }
-  | { type: "dialogue"; speaker: string; text: string };
+  | { type: "dialogue"; speaker: string; text: string; speakerColor?: string }
+  | { type: "thought"; text: string };
 
 export type TextBlock =
   | { type: "narration"; text: string }
-  | { type: "dialogue"; speaker: string; text: string }
+  | { type: "dialogue"; speaker: string; text: string; speakerColor?: string }
   | { type: "thought"; text: string }
   | { type: "sfx"; text: string };
 
@@ -17,22 +18,39 @@ export type PageContent = {
   fullPageTextBlocks: TextBlock[];
 };
 
-function CaptionBox({ text, position }: { text: string; position?: { bottom?: string; left?: string; right?: string; top?: string } }) {
-  const pos = position || { bottom: "8%", left: "6%" };
+function NarrationBox({
+  text,
+  style,
+}: {
+  text: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
-      className="absolute pointer-events-none z-10 max-w-[42%]"
-      style={pos}
+      className="absolute pointer-events-none z-10"
+      style={style}
     >
       <div
-        className="rounded-md px-2.5 py-1.5 sm:px-3 sm:py-2"
         style={{
-          background: "rgba(255, 252, 240, 0.88)",
-          boxShadow: "0 1px 8px rgba(26,26,46,0.12)",
-          border: "1.5px solid rgba(26,26,46,0.10)",
+          background: "#FFF3B0",
+          border: "2.5px solid #1a1a2e",
+          borderRadius: "4px",
+          padding: "8px 12px",
+          maxWidth: "100%",
+          boxShadow: "1px 1px 0px #1a1a2e",
         }}
       >
-        <p className="font-body text-[clamp(7px,1.2vw,12px)] text-[#2a2a3e] leading-snug italic">
+        <p
+          style={{
+            fontFamily: "'Nunito', sans-serif",
+            fontSize: "clamp(8px, 1.3vw, 14px)",
+            fontWeight: 700,
+            fontStyle: "italic",
+            color: "#1a1a2e",
+            lineHeight: 1.35,
+            margin: 0,
+          }}
+        >
           {text}
         </p>
       </div>
@@ -43,120 +61,104 @@ function CaptionBox({ text, position }: { text: string; position?: { bottom?: st
 function SpeechBubble({
   speaker,
   text,
-  position,
-  tailDirection,
+  speakerColor,
+  style,
+  tailSide,
 }: {
   speaker: string;
   text: string;
-  position?: { bottom?: string; left?: string; right?: string; top?: string };
-  tailDirection?: "left" | "right" | "center";
+  speakerColor?: string;
+  style?: React.CSSProperties;
+  tailSide?: "left" | "right" | "center";
 }) {
-  const pos = position || { bottom: "6%", right: "6%" };
-  const tail = tailDirection || "center";
-
-  const tailPos =
-    tail === "left" ? "left-3" : tail === "right" ? "right-3" : "left-1/2 -translate-x-1/2";
+  const color = speakerColor || "#7B2D8B";
+  const tail = tailSide || "left";
 
   return (
     <div
-      className="absolute pointer-events-none z-10 max-w-[40%]"
-      style={pos}
+      className="absolute pointer-events-none z-10"
+      style={style}
     >
-      <div className="relative">
+      <div style={{ position: "relative", display: "inline-block" }}>
         <div
-          className="rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2"
           style={{
-            background: "rgba(255, 255, 255, 0.94)",
-            boxShadow: "0 2px 10px rgba(26,26,46,0.12)",
-            border: "1.5px solid rgba(26,26,46,0.12)",
+            position: "absolute",
+            top: "-14px",
+            left: tail === "right" ? "auto" : "8px",
+            right: tail === "right" ? "8px" : "auto",
+            background: color,
+            borderRadius: "4px",
+            padding: "1px 8px",
+            border: "2px solid #1a1a2e",
+            zIndex: 2,
           }}
         >
-          <span className="font-heading text-[clamp(6px,0.9vw,9px)] font-bold text-[#7B2D8B] uppercase tracking-wide block mb-0.5 opacity-80">
+          <span
+            style={{
+              fontFamily: "'Baloo 2', cursive",
+              fontSize: "clamp(7px, 1vw, 11px)",
+              fontWeight: 800,
+              color: "#fff",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
             {speaker}
           </span>
-          <p className="font-body text-[clamp(7px,1.15vw,12px)] text-[#1a1a2e] leading-snug">
-            &ldquo;{text}&rdquo;
+        </div>
+
+        <div
+          style={{
+            background: "#ffffff",
+            border: "2.5px solid #1a1a2e",
+            borderRadius: "16px",
+            padding: "8px 12px",
+            paddingTop: "10px",
+            maxWidth: "100%",
+            position: "relative",
+            boxShadow: "1px 1px 0px #1a1a2e",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'Nunito', sans-serif",
+              fontSize: "clamp(7px, 1.2vw, 13px)",
+              fontWeight: 600,
+              color: "#1a1a2e",
+              lineHeight: 1.35,
+              margin: 0,
+            }}
+          >
+            {text}
           </p>
         </div>
+
         <div
-          className={`absolute -bottom-[6px] ${tailPos} w-0 h-0`}
           style={{
-            borderLeft: "5px solid transparent",
-            borderRight: "5px solid transparent",
-            borderTop: "7px solid rgba(255, 255, 255, 0.94)",
-            filter: "drop-shadow(0 1px 1px rgba(26,26,46,0.08))",
+            position: "absolute",
+            bottom: "-10px",
+            left: tail === "left" ? "14px" : tail === "center" ? "50%" : "auto",
+            right: tail === "right" ? "14px" : "auto",
+            transform: tail === "center" ? "translateX(-50%)" : "none",
+            width: 0,
+            height: 0,
+            borderLeft: "7px solid transparent",
+            borderRight: "7px solid transparent",
+            borderTop: "12px solid #1a1a2e",
           }}
         />
-      </div>
-    </div>
-  );
-}
-
-function FullCaptionBox({ text, position }: { text: string; position: { bottom?: string; left?: string; right?: string; top?: string } }) {
-  return (
-    <div
-      className="absolute pointer-events-none z-10 max-w-[44%]"
-      style={position}
-    >
-      <div
-        className="rounded-md px-3 py-2 sm:px-4 sm:py-2.5"
-        style={{
-          background: "rgba(255, 252, 240, 0.90)",
-          boxShadow: "0 1px 10px rgba(26,26,46,0.14)",
-          border: "1.5px solid rgba(26,26,46,0.10)",
-        }}
-      >
-        <p className="font-body text-[clamp(8px,1.4vw,14px)] text-[#2a2a3e] leading-relaxed italic">
-          {text}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function FullSpeechBubble({
-  speaker,
-  text,
-  position,
-  tailDirection,
-}: {
-  speaker: string;
-  text: string;
-  position: { bottom?: string; left?: string; right?: string; top?: string };
-  tailDirection?: "left" | "right" | "center";
-}) {
-  const tail = tailDirection || "center";
-  const tailPos =
-    tail === "left" ? "left-3" : tail === "right" ? "right-3" : "left-1/2 -translate-x-1/2";
-
-  return (
-    <div
-      className="absolute pointer-events-none z-10 max-w-[42%]"
-      style={position}
-    >
-      <div className="relative">
         <div
-          className="rounded-xl px-3 py-2 sm:px-4 sm:py-2.5"
           style={{
-            background: "rgba(255, 255, 255, 0.94)",
-            boxShadow: "0 2px 12px rgba(26,26,46,0.12)",
-            border: "1.5px solid rgba(26,26,46,0.12)",
-          }}
-        >
-          <span className="font-heading text-[clamp(7px,1vw,10px)] font-bold text-[#7B2D8B] uppercase tracking-wide block mb-0.5 opacity-80">
-            {speaker}
-          </span>
-          <p className="font-body text-[clamp(8px,1.3vw,13px)] text-[#1a1a2e] leading-snug">
-            &ldquo;{text}&rdquo;
-          </p>
-        </div>
-        <div
-          className={`absolute -bottom-[7px] ${tailPos} w-0 h-0`}
-          style={{
+            position: "absolute",
+            bottom: "-7px",
+            left: tail === "left" ? "15px" : tail === "center" ? "50%" : "auto",
+            right: tail === "right" ? "15px" : "auto",
+            transform: tail === "center" ? "translateX(-50%)" : "none",
+            width: 0,
+            height: 0,
             borderLeft: "6px solid transparent",
             borderRight: "6px solid transparent",
-            borderTop: "8px solid rgba(255, 255, 255, 0.94)",
-            filter: "drop-shadow(0 1px 1px rgba(26,26,46,0.08))",
+            borderTop: "10px solid #ffffff",
           }}
         />
       </div>
@@ -164,37 +166,92 @@ function FullSpeechBubble({
   );
 }
 
-function FullThoughtBox({ text, position }: { text: string; position: { bottom?: string; left?: string; right?: string; top?: string } }) {
+function ThoughtBubble({
+  text,
+  style,
+}: {
+  text: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
-      className="absolute pointer-events-none z-10 max-w-[38%]"
-      style={position}
+      className="absolute pointer-events-none z-10"
+      style={style}
     >
-      <div
-        className="rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 text-center"
-        style={{
-          background: "rgba(243, 232, 255, 0.85)",
-          boxShadow: "0 1px 8px rgba(123,45,139,0.10)",
-          border: "1.5px solid rgba(192, 132, 252, 0.3)",
-        }}
-      >
-        <p className="font-body text-[clamp(8px,1.2vw,13px)] text-[#4a1d6b] italic leading-snug">
-          {text}
-        </p>
+      <div style={{ position: "relative" }}>
+        <div
+          style={{
+            background: "#ffffff",
+            border: "2.5px solid #1a1a2e",
+            borderRadius: "20px",
+            padding: "8px 14px",
+            maxWidth: "100%",
+            boxShadow: "1px 1px 0px #1a1a2e",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'Nunito', sans-serif",
+              fontSize: "clamp(7px, 1.2vw, 13px)",
+              fontWeight: 600,
+              fontStyle: "italic",
+              color: "#1a1a2e",
+              lineHeight: 1.35,
+              margin: 0,
+            }}
+          >
+            {text}
+          </p>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-8px",
+            left: "20px",
+            width: "8px",
+            height: "8px",
+            background: "#ffffff",
+            border: "2px solid #1a1a2e",
+            borderRadius: "50%",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-14px",
+            left: "14px",
+            width: "5px",
+            height: "5px",
+            background: "#ffffff",
+            border: "2px solid #1a1a2e",
+            borderRadius: "50%",
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function FullSfxText({ text, position }: { text: string; position: { bottom?: string; left?: string; right?: string; top?: string } }) {
+function SfxText({
+  text,
+  style,
+}: {
+  text: string;
+  style?: React.CSSProperties;
+}) {
   return (
-    <div className="absolute pointer-events-none z-10" style={position}>
+    <div className="absolute pointer-events-none z-10" style={style}>
       <span
-        className="font-heading text-[clamp(14px,2.8vw,26px)] font-black text-[#FFD166] uppercase tracking-wider"
         style={{
+          fontFamily: "'Baloo 2', cursive",
+          fontSize: "clamp(16px, 3vw, 30px)",
+          fontWeight: 800,
+          color: "#FFD166",
+          textTransform: "uppercase",
+          letterSpacing: "2px",
           textShadow:
             "2px 2px 0px #1a1a2e, -1px -1px 0px #1a1a2e, 1px -1px 0px #1a1a2e, -1px 1px 0px #1a1a2e",
-          WebkitTextStroke: "1px #1a1a2e",
+          WebkitTextStroke: "1.5px #1a1a2e",
         }}
       >
         {text}
@@ -203,65 +260,108 @@ function FullSfxText({ text, position }: { text: string; position: { bottom?: st
   );
 }
 
-export function PreviewOverlay({ previewText }: { previewText: PreviewText }) {
+export function PreviewOverlay({ previewText, placement }: {
+  previewText: PreviewText;
+  placement?: { position: React.CSSProperties; tailSide?: "left" | "right" | "center" };
+}) {
   if (previewText.type === "narration") {
-    return <CaptionBox text={previewText.text} position={{ bottom: "8%", left: "6%" }} />;
+    return (
+      <NarrationBox
+        text={previewText.text}
+        style={placement?.position || { bottom: "6%", left: "4%", maxWidth: "44%" }}
+      />
+    );
+  }
+
+  if (previewText.type === "thought") {
+    return (
+      <ThoughtBubble
+        text={previewText.text}
+        style={placement?.position || { top: "6%", right: "4%", maxWidth: "40%" }}
+      />
+    );
   }
 
   return (
     <SpeechBubble
       speaker={previewText.speaker}
       text={previewText.text}
-      position={{ bottom: "8%", right: "6%" }}
-      tailDirection="right"
+      speakerColor={previewText.speakerColor}
+      style={placement?.position || { bottom: "8%", right: "4%", maxWidth: "40%" }}
+      tailSide={placement?.tailSide || "left"}
     />
   );
 }
 
-export function FullPageOverlay({ textBlocks }: { textBlocks: TextBlock[] }) {
-  const narrationPositions = [
-    { top: "5%", left: "5%" },
-    { bottom: "5%", left: "5%" },
+export function FullPageOverlay({
+  textBlocks,
+  layout,
+}: {
+  textBlocks: TextBlock[];
+  layout?: {
+    positions: React.CSSProperties[];
+    tailSides?: Array<"left" | "right" | "center">;
+  };
+}) {
+  const defaultNarrationPositions: React.CSSProperties[] = [
+    { top: "4%", left: "3%", maxWidth: "40%" },
+    { bottom: "4%", left: "3%", maxWidth: "42%" },
+    { bottom: "4%", right: "3%", maxWidth: "40%" },
   ];
-  const dialoguePositions = [
-    { top: "8%", right: "5%" },
-    { bottom: "10%", right: "5%" },
-    { bottom: "8%", left: "5%" },
+  const defaultDialoguePositions: React.CSSProperties[] = [
+    { top: "10%", right: "4%", maxWidth: "38%" },
+    { top: "38%", left: "4%", maxWidth: "36%" },
+    { bottom: "12%", right: "4%", maxWidth: "38%" },
   ];
-  const thoughtPosition = { bottom: "35%", left: "8%" };
-  const sfxPosition = { top: "12%", right: "8%" };
+  const defaultDialogueTails: Array<"left" | "right" | "center"> = ["left", "right", "left"];
 
   let narrationIdx = 0;
   let dialogueIdx = 0;
+  let blockIdx = 0;
 
   return (
     <>
       {textBlocks.map((block, i) => {
+        const customPos = layout?.positions?.[blockIdx];
+        blockIdx++;
+
         switch (block.type) {
           case "narration": {
-            const pos = narrationPositions[narrationIdx % narrationPositions.length];
+            const pos = customPos || defaultNarrationPositions[narrationIdx % defaultNarrationPositions.length];
             narrationIdx++;
-            return <FullCaptionBox key={i} text={block.text} position={pos} />;
+            return <NarrationBox key={i} text={block.text} style={pos} />;
           }
           case "dialogue": {
-            const pos = dialoguePositions[dialogueIdx % dialoguePositions.length];
-            const tails: Array<"left" | "right"> = ["right", "right", "left"];
-            const tail = tails[dialogueIdx % tails.length];
+            const pos = customPos || defaultDialoguePositions[dialogueIdx % defaultDialoguePositions.length];
+            const tail = layout?.tailSides?.[dialogueIdx] || defaultDialogueTails[dialogueIdx % defaultDialogueTails.length];
             dialogueIdx++;
             return (
-              <FullSpeechBubble
+              <SpeechBubble
                 key={i}
                 speaker={block.speaker}
                 text={block.text}
-                position={pos}
-                tailDirection={tail}
+                speakerColor={block.speakerColor}
+                style={pos}
+                tailSide={tail}
               />
             );
           }
           case "thought":
-            return <FullThoughtBox key={i} text={block.text} position={thoughtPosition} />;
+            return (
+              <ThoughtBubble
+                key={i}
+                text={block.text}
+                style={customPos || { top: "8%", left: "6%", maxWidth: "36%" }}
+              />
+            );
           case "sfx":
-            return <FullSfxText key={i} text={block.text} position={sfxPosition} />;
+            return (
+              <SfxText
+                key={i}
+                text={block.text}
+                style={customPos || { top: "10%", right: "6%" }}
+              />
+            );
           default:
             return null;
         }
