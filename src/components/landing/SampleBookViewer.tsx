@@ -10,18 +10,27 @@ const samplePages = [
     theme: "Space Adventure",
     text: "He stepped off the spaceship onto the moon\u2019s surface. \u201CWow! I\u2019m really on the moon!\u201D he said with excitement. He looked up at the Earth and stars, ready for his big adventure.",
     color: "bg-indigo-500",
+    overlayTitle: "Mission to the Moon!",
+    overlayBody: "He climbed out of the spaceship and took his very first step on the moon. The ground was soft and dusty. He looked up and saw the Earth, big and blue, floating in the dark sky. \u201CThis is amazing!\u201D he whispered.",
+    overlayStyle: "left" as const,
   },
   {
     image: "/images/demo/spread-dino.png",
     theme: "Dinosaur Discovery",
     text: "He explored the jungle with his new dino friend. \u201CLook, a volcano!\u201D he shouted. \u201CLet\u2019s go on a dino adventure!\u201D The friendly dinosaur wagged its tail with glee.",
     color: "bg-emerald-500",
+    overlayTitle: "The Dinosaur Valley",
+    overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
+    overlayStyle: "left" as const,
   },
   {
     image: "/images/demo/spread-castle.png",
     theme: "Enchanted Castle",
     text: "The royal carriage arrived to take them to the grand ball. With butterflies dancing in the breeze, the castle towers sparkled in the golden sunlight.",
     color: "bg-pink-500",
+    overlayTitle: "The Royal Adventure",
+    overlayBody: "A golden carriage pulled by two white horses arrived just for them. Butterflies danced in the warm breeze as they rode through the flower-covered meadow toward the sparkling castle on the hill.",
+    overlayStyle: "left" as const,
   },
 ];
 
@@ -63,6 +72,18 @@ export default function SampleBookViewer() {
                   sizes="(max-width: 768px) 100vw, 720px"
                   priority
                 />
+
+                <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none">
+                  <div className="absolute inset-0 bg-[#FFF8EE]/90 backdrop-blur-sm rounded-lg" />
+                  <div className="relative p-[8%] flex flex-col h-full">
+                    <h3 className="font-heading text-[clamp(10px,2vw,18px)] font-bold text-[#1a1a2e] leading-tight mb-[4%]">
+                      {page.overlayTitle}
+                    </h3>
+                    <p className="font-body text-[clamp(7px,1.3vw,13px)] text-[#1a1a2e]/80 leading-relaxed">
+                      {page.overlayBody}
+                    </p>
+                  </div>
+                </div>
 
                 <div className="absolute top-4 right-4">
                   <div className={`${page.color} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
