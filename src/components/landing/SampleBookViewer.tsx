@@ -12,6 +12,10 @@ const samplePages: {
   theme: string;
   color: string;
   fullPageTextBlocks: TextBlock[];
+  layout?: {
+    positions: React.CSSProperties[];
+    tailSides?: Array<"left" | "right" | "center">;
+  };
 }[] = [
   {
     image: "/images/demo/spread-space.png",
@@ -21,14 +25,27 @@ const samplePages: {
     fullPageTextBlocks: [
       {
         type: "narration",
-        text: "He took his very first step on the moon. The ground was soft and dusty beneath his boots.",
+        text: "He took his very first step on the moon.\nThe ground was soft and dusty\nbeneath his boots.",
       },
       {
         type: "dialogue",
         speaker: "Aarav",
         text: "I can see the whole Earth from here!",
+        speakerColor: "#4F46E5",
+      },
+      {
+        type: "narration",
+        text: "It was the most amazing sight\nhe had ever seen.",
       },
     ],
+    layout: {
+      positions: [
+        { top: "4%", left: "3%", maxWidth: "38%" },
+        { top: "12%", right: "4%", maxWidth: "36%" },
+        { bottom: "5%", right: "3%", maxWidth: "38%" },
+      ],
+      tailSides: ["left"],
+    },
   },
   {
     image: "/images/demo/spread-dino.png",
@@ -38,14 +55,29 @@ const samplePages: {
     fullPageTextBlocks: [
       {
         type: "narration",
-        text: "The volcano rumbled softly as they stepped into the valley together.",
+        text: "The volcano rumbled softly\nas they stepped into the valley.",
+      },
+      {
+        type: "dialogue",
+        speaker: "Aarav",
+        text: "Do you think we should keep going?",
+        speakerColor: "#4F46E5",
       },
       {
         type: "dialogue",
         speaker: "Dino",
-        text: "Follow me! Adventure is waiting!",
+        text: "Follow me!\nAdventure is waiting!",
+        speakerColor: "#059669",
       },
     ],
+    layout: {
+      positions: [
+        { top: "4%", left: "3%", maxWidth: "40%" },
+        { top: "14%", right: "4%", maxWidth: "34%" },
+        { bottom: "8%", left: "4%", maxWidth: "36%" },
+      ],
+      tailSides: ["left", "right"],
+    },
   },
   {
     image: "/images/demo/spread-castle.png",
@@ -55,14 +87,27 @@ const samplePages: {
     fullPageTextBlocks: [
       {
         type: "narration",
-        text: "A golden carriage arrived as butterflies danced in the warm breeze.",
+        text: "A golden carriage arrived\nas butterflies danced in the\nwarm breeze.",
       },
       {
         type: "dialogue",
         speaker: "Princess Emma",
-        text: "The grand ball is about to begin!",
+        text: "The grand ball is\nabout to begin!",
+        speakerColor: "#DB2777",
+      },
+      {
+        type: "narration",
+        text: "And so their magical adventure\nbegan at the enchanted castle.",
       },
     ],
+    layout: {
+      positions: [
+        { top: "4%", left: "3%", maxWidth: "38%" },
+        { top: "10%", right: "3%", maxWidth: "36%" },
+        { bottom: "4%", left: "3%", maxWidth: "40%" },
+      ],
+      tailSides: ["right"],
+    },
   },
 ];
 
@@ -105,7 +150,7 @@ export default function SampleBookViewer() {
                   priority
                 />
 
-                <FullPageOverlay textBlocks={page.fullPageTextBlocks} />
+                <FullPageOverlay textBlocks={page.fullPageTextBlocks} layout={page.layout} />
               </div>
             </div>
 
