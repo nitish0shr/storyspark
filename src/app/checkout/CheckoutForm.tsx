@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { PricingTier } from "@/types/order";
-import {
-  Check,
-  Gift,
-  Loader2,
-  Star,
-  CreditCard,
-} from "lucide-react";
-import { usePostHog } from "posthog-js/react";
+import { Check, Gift, Loader2, Star, CreditCard } from "lucide-react";
 
 interface TierOption {
   id: PricingTier;
@@ -32,7 +25,6 @@ export default function CheckoutForm({
   childName,
   tiers,
 }: CheckoutFormProps) {
-  const posthog = usePostHog();
   const [selectedTier, setSelectedTier] = useState<PricingTier>("mid");
   const [isGift, setIsGift] = useState(false);
   const [giftRecipientName, setGiftRecipientName] = useState("");
@@ -40,6 +32,9 @@ export default function CheckoutForm({
   const [giftMessage, setGiftMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedTierData = tiers.find((t) => t.id === selectedTier);
+  const basePrice = selectedTierData?.price ?? 0;
 
   async function handleCheckout() {
     setLoading(true);
@@ -71,7 +66,6 @@ export default function CheckoutForm({
       }
 
       if (data.checkoutUrl) {
-        posthog.capture("checkout_initiated", { tier: selectedTier, book_id: bookId, is_gift: isGift });
         window.location.href = data.checkoutUrl;
       }
     } catch {
@@ -127,7 +121,6 @@ export default function CheckoutForm({
                 ))}
               </ul>
 
-              {/* Selection indicator */}
               <div
                 className={`mt-4 h-2 rounded-full transition-colors ${
                   isSelected
@@ -157,13 +150,10 @@ export default function CheckoutForm({
           </div>
           <div className="flex items-center gap-2">
             <Gift className="h-5 w-5 text-[#EC4899]" />
-            <span className="font-medium text-gray-900">
-              This is a gift
-            </span>
+            <span className="font-medium text-gray-900">This is a gift</span>
           </div>
         </label>
 
-        {/* Gift fields */}
         {isGift && (
           <div className="mt-5 space-y-4 pl-1">
             <div>
@@ -219,14 +209,20 @@ export default function CheckoutForm({
         )}
       </div>
 
-      {/* Error */}
+      {/* Order summary */}
+      <div className="bg-gradient-to-br from-violet-50 to-pink-50 rounded-2xl border border-violet-100 p-6 mb-6">
+        <div className="flex justify-between text-lg font-bold text-gray-900">
+          <span>Total</span>
+          <span>${(basePrice / 100).toFixed(2)}</span>
+        </div>
+      </div>
+
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
-      {/* Checkout button */}
       <button
         type="button"
         onClick={handleCheckout}

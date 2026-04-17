@@ -64,7 +64,7 @@ export default function DemoPage() {
             className="flex items-center gap-2 text-lg font-bold text-violet-700"
           >
             <BookOpen className="h-5 w-5" />
-            <span className="font-heading">StorySpark</span>
+            <span className="font-heading">Starmee</span>
           </Link>
           <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700">
             Sample Book
@@ -79,7 +79,7 @@ export default function DemoPage() {
             Sample Story Preview
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            See how a personalized StorySpark book looks
+            See how a personalized Starmee book looks
           </p>
         </div>
 
@@ -106,7 +106,7 @@ export default function DemoPage() {
                   </h2>
                   <div className="mt-6 h-0.5 w-16 rounded-full bg-white/40" />
                   <p className="mt-3 text-sm text-white/70">
-                    A StorySpark Adventure
+                    A Starmee Adventure
                   </p>
                 </div>
                 <div className="absolute top-3 right-3 rounded-full bg-amber-400/90 px-3 py-1 text-xs font-bold text-amber-900">

@@ -82,7 +82,7 @@ function LoginPageContent() {
         <Link href="/" className="inline-flex items-center gap-2 group">
           <Sparkles className="h-6 w-6 text-[#7C3AED] transition-transform group-hover:rotate-12" />
           <span className="font-heading text-xl font-bold text-[#7C3AED]">
-            StorySpark
+            Starmee
           </span>
         </Link>
       </div>
@@ -101,7 +101,7 @@ function LoginPageContent() {
 
             {/* Heading */}
             <h1 className="font-heading text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-2">
-              Welcome to StorySpark
+              Welcome to Starmee
             </h1>
             <p className="text-center text-gray-500 mb-8 text-sm">
               Sign in to create magical memory books for your little ones

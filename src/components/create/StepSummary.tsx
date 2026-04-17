@@ -17,7 +17,6 @@ import {
   Camera,
   MessageCircle,
 } from "lucide-react";
-import { usePostHog } from "posthog-js/react";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -45,7 +44,6 @@ export function StepSummary() {
     nextStep,
   } = useWizardStore();
 
-  const posthog = usePostHog();
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +104,6 @@ export function StepSummary() {
         );
       }
 
-      posthog.capture("book_preview_requested", { theme_id: selectedThemeId, book_id: bookId });
       setGenerating(true, "Preparing your story...");
       nextStep();
     } catch (err) {

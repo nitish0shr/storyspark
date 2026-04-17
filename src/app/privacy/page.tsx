@@ -4,8 +4,8 @@ import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — StorySpark",
-  description: "How StorySpark handles your data and protects your family's privacy.",
+  title: "Privacy Policy — Starmee",
+  description: "How Starmee handles your data and protects your family's privacy.",
 };
 
 export default function PrivacyPage() {
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
               1. Information We Collect
             </h2>
             <p>
-              When you use StorySpark, we collect the information you provide directly:
+              When you use Starmee, we collect the information you provide directly:
               your email address, your child&apos;s first name, age, and gender, and
               optionally a photo of your child. We also collect standard usage data
               (browser type, pages visited) to improve the service.
@@ -61,7 +61,7 @@ export default function PrivacyPage() {
               4. Children&apos;s Privacy (COPPA)
             </h2>
             <p>
-              StorySpark is designed for parents and guardians to create books for
+              Starmee is designed for parents and guardians to create books for
               their children. Only parents create accounts. Child information is stored
               within parent accounts and is parent-controlled. We do not knowingly
               collect information directly from children under 13.
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
             </h2>
             <p>
               We do not sell your personal information. We share data only with service
-              providers necessary to operate StorySpark: Supabase (database), Stripe
+              providers necessary to operate Starmee: Supabase (database), Stripe
               (payments), Resend (email), OpenAI (story generation), and Replicate
               (illustration generation). Each provider has their own privacy policy.
             </p>
@@ -102,10 +102,10 @@ export default function PrivacyPage() {
             <p>
               For privacy-related questions, email us at{" "}
               <a
-                href="mailto:privacy@storyspark.co"
+                href="mailto:privacy@starmee.com"
                 className="text-[#7C3AED] hover:underline"
               >
-                privacy@storyspark.co
+                privacy@starmee.com
               </a>
               .
             </p>

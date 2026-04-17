@@ -88,7 +88,7 @@ export default function Testimonials() {
             </span>
           </div>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-5 leading-tight">
-            Parents Love StorySpark
+            Parents Love Starmee
           </h2>
           {/* Aggregate stars */}
           <div className="flex items-center justify-center gap-2 mb-2">

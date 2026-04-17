@@ -77,12 +77,12 @@ export async function generateMetadata({
 
   if (!book) {
     return {
-      title: "Book Not Found - StorySpark",
+      title: "Book Not Found - Starmee",
     };
   }
 
   const appUrl = getAppUrl();
-  const title = `${book.child_name}'s Story - StorySpark`;
+  const title = `${book.child_name}'s Story - Starmee`;
   const description = `Preview ${book.child_name}'s personalized storybook — a magical tale crafted just for them.`;
 
   return {

@@ -77,7 +77,7 @@ export default function Footer() {
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <span className="font-heading text-lg font-bold text-[#7C3AED]">
-                StorySpark
+                Starmee
               </span>
             </div>
 
@@ -96,16 +96,16 @@ export default function Footer() {
 
             {/* Contact */}
             <a
-              href="mailto:hello@storyspark.com"
+              href="mailto:hello@starmee.com"
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 transition-colors"
             >
               <Mail className="h-4 w-4" />
-              hello@storyspark.com
+              hello@starmee.com
             </a>
           </div>
 
           <div className="mt-6 pt-6 border-t border-violet-100/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
-            <p>&copy; {new Date().getFullYear()} StorySpark. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Starmee. All rights reserved.</p>
             <p className="flex items-center gap-1">
               Made with <Heart className="h-3 w-3 text-pink-400 fill-pink-400 mx-1" /> for
               families everywhere

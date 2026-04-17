@@ -4,8 +4,8 @@ import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "About — StorySpark",
-  description: "Learn about StorySpark and our mission to make every child the hero of their own story.",
+  title: "About — Starmee",
+  description: "Learn about Starmee and our mission to make every child the hero of their own story.",
 };
 
 export default function AboutPage() {
@@ -41,10 +41,10 @@ export default function AboutPage() {
       <Navbar />
       <main className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-          About StorySpark
+          About Starmee
         </h1>
         <p className="text-lg text-gray-500 mb-12 leading-relaxed">
-          StorySpark is an AI-powered platform that turns your child into the hero of
+          Starmee is an AI-powered platform that turns your child into the hero of
           their own beautifully illustrated storybook. Upload a photo, choose an
           adventure, and in minutes you&apos;ll have a personalized book your family
           will treasure.
@@ -76,7 +76,7 @@ export default function AboutPage() {
           Our Story
         </h2>
         <p className="text-gray-600 leading-relaxed">
-          StorySpark was born from a simple idea: every child deserves to see
+          Starmee was born from a simple idea: every child deserves to see
           themselves as the hero. We combine the latest in AI technology with the
           warmth and care of traditional children&apos;s book illustration to create
           something truly special — personalized stories that families read together

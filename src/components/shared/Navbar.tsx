@@ -44,7 +44,7 @@ export default function Navbar({ user }: NavbarProps) {
               <Sparkles className="h-4 w-4 text-[#1a1a2e]" />
             </div>
             <span className="font-heading text-xl font-bold text-[#1a1a2e]">
-              Story<span className="text-[#7B2D8B]">Spark</span>
+              Star<span className="text-[#7B2D8B]">mee</span>
             </span>
           </Link>
 

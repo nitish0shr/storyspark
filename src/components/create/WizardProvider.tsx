@@ -84,7 +84,7 @@ export const useWizardStore = create<WizardState>()(
       reset: () => set(initialState),
     }),
     {
-      name: "storyspark-wizard",
+      name: "starmee-wizard",
       partialize: (state) => ({
         // Persist user inputs only — skip transient/non-serializable fields
         step: state.step,

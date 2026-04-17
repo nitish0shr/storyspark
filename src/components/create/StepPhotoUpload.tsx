@@ -15,7 +15,6 @@ import {
   Shield,
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePostHog } from "posthog-js/react";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
@@ -23,10 +22,10 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
 export function StepPhotoUpload() {
   const { childName, photoPreviewUrl, setPhoto, setPhotoUrl, nextStep } =
     useWizardStore();
-  const posthog = usePostHog();
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [consent, setConsent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadToServer = useCallback(async (file: File) => {
@@ -201,6 +200,34 @@ export function StepPhotoUpload() {
         <span>Your photo is encrypted and never shared with third parties.</span>
       </div>
 
+      {/* Parent/guardian consent (COPPA) */}
+      <label
+        htmlFor="parent-consent"
+        className="flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50/50 p-4 cursor-pointer hover:bg-violet-50 transition-colors"
+      >
+        <input
+          id="parent-consent"
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
+        />
+        <span className="text-sm text-gray-700 leading-relaxed">
+          I&apos;m {childName}&apos;s parent or legal guardian and I consent to
+          Starmee using this photo to generate a personalized book. I&apos;ve
+          read the{" "}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener"
+            className="text-violet-600 underline hover:text-violet-700"
+          >
+            privacy policy
+          </a>
+          .
+        </span>
+      </label>
+
       <input
         ref={inputRef}
         type="file"
@@ -219,18 +246,17 @@ export function StepPhotoUpload() {
           onClick={() => {
             if (!photoPreviewUrl) {
               toast.info(`Please upload a photo of ${childName} to continue, or skip below.`);
+            } else if (!consent) {
+              toast.info("Please confirm you're the parent or guardian.");
             }
           }}
         >
           <Button
-            onClick={() => {
-              posthog.capture("wizard_step_completed", { step: "photo_upload" });
-              nextStep();
-            }}
-            disabled={!photoPreviewUrl}
+            onClick={() => nextStep()}
+            disabled={!photoPreviewUrl || !consent}
             className={cn(
               "h-12 w-full rounded-xl text-base font-semibold transition-all",
-              photoPreviewUrl
+              photoPreviewUrl && consent
                 ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-200 hover:brightness-105"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}
@@ -240,10 +266,7 @@ export function StepPhotoUpload() {
           </Button>
         </div>
         <button
-          onClick={() => {
-            posthog.capture("wizard_step_completed", { step: "photo_skipped" });
-            nextStep();
-          }}
+          onClick={() => nextStep()}
           className="text-sm font-medium text-gray-400 hover:text-violet-600 transition-colors"
         >
           Skip — illustrations won&apos;t match {childName}&apos;s appearance

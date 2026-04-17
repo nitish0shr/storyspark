@@ -16,7 +16,7 @@ export async function generateMetadata({
   params,
 }: GiftPageProps): Promise<Metadata> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return { title: "StorySpark Gift" };
+    return { title: "Starmee Gift" };
   }
   const { bookId } = await params;
   const supabase = await createClient();
@@ -29,7 +29,7 @@ export async function generateMetadata({
   const childName = book?.child_profiles?.name || "a special child";
 
   return {
-    title: `A StorySpark Gift for ${childName}!`,
+    title: `A Starmee Gift for ${childName}!`,
     description: `Someone special created a personalized storybook for ${childName}. Open it now!`,
   };
 }
@@ -133,7 +133,7 @@ export default async function GiftPage({ params }: GiftPageProps) {
                   <p className="font-heading text-lg font-bold leading-tight">
                     {childName}&apos;s Adventure
                   </p>
-                  <p className="text-sm text-white/70 mt-1">A StorySpark Book</p>
+                  <p className="text-sm text-white/70 mt-1">A Starmee Book</p>
                 </div>
               </div>
             </div>
@@ -184,7 +184,7 @@ export default async function GiftPage({ params }: GiftPageProps) {
                   className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
                 >
                   <Sparkles className="h-4 w-4 mr-1" />
-                  Create Your Own StorySpark Book
+                  Create Your Own Starmee Book
                 </Button>
               </Link>
             </div>

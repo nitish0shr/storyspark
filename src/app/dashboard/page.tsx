@@ -12,7 +12,7 @@ import OrderHistory from "@/components/dashboard/OrderHistory";
 import { Sparkles, Plus, UserPlus, BookOpen, Receipt } from "lucide-react";
 
 export const metadata = {
-  title: "Dashboard | StorySpark",
+  title: "Dashboard | Starmee",
 };
 
 export const dynamic = "force-dynamic";

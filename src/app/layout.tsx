@@ -3,7 +3,6 @@ import { Inter, Playfair_Display, Nunito, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
-import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { ThemeProvider } from "@/context/ThemeContext";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 
@@ -31,7 +30,7 @@ const baloo = Baloo_2({
 });
 
 export const metadata: Metadata = {
-  title: "StorySpark — Personalized AI Storybooks for Kids",
+  title: "Starmee — Personalized AI Storybooks for Kids",
   description:
     "Upload a photo, pick an adventure, and AI creates a beautiful personalized storybook with your child as the hero. Digital delivery in under 2 minutes.",
   keywords: [
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
     "personalized gift",
   ],
   openGraph: {
-    title: "StorySpark — Your Child Is the Star of Their Own Storybook",
+    title: "Starmee — Your Child Is the Star of Their Own Storybook",
     description:
       "Upload a photo, pick an adventure theme, and get a beautifully illustrated storybook featuring your child in under 2 minutes.",
     type: "website",
@@ -66,11 +65,9 @@ export default function RootLayout({
     >
       <body className="antialiased">
         <ThemeProvider>
-          <PostHogProvider>
-            {children}
-            <ThemeToggle />
-            <Toaster />
-          </PostHogProvider>
+          {children}
+          <ThemeToggle />
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

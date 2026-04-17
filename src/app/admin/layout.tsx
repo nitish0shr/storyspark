@@ -7,6 +7,7 @@ import {
   Users,
   BookOpen,
   AlertTriangle,
+  ClipboardCheck,
   ArrowLeft,
 } from "lucide-react";
 
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/review", label: "Review Queue", icon: ClipboardCheck },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/books", label: "Books", icon: BookOpen },
   { href: "/admin/failed", label: "Failed Jobs", icon: AlertTriangle },
@@ -61,7 +63,7 @@ export default async function AdminLayout({
               Site
             </Link>
             <span className="text-lg font-bold text-violet-700">
-              StorySpark Admin
+              Starmee Admin
             </span>
           </div>
           <span className="text-xs text-gray-400">{user.email}</span>

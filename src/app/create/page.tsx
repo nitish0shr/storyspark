@@ -94,7 +94,7 @@ export default function CreatePage() {
             className="flex items-center gap-2 text-lg font-bold text-violet-700"
           >
             <BookOpen className="h-5 w-5" />
-            <span className="font-heading">StorySpark</span>
+            <span className="font-heading">Starmee</span>
           </Link>
 
           {step < 6 && (

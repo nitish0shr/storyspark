@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    // Authenticate user
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse & validate body
     const body = await request.json();
     const {
       bookId,
@@ -55,10 +54,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (!bookId || typeof bookId !== "string") {
-      return NextResponse.json(
-        { error: "bookId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "bookId is required" }, { status: 400 });
     }
 
     if (!tier || !TIER_CONFIG[tier]) {
@@ -75,7 +71,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify book exists and user owns it
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .select("id, user_id, child_name, status")
@@ -90,7 +85,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Don't allow checkout for books that are already purchased or in generation
     if (book.status === "generating" || book.status === "complete") {
       return NextResponse.json(
         { error: "This book has already been purchased." },
@@ -101,7 +95,6 @@ export async function POST(request: NextRequest) {
     const tierConfig = TIER_CONFIG[tier];
     const appUrl = getAppUrl();
 
-    // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email,
@@ -110,7 +103,7 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `StorySpark Book - ${tierConfig.name}`,
+              name: `Starmee Book - ${tierConfig.name}`,
               description: `${book.child_name}'s personalized storybook`,
             },
             unit_amount: tierConfig.price,
@@ -130,7 +123,6 @@ export async function POST(request: NextRequest) {
       cancel_url: `${appUrl}/preview/${bookId}`,
     });
 
-    // Create pending order in DB
     const { error: orderError } = await supabaseAdmin.from("orders").insert({
       user_id: user.id,
       book_id: bookId,
@@ -147,15 +139,11 @@ export async function POST(request: NextRequest) {
 
     if (orderError) {
       console.error("Failed to create order record:", orderError);
-      // Don't block checkout — the webhook will reconcile
     }
 
     return NextResponse.json({ checkoutUrl: session.url });
   } catch (error) {
     console.error("Checkout error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

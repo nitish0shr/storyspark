@@ -4,8 +4,8 @@ import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "Contact — StorySpark",
-  description: "Get in touch with the StorySpark team.",
+  title: "Contact — Starmee",
+  description: "Get in touch with the Starmee team.",
 };
 
 export default function ContactPage() {
@@ -32,10 +32,10 @@ export default function ContactPage() {
                 For general inquiries, support, or order help:
               </p>
               <a
-                href="mailto:hello@storyspark.co"
+                href="mailto:hello@starmee.com"
                 className="text-[#7C3AED] font-medium hover:underline"
               >
-                hello@storyspark.co
+                hello@starmee.com
               </a>
             </div>
           </div>
@@ -48,7 +48,7 @@ export default function ContactPage() {
               <h2 className="font-semibold text-gray-900 mb-1">Feedback</h2>
               <p className="text-sm text-gray-500">
                 Love your book? Have a suggestion? We read every message and use your
-                feedback to make StorySpark better for all families.
+                feedback to make Starmee better for all families.
               </p>
             </div>
           </div>

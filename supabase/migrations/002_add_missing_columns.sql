@@ -1,4 +1,4 @@
--- StorySpark Migration 002: Add missing columns and tables
+-- Starmee Migration 002: Add missing columns and tables
 -- Adds columns/tables that frontend pages already reference but don't exist in 001
 
 -- =============================================================================

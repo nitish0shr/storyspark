@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         await resend.emails.send({
           from: RESEND_FROM_EMAIL,
           to: d.buyerEmail,
-          subject: `${d.childName}'s StorySpark book is ready!`,
+          subject: `${d.childName}'s Starmee book is ready!`,
           html: buildOrderConfirmation({
             buyerName: d.buyerName || "there",
             childName: d.childName,
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         await resend.emails.send({
           from: RESEND_FROM_EMAIL,
           to: d.recipientEmail,
-          subject: `You've received a StorySpark book!`,
+          subject: `You've received a Starmee book!`,
           html: buildGiftNotification({
             recipientName: d.recipientName || "Friend",
             senderName: d.senderName || "Someone special",
@@ -175,7 +175,7 @@ function emailWrapper(headerTitle: string, headerSubtitle: string, bodyHtml: str
     </div>
     <!-- Footer -->
     <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
-      <p style="margin:0;">Made with love by StorySpark</p>
+      <p style="margin:0;">Made with love by Starmee</p>
     </div>
   </div>
 </body>
@@ -208,7 +208,7 @@ function buildOrderConfirmation(data: {
     : "";
 
   return emailWrapper(
-    "StorySpark",
+    "Starmee",
     `${data.childName}'s book is ready!`,
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.buyerName}!</h2>
@@ -241,12 +241,12 @@ function buildGiftNotification(data: {
     : "";
 
   return emailWrapper(
-    "StorySpark",
+    "Starmee",
     "You've received a magical gift!",
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.recipientName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        ${data.senderName} has gifted ${data.childName} a personalized storybook from StorySpark!
+        ${data.senderName} has gifted ${data.childName} a personalized storybook from Starmee!
         It's a beautifully illustrated story where ${data.childName} is the hero of their very own adventure.
       </p>
       ${giftBlock}
@@ -264,7 +264,7 @@ function buildPreviewReminder(data: {
   appUrl: string;
 }): string {
   return emailWrapper(
-    "StorySpark",
+    "Starmee",
     `${data.childName}'s adventure awaits!`,
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Don't forget about ${data.childName}'s story!</h2>

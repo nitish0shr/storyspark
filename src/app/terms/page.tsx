@@ -3,8 +3,8 @@ import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — StorySpark",
-  description: "Terms and conditions for using StorySpark.",
+  title: "Terms of Service — Starmee",
+  description: "Terms and conditions for using Starmee.",
 };
 
 export default function TermsPage() {
@@ -23,7 +23,7 @@ export default function TermsPage() {
               1. Service Description
             </h2>
             <p>
-              StorySpark is an AI-powered platform that creates personalized,
+              Starmee is an AI-powered platform that creates personalized,
               illustrated children&apos;s storybooks. By using our service, you agree
               to these terms.
             </p>
@@ -45,7 +45,7 @@ export default function TermsPage() {
               3. Content and Ownership
             </h2>
             <p>
-              You retain ownership of any photos you upload. StorySpark grants you a
+              You retain ownership of any photos you upload. Starmee grants you a
               personal, non-commercial license to use the generated storybooks
               (illustrations and text) for personal and gift purposes. You may print,
               share, and display your purchased books.
@@ -92,7 +92,7 @@ export default function TermsPage() {
               7. Limitation of Liability
             </h2>
             <p>
-              StorySpark is provided &quot;as is.&quot; We are not liable for indirect,
+              Starmee is provided &quot;as is.&quot; We are not liable for indirect,
               incidental, or consequential damages arising from your use of the
               service. Our total liability is limited to the amount you paid for the
               specific product in question.

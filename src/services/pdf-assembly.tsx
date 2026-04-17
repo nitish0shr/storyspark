@@ -171,7 +171,7 @@ function BookPdfDocument({
 
   return h(
     Document,
-    { title: `${childName}'s ${themeName} - StorySpark`, author: "StorySpark" },
+    { title: `${childName}'s ${themeName} - Starmee`, author: "Starmee" },
     // Cover Page
     h(
       Page,
@@ -239,7 +239,7 @@ function BookPdfDocument({
           { style: styles.backDedication },
           `Created with love for ${childName}`
         ),
-        h(Text, { style: styles.backLogo }, "StorySpark"),
+        h(Text, { style: styles.backLogo }, "Starmee"),
         h(
           Text,
           { style: styles.backBrand },
@@ -248,7 +248,7 @@ function BookPdfDocument({
         h(
           Text,
           { style: [styles.backBrand, { marginTop: 20, fontSize: 11 }] },
-          "storyspark.com"
+          "starmee.com"
         )
       )
     )
@@ -304,8 +304,8 @@ export async function assemblePdf(
   const pdfBuffer = await renderToBuffer(pdfElement as any);
 
   // Upload to Supabase Storage
-  const storagePath = `books/${bookId}/storyspark-book.pdf`;
-  const printPath = `books/${bookId}/storyspark-book-print.pdf`;
+  const storagePath = `books/${bookId}/starmee-book.pdf`;
+  const printPath = `books/${bookId}/starmee-book-print.pdf`;
 
   const { error: uploadError } = await supabaseAdmin.storage
     .from("books")

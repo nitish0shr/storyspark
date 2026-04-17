@@ -220,8 +220,8 @@ export async function generateFullBook(bookId: string): Promise<void> {
     // Trigger PDF assembly
     const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
 
-    // Mark complete
-    await updateBookStatus(bookId, "complete", {
+    // Hold for manual review before delivery
+    await updateBookStatus(bookId, "pending_review", {
       pdf_url: pdfUrl,
       pdf_print_url: pdfPrintUrl,
     });

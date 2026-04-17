@@ -8,6 +8,7 @@ const statusColor: Record<string, string> = {
   preview_generating: "bg-blue-100 text-blue-700",
   preview_ready: "bg-violet-100 text-violet-700",
   generating: "bg-amber-100 text-amber-700",
+  pending_review: "bg-orange-100 text-orange-700",
   complete: "bg-green-100 text-green-700",
   failed: "bg-red-100 text-red-700",
 };

@@ -1,12 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Users, BookOpen, DollarSign, AlertTriangle } from "lucide-react";
+import { Users, BookOpen, DollarSign, AlertTriangle, ClipboardCheck } from "lucide-react";
 
 async function getStats() {
   const supabase = createAdminClient();
 
-  const [usersRes, booksRes, ordersRes, failedRes, recentBooksRes] =
+  const [usersRes, booksRes, ordersRes, failedRes, pendingReviewRes, recentBooksRes] =
     await Promise.all([
       supabase.from("child_profiles").select("id", { count: "exact", head: true }),
       supabase.from("books").select("id", { count: "exact", head: true }),
@@ -18,6 +18,10 @@ async function getStats() {
         .from("books")
         .select("id", { count: "exact", head: true })
         .eq("status", "failed"),
+      supabase
+        .from("books")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending_review"),
       supabase
         .from("books")
         .select("id, child_name, theme_title, status, created_at")
@@ -35,6 +39,7 @@ async function getStats() {
     totalBooks: booksRes.count ?? 0,
     totalRevenue: totalRevenueCents,
     failedJobs: failedRes.count ?? 0,
+    pendingReview: pendingReviewRes.count ?? 0,
     paidOrders: ordersRes.data?.length ?? 0,
     recentBooks: recentBooksRes.data ?? [],
   };
@@ -49,6 +54,7 @@ const statusColor: Record<string, string> = {
   preview_generating: "bg-blue-100 text-blue-700",
   preview_ready: "bg-violet-100 text-violet-700",
   generating: "bg-amber-100 text-amber-700",
+  pending_review: "bg-orange-100 text-orange-700",
   complete: "bg-green-100 text-green-700",
   failed: "bg-red-100 text-red-700",
 };
@@ -74,6 +80,12 @@ export default async function AdminOverviewPage() {
       value: formatCents(stats.totalRevenue),
       icon: DollarSign,
       color: "text-green-600 bg-green-100",
+    },
+    {
+      label: "Pending Review",
+      value: stats.pendingReview,
+      icon: ClipboardCheck,
+      color: "text-orange-600 bg-orange-100",
     },
     {
       label: "Failed Jobs",

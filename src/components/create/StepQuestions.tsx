@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { usePostHog } from "posthog-js/react";
 
 export function StepQuestions() {
   const {
@@ -17,8 +16,6 @@ export function StepQuestions() {
     setContextualAnswer,
     nextStep,
   } = useWizardStore();
-
-  const posthog = usePostHog();
 
   const questions = selectedThemeId
     ? getQuestionsForTheme(selectedThemeId)
@@ -105,7 +102,6 @@ export function StepQuestions() {
 
       <Button
         onClick={() => {
-          posthog.capture("wizard_step_completed", { step: "questions", theme_id: selectedThemeId });
           nextStep();
         }}
         disabled={!allAnswered}

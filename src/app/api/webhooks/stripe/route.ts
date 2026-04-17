@@ -128,18 +128,45 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const childName = book?.child_name || "your child";
   const appUrl = getAppUrl();
 
-  // 4. Trigger full book generation in background (don't await)
+  // 4. Send admin notification email
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (adminEmail && isResendConfigured()) {
+    try {
+      const amount = session.amount_total
+        ? `$${(session.amount_total / 100).toFixed(2)}`
+        : "unknown";
+      await resend.emails.send({
+        from: RESEND_FROM_EMAIL,
+        to: adminEmail,
+        subject: `New Starmee Order — ${childName} (${amount})`,
+        html: `<div style="font-family:sans-serif;padding:20px;">
+          <h2 style="color:#7C3AED;">New Order Received</h2>
+          <p><strong>Child:</strong> ${childName}</p>
+          <p><strong>Buyer:</strong> ${buyerName} (${buyerEmail || "no email"})</p>
+          <p><strong>Tier:</strong> ${tier || "base"}</p>
+          <p><strong>Amount:</strong> ${amount}</p>
+          <p><strong>Book ID:</strong> ${bookId}</p>
+          <p><strong>Gift:</strong> ${isGift ? `Yes — to ${giftRecipientName} (${giftRecipientEmail})` : "No"}</p>
+          <p style="margin-top:20px;">The book is generating now. Once ready, it will appear in the <a href="${appUrl}/admin/review" style="color:#7C3AED;">Review Queue</a> for approval before delivery.</p>
+        </div>`,
+      });
+    } catch (adminEmailErr) {
+      console.error("Failed to send admin notification:", adminEmailErr);
+    }
+  }
+
+  // 5. Trigger full book generation in background (don't await)
   generateFullBook(bookId).catch((err) => {
     console.error(`Background full-book generation failed for ${bookId}:`, err);
   });
 
-  // 5. Send order confirmation email to buyer
+  // 6. Send order confirmation email to buyer
   if (buyerEmail && isResendConfigured()) {
     try {
       await resend.emails.send({
         from: RESEND_FROM_EMAIL,
         to: buyerEmail,
-        subject: `${childName}'s StorySpark book is on its way!`,
+        subject: `${childName}'s Starmee book is on its way!`,
         html: buildOrderConfirmationEmail({
           buyerName,
           childName,
@@ -159,7 +186,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // 6. If gift, send notification to recipient
+  // 7. If gift, send notification to recipient
   if (isGift && giftRecipientEmail && isResendConfigured()) {
     try {
       // Fetch gift message from order
@@ -172,7 +199,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       await resend.emails.send({
         from: RESEND_FROM_EMAIL,
         to: giftRecipientEmail,
-        subject: `You've received a StorySpark book!`,
+        subject: `You've received a Starmee book!`,
         html: buildGiftNotificationEmail({
           recipientName: giftRecipientName || "Friend",
           senderName: buyerName,
@@ -225,7 +252,7 @@ function buildOrderConfirmationEmail(data: {
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">StorySpark</h1>
+      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Starmee</h1>
       <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">A magical story, just for ${data.childName}</p>
     </div>
 
@@ -233,10 +260,10 @@ function buildOrderConfirmationEmail(data: {
     <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.buyerName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        Thank you for your order! ${data.childName}'s personalized storybook is being created right now. Our AI illustrators are hard at work bringing the story to life.
+        Thank you for your order! ${data.childName}'s personalized storybook is being created right now. Our team is carefully reviewing each page to make sure everything is perfect.
       </p>
       <p style="margin:0 0 24px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        You'll be able to download your book as a PDF and view it in your browser once it's ready (usually under 2 minutes).
+        You'll receive another email when your book is ready to download — usually within 24 hours.
       </p>
 
       <!-- CTA Button -->
@@ -254,7 +281,7 @@ function buildOrderConfirmationEmail(data: {
 
     <!-- Footer -->
     <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
-      <p style="margin:0;">Made with love by StorySpark</p>
+      <p style="margin:0;">Made with love by Starmee</p>
     </div>
   </div>
 </body>
@@ -288,7 +315,7 @@ function buildGiftNotificationEmail(data: {
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">StorySpark</h1>
+      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Starmee</h1>
       <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">You've received a magical gift!</p>
     </div>
 
@@ -296,7 +323,7 @@ function buildGiftNotificationEmail(data: {
     <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.recipientName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        ${data.senderName} has gifted ${data.childName} a personalized storybook from StorySpark!
+        ${data.senderName} has gifted ${data.childName} a personalized storybook from Starmee!
         It's a beautifully illustrated story where ${data.childName} is the hero.
       </p>
 
@@ -310,14 +337,14 @@ function buildGiftNotificationEmail(data: {
       </div>
 
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
-        Want to create a StorySpark book of your own?
+        Want to create a Starmee book of your own?
         <a href="${data.appUrl}" style="color:#7C3AED;">Get started here</a>.
       </p>
     </div>
 
     <!-- Footer -->
     <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
-      <p style="margin:0;">Made with love by StorySpark</p>
+      <p style="margin:0;">Made with love by Starmee</p>
     </div>
   </div>
 </body>

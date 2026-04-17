@@ -1,5 +1,5 @@
 {
-  "name": "storyspark",
+  "name": "starmee",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -19,7 +19,6 @@
     "next": "14.2.35",
     "next-themes": "^0.4.6",
     "openai": "^6.33.0",
-    "posthog-js": "^1.364.7",
     "react": "^18",
     "react-dom": "^18",
     "replicate": "^1.4.0",

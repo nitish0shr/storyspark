@@ -110,7 +110,7 @@ export default function BookViewer({
   const handleShare = async () => {
     const url = `${window.location.origin}/preview/${bookId}`;
     const shareData = {
-      title: `${childName}'s Story - StorySpark`,
+      title: `${childName}'s Story - Starmee`,
       text: `Check out ${childName}'s personalized storybook!`,
       url,
     };

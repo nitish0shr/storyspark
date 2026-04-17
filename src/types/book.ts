@@ -8,6 +8,7 @@ export type BookStatus =
   | "preview_generating"
   | "preview_ready"
   | "generating"
+  | "pending_review"
   | "complete"
   | "failed";
 

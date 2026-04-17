@@ -13,7 +13,6 @@ import {
   Star,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { usePostHog } from "posthog-js/react";
 
 const iconMap: Record<string, LucideIcon> = {
   Rocket,
@@ -35,11 +34,8 @@ export function StepThemeSelect() {
   const { childName, childAge, selectedThemeId, setSelectedTheme, nextStep } =
     useWizardStore();
 
-  const posthog = usePostHog();
-
   const handleSelect = (themeId: string) => {
     setSelectedTheme(themeId);
-    posthog.capture("wizard_step_completed", { step: "theme_select", theme_id: themeId });
     // Auto-advance after a brief visual pause
     setTimeout(() => {
       nextStep();

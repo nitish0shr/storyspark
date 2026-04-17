@@ -1,4 +1,4 @@
-# StorySpark
+# Starmee
 
 AI-powered personalized children's storybook generator. Parents upload a photo of their child, pick a magical theme, and AI generates a unique 12-page illustrated storybook with the child as the hero.
 

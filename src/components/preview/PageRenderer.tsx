@@ -65,7 +65,7 @@ export default function PageRenderer({
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="h-5 w-5 text-white/70" />
             <span className="text-white/70 text-sm font-medium tracking-widest uppercase">
-              A StorySpark Book
+              A Starmee Book
             </span>
           </div>
           <h1 className="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-3 drop-shadow-lg">

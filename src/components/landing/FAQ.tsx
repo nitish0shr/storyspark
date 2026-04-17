@@ -41,7 +41,7 @@ const faqs = [
   {
     question: "How do I access my book after purchasing?",
     answer:
-      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your StorySpark account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
+      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your Starmee account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
   },
   {
     question: "Can I print it at home?",
@@ -51,7 +51,7 @@ const faqs = [
   {
     question: "What's the return policy?",
     answer:
-      "If you\u2019re not completely happy with your storybook, email us at hello@storyspark.com within 30 days for a full refund \u2014 no questions asked. We want every family to love their book, and we stand behind the quality of every story we create.",
+      "If you\u2019re not completely happy with your storybook, email us at hello@starmee.com within 30 days for a full refund \u2014 no questions asked. We want every family to love their book, and we stand behind the quality of every story we create.",
   },
 ];
 

@@ -1,4 +1,4 @@
--- StorySpark Initial Schema
+-- Starmee Initial Schema
 -- Creates core tables for child profiles, books, orders, and email captures
 
 -- Enable UUID generation

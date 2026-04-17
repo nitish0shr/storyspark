@@ -8,7 +8,7 @@ import Navbar from "@/components/shared/Navbar";
 import CheckoutForm from "./CheckoutForm";
 
 export const metadata: Metadata = {
-  title: "Checkout - StorySpark",
+  title: "Checkout - Starmee",
   description: "Complete your personalized storybook order.",
 };
 
