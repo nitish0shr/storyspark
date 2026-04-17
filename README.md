@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Starmee
 
-## Getting Started
+Personalized AI-generated children's storybooks. Parents answer a few questions about their child, upload a photo, pick a theme, and get a 12-page illustrated book delivered as a print-ready PDF.
 
-First, run the development server:
+**Live:** [starmee.com](https://starmee.com) · **Stack:** Next.js 14 · Supabase · Stripe · OpenAI · Replicate · Resend · Railway
+
+---
+
+## How it works
+
+1. **Wizard** (`/create`) — child info → photo → theme → contextual questions → email capture
+2. **Preview generation** — OpenAI writes 5 preview pages, Replicate illustrates them
+3. **Checkout** (`/checkout`) — Stripe Checkout, 3 tiers ($9.99 / $19.99 / $34.99)
+4. **Full book generation** — Stripe webhook triggers the remaining 7 pages + cover
+5. **Admin review** (`/admin/review`) — you approve before the customer gets the PDF
+6. **Delivery** — Resend emails the PDF link
+
+---
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone git@github.com:nitish0shr/storyspark.git starmee
+cd starmee
+npm install
+cp .env.local.example .env.local   # fill in real values (see below)
+npm run dev                        # starts on http://localhost:5000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Required env vars
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Every var in `.env.local.example` must be set in both local `.env.local` **and** Railway dashboard for production.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Where to get it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API |
+| `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe dashboard → Developers → API keys |
+| `STRIPE_WEBHOOK_SECRET` | Stripe dashboard → Developers → Webhooks → your endpoint |
+| `OPENAI_API_KEY` | platform.openai.com |
+| `REPLICATE_API_TOKEN` | replicate.com/account/api-tokens |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | resend.com/api-keys (verify domain first) |
+| `NEXT_PUBLIC_APP_URL` | `https://starmee.com` in prod, `http://localhost:5000` in dev |
+| `ADMIN_EMAILS`, `ADMIN_NOTIFICATION_EMAIL` | Your email (comma-separated list for multi-admin) |
+| `PRICE_BASE`, `PRICE_MID`, `PRICE_PREMIUM` | Prices in cents (999 / 1999 / 3499) |
 
-## Learn More
+### Supabase migrations
 
-To learn more about Next.js, take a look at the following resources:
+Run in order against your Supabase project (SQL editor → paste + run):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+supabase/migrations/001_initial_schema.sql
+supabase/migrations/002_add_missing_columns.sql
+supabase/migrations/003_fix_book_status_constraint.sql
+supabase/migrations/004_cost_tracking.sql
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Also create a Storage bucket named `child-photos` (public = false).
 
-## Deploy on Vercel
+### Stripe webhook
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Point a webhook at `https://starmee.com/api/webhooks/stripe` listening for:
+- `checkout.session.completed`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+---
+
+## Deployment
+
+Railway is wired to auto-deploy on every push to `main`. Flow:
+
+```bash
+git add .
+git commit -m "..."
+git push origin main    # Railway picks it up within ~60s
+```
+
+Healthcheck: `GET /api/health` returns `{ ok: true }`. Railway watches it.
+
+To deploy a change without rebuilding: push an empty commit (`git commit --allow-empty -m "redeploy"`).
+
+---
+
+## Admin
+
+Any email in `ADMIN_EMAILS` can access `/admin`. Key views:
+- `/admin` — stats, orders, revenue
+- `/admin/review` — approve books before customer delivery
+- `/admin/books` — all books
+- `/admin/users` — all users
+- `/admin/failed` — generation failures needing manual retry
+
+---
+
+## Testing the full flow locally
+
+1. Start dev server (`npm run dev`)
+2. Log in via magic link at `/auth/login`
+3. Walk through `/create` → preview
+4. Use Stripe test card `4242 4242 4242 4242` at checkout
+5. Forward webhooks locally: `stripe listen --forward-to localhost:5000/api/webhooks/stripe`
+6. Approve the book at `/admin/review`
+7. Confirm delivery email arrives
+
+---
+
+## Cost monitoring
+
+Every order writes `cost_cents` (OpenAI + Replicate actual spend). Check gross margin:
+
+```sql
+select
+  tier,
+  count(*) as orders,
+  sum(amount_cents)/100.0 as revenue,
+  sum(cost_cents)/100.0 as cost,
+  (sum(amount_cents) - sum(cost_cents))/100.0 as gross_margin
+from orders
+where status = 'paid'
+group by tier;
+```
+
+If margin dips below 60% on any tier, investigate before running ads.
+
+---
+
+## Known limitations
+
+- Admin review is a manual bottleneck (scales to ~10 orders/day before it hurts)
+- No automated COPPA flow — delete requests go through `/api/delete-profile`
+- No test coverage — smoke-test changes manually before pushing to main
