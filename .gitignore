@@ -19,6 +19,9 @@
 # misc
 .DS_Store
 *.pem
+# macOS Finder makes "* 2.ext" duplicates; keep them out of source
+* 2
+* 2.*
 
 # debug
 npm-debug.log*

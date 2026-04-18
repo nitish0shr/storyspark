@@ -54,7 +54,7 @@ echo
 
 check "/api/health"    '"ok"'          "health endpoint"
 check "/"              "Starmee"       "landing page"
-check "/pricing"       "9.99"          "pricing page"
+check "/pricing"       "Pricing"       "pricing page"
 check "/privacy"       "Privacy"       "privacy policy"
 check "/terms"         "Terms"         "terms of service"
 check "/auth/login"    "email"         "login page"

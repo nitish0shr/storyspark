@@ -1,0 +1,42 @@
+name: CI
+
+# Catches type errors and lint violations before they hit Railway.
+# We disabled ESLint during `next build` to keep deploys from failing on cosmetic
+# rule violations, so this workflow is the *only* place those rules are enforced.
+# Don't delete it without flipping `eslint.ignoreDuringBuilds` back to false in
+# next.config.mjs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      # Lint is informational for now — we know there are pre-existing
+      # violations on main (which is why we set ignoreDuringBuilds in
+      # next.config.mjs). Once those are cleaned up, drop continue-on-error
+      # so lint becomes a real gate.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
