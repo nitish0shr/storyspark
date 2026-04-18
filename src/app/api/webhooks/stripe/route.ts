@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { generateFullBook } from "@/services/book-pipeline";
 import { getAppUrl } from "@/lib/utils";
+import { logServerError } from "@/lib/monitor";
 
 export async function POST(request: NextRequest) {
   if (!isStripeConfigured() || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (error) {
-    console.error(`Error processing webhook event ${event.type}:`, error);
+    await logServerError("stripe-webhook", error, { eventType: event.type });
     // Return 200 so Stripe doesn't keep retrying
     return NextResponse.json(
       { error: "Webhook handler failed" },

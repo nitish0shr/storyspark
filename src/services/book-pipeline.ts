@@ -6,6 +6,11 @@ import { analyzeFace } from "@/services/face-analysis";
 import { generateStory } from "@/services/story-generation";
 import { generateIllustrations } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
+import {
+  estimatePreviewCost,
+  estimateFullBookCompletionCost,
+} from "@/lib/cost-estimator";
+import { logServerError } from "@/lib/monitor";
 
 /**
  * Fetches a book record and its associated child profile from the database.
@@ -135,14 +140,19 @@ export async function generatePreview(bookId: string): Promise<void> {
       previewPageNumbers.includes(p.pageNumber)
     );
 
+    // Track estimated cost (see cost-estimator.ts for rationale)
+    const previewCost = estimatePreviewCost();
+
     await updateBookStatus(bookId, "preview_ready", {
       story_text: storyPages,
       illustration_urls: allIllustrationUrls,
       preview_pages: previewPages,
       page_count: storyPages.length,
+      openai_cost_cents: previewCost.openaiCents,
+      replicate_cost_cents: previewCost.replicateCents,
     });
   } catch (error) {
-    console.error(`Preview generation failed for book ${bookId}:`, error);
+    await logServerError("preview-generation", error, { bookId });
     await updateBookStatus(bookId, "failed");
     throw error;
   }
@@ -220,13 +230,39 @@ export async function generateFullBook(bookId: string): Promise<void> {
     // Trigger PDF assembly
     const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
 
+    // Track incremental cost for completing the book (additional images beyond preview)
+    const completionCost = estimateFullBookCompletionCost();
+
+    // Read current cost totals to accumulate (preview cost already tracked)
+    const { data: currentBook } = await supabaseAdmin
+      .from("books")
+      .select("openai_cost_cents, replicate_cost_cents")
+      .eq("id", bookId)
+      .single();
+
+    const totalOpenAiCents =
+      (currentBook?.openai_cost_cents ?? 0) + completionCost.openaiCents;
+    const totalReplicateCents =
+      (currentBook?.replicate_cost_cents ?? 0) + completionCost.replicateCents;
+    const totalCostCents = totalOpenAiCents + totalReplicateCents;
+
     // Hold for manual review before delivery
     await updateBookStatus(bookId, "pending_review", {
       pdf_url: pdfUrl,
       pdf_print_url: pdfPrintUrl,
+      openai_cost_cents: totalOpenAiCents,
+      replicate_cost_cents: totalReplicateCents,
     });
+
+    // Copy total into the associated paid order for gross-margin queries
+    // (see migration 004 v_daily_margin view). No-op if no paid order yet.
+    await supabaseAdmin
+      .from("orders")
+      .update({ cost_cents: totalCostCents })
+      .eq("book_id", bookId)
+      .eq("status", "paid");
   } catch (error) {
-    console.error(`Full book generation failed for book ${bookId}:`, error);
+    await logServerError("full-book-generation", error, { bookId });
     await updateBookStatus(bookId, "failed");
     throw error;
   }

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ClipboardCheck,
   ArrowLeft,
+  DollarSign,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/review", label: "Review Queue", icon: ClipboardCheck },
+  { href: "/admin/costs", label: "Costs & Margin", icon: DollarSign },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/books", label: "Books", icon: BookOpen },
   { href: "/admin/failed", label: "Failed Jobs", icon: AlertTriangle },
