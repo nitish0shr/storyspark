@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles, Star, Wand2 } from "lucide-react";
+import { Star, Wand2 } from "lucide-react";
 
 interface LoadingAnimationProps {
   childName: string;
   currentStep?: string;
-  /** Real status from the server polling endpoint */
   serverStatus?: string;
-  /** Number of illustrations completed so far */
   illustrationsReady?: number;
 }
 
@@ -50,7 +48,6 @@ export function LoadingAnimation({
     const messageInterval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 3500);
-
     return () => clearInterval(messageInterval);
   }, []);
 
@@ -61,7 +58,6 @@ export function LoadingAnimation({
         return prev + Math.random() * 3 + 0.5;
       });
     }, 400);
-
     return () => clearInterval(progressInterval);
   }, []);
 
@@ -70,33 +66,26 @@ export function LoadingAnimation({
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      {/* Animated sparkle area */}
+      {/* Animated icon area */}
       <div className="relative mb-8 h-40 w-40">
-        {/* Central wand icon */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="rounded-full bg-gradient-to-br from-violet-500 to-pink-500 p-5 shadow-lg shadow-violet-200 animate-pulse">
-            <Wand2 className="h-10 w-10 text-white" />
+          <div className="rounded-full bg-[#FFDE59] border-[2.5px] border-[#262625] shadow-[4px_4px_0px_#262625] p-5 animate-bounce-gentle">
+            <Wand2 className="h-10 w-10 text-[#262625]" />
           </div>
         </div>
 
-        {/* Orbiting sparkles */}
+        {/* Orbiting stars */}
         <div className="absolute inset-0 animate-spin" style={{ animationDuration: "6s" }}>
-          <Sparkles className="absolute top-0 left-1/2 -translate-x-1/2 h-5 w-5 text-amber-400" />
+          <Star className="absolute top-0 left-1/2 -translate-x-1/2 h-5 w-5 text-[#FFDE59] fill-[#FFDE59]" />
         </div>
-        <div
-          className="absolute inset-0 animate-spin"
-          style={{ animationDuration: "8s", animationDirection: "reverse" }}
-        >
-          <Star className="absolute top-1/2 right-0 -translate-y-1/2 h-4 w-4 text-pink-400 fill-pink-400" />
+        <div className="absolute inset-0 animate-spin" style={{ animationDuration: "8s", animationDirection: "reverse" }}>
+          <Star className="absolute top-1/2 right-0 -translate-y-1/2 h-4 w-4 text-[#CB6CE6] fill-[#CB6CE6]" />
         </div>
         <div className="absolute inset-0 animate-spin" style={{ animationDuration: "10s" }}>
-          <Sparkles className="absolute bottom-0 left-1/2 -translate-x-1/2 h-5 w-5 text-violet-400" />
+          <Star className="absolute bottom-0 left-1/2 -translate-x-1/2 h-5 w-5 text-[#5E17EB] fill-[#5E17EB]" />
         </div>
-        <div
-          className="absolute inset-0 animate-spin"
-          style={{ animationDuration: "7s", animationDirection: "reverse" }}
-        >
-          <Star className="absolute top-1/2 left-0 -translate-y-1/2 h-4 w-4 text-amber-300 fill-amber-300" />
+        <div className="absolute inset-0 animate-spin" style={{ animationDuration: "7s", animationDirection: "reverse" }}>
+          <Star className="absolute top-1/2 left-0 -translate-y-1/2 h-4 w-4 text-[#FFDE59] fill-[#FFDE59]" />
         </div>
 
         {/* Floating particles */}
@@ -105,7 +94,7 @@ export function LoadingAnimation({
             key={i}
             className="absolute h-1.5 w-1.5 rounded-full animate-bounce"
             style={{
-              backgroundColor: i % 2 === 0 ? "#7C3AED" : "#EC4899",
+              backgroundColor: i % 3 === 0 ? "#5E17EB" : i % 3 === 1 ? "#CB6CE6" : "#FFDE59",
               top: `${20 + Math.sin(i * 1.2) * 35}%`,
               left: `${20 + Math.cos(i * 1.2) * 35}%`,
               animationDelay: `${i * 0.3}s`,
@@ -115,31 +104,30 @@ export function LoadingAnimation({
         ))}
       </div>
 
-      {/* Message */}
-      <h3 className="font-heading text-xl md:text-2xl font-semibold text-gray-800 mb-2 transition-opacity duration-500">
+      <h3 className="font-heading text-xl md:text-2xl font-bold text-[#262625] mb-2">
         Creating {childName}&apos;s Story
       </h3>
-      <p className="text-gray-500 mb-8 h-6 transition-all duration-500">
+      <p className="font-body text-[#262625]/60 mb-8 h-6 transition-all duration-500">
         {serverMessage || currentStep || currentMessage}
       </p>
 
       {/* Progress bar */}
       <div className="w-full max-w-xs">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-violet-100">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-[#262625]/10 border border-[#262625]/20">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-600 to-pink-500 transition-all duration-700 ease-out"
+            className="h-full rounded-full bg-[#FFDE59] border-r border-[#262625]/20 transition-all duration-700 ease-out"
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-2 font-body text-xs text-[#262625]/40">
           {Math.round(Math.min(progress, 100))}% complete
         </p>
       </div>
 
       {/* Tip */}
-      <div className="mt-8 max-w-sm rounded-xl bg-violet-50 border border-violet-100 p-4">
-        <p className="text-sm text-violet-700">
-          <Sparkles className="inline h-4 w-4 mr-1 -mt-0.5" />
+      <div className="mt-8 max-w-sm rounded-2xl bg-[#CB6CE6]/15 border-2 border-[#CB6CE6]/30 p-4">
+        <p className="font-body text-sm text-[#5E17EB]">
+          <Star className="inline h-4 w-4 mr-1 -mt-0.5 fill-[#5E17EB]" />
           Each story is uniquely crafted with custom illustrations made just for{" "}
           {childName}.
         </p>

@@ -3,7 +3,6 @@
 import { useWizardStore } from "./WizardProvider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Baby, Smile, ArrowRight, UserPlus, X } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
@@ -50,7 +49,7 @@ function ChildForm({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor={`${label}-name`} className="text-sm font-medium text-gray-700">
+        <Label htmlFor={`${label}-name`} className="font-body text-sm font-bold text-[#262625]">
           {label}&apos;s first name
         </Label>
         <Input
@@ -59,14 +58,14 @@ function ChildForm({
           placeholder="e.g. Emma"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
-          className="h-12 rounded-xl border-gray-200 bg-white px-4 text-base focus-visible:border-violet-400 focus-visible:ring-violet-200"
+          className="h-12 rounded-xl border-2 border-[#262625]/20 bg-white px-4 text-base focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={`${label}-age`} className="text-sm font-medium text-gray-700">
+        <Label htmlFor={`${label}-age`} className="font-body text-sm font-bold text-[#262625]">
           Age{" "}
-          <span className="font-normal text-gray-400">(adjusts story reading level)</span>
+          <span className="font-normal text-[#262625]/50">(adjusts story reading level)</span>
         </Label>
         <div className="relative">
           <select
@@ -74,22 +73,18 @@ function ChildForm({
             value={age}
             onChange={(e) => onAgeChange(Number(e.target.value))}
             className={cn(
-              "h-12 w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 pr-10 text-base outline-none transition-colors",
-              "focus:border-violet-400 focus:ring-2 focus:ring-violet-200",
-              age === -1 && "text-gray-400"
+              "h-12 w-full appearance-none rounded-xl border-2 border-[#262625]/20 bg-white px-4 pr-10 text-base outline-none transition-colors font-body",
+              "focus:border-[#5E17EB] focus:ring-2 focus:ring-[#CB6CE6]/20",
+              age === -1 && "text-[#262625]/40"
             )}
           >
-            <option value={-1} disabled>
-              Select age
-            </option>
+            <option value={-1} disabled>Select age</option>
             {ageOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4 text-[#262625]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -97,7 +92,7 @@ function ChildForm({
       </div>
 
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-700">Gender</Label>
+        <Label className="font-body text-sm font-bold text-[#262625]">Gender</Label>
         <div className="grid grid-cols-3 gap-3">
           {genderOptions.map((option) => {
             const Icon = option.icon;
@@ -109,26 +104,21 @@ function ChildForm({
                 onClick={() => onGenderChange(option.value)}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200",
-                  "hover:border-violet-300 hover:bg-violet-50/50",
                   isSelected
-                    ? "border-violet-600 bg-violet-50 shadow-sm shadow-violet-100"
-                    : "border-gray-200 bg-white"
+                    ? "border-[#262625] bg-[#FFDE59] shadow-[3px_3px_0px_#262625]"
+                    : "border-[#262625]/20 bg-white hover:border-[#CB6CE6] hover:bg-[#CB6CE6]/5"
                 )}
               >
-                <div
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                    isSelected ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-500"
-                  )}
-                >
+                <div className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                  isSelected ? "bg-[#262625] text-[#FFDE59]" : "bg-[#262625]/10 text-[#262625]/50"
+                )}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium sm:text-sm",
-                    isSelected ? "text-violet-700" : "text-gray-600"
-                  )}
-                >
+                <span className={cn(
+                  "font-body text-xs font-bold sm:text-sm",
+                  isSelected ? "text-[#262625]" : "text-[#262625]/60"
+                )}>
                   {option.label}
                 </span>
               </button>
@@ -142,20 +132,10 @@ function ChildForm({
 
 export function StepChildInfo() {
   const {
-    childName,
-    childAge,
-    childGender,
-    setChildName,
-    setChildAge,
-    setChildGender,
-    hasSecondChild,
-    secondChildName,
-    secondChildAge,
-    secondChildGender,
-    setHasSecondChild,
-    setSecondChildName,
-    setSecondChildAge,
-    setSecondChildGender,
+    childName, childAge, childGender,
+    setChildName, setChildAge, setChildGender,
+    hasSecondChild, secondChildName, secondChildAge, secondChildGender,
+    setHasSecondChild, setSecondChildName, setSecondChildAge, setSecondChildGender,
     nextStep,
   } = useWizardStore();
 
@@ -170,10 +150,10 @@ export function StepChildInfo() {
   return (
     <div className="mx-auto max-w-lg space-y-8">
       <div className="text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
+        <h2 className="font-heading text-2xl md:text-3xl font-bold text-[#262625]">
           Tell us about your little one{hasSecondChild ? "s" : ""}
         </h2>
-        <p className="mt-2 text-gray-500">
+        <p className="mt-2 font-body text-[#262625]/60">
           We&apos;ll use this to personalize every page of the story.
         </p>
       </div>
@@ -192,7 +172,7 @@ export function StepChildInfo() {
         <button
           type="button"
           onClick={() => setHasSecondChild(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-sm font-medium text-gray-500 transition-all hover:border-violet-300 hover:bg-violet-50/30 hover:text-violet-600"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#262625]/30 bg-white p-4 font-body text-sm font-bold text-[#262625]/50 transition-all hover:border-[#CB6CE6] hover:bg-[#CB6CE6]/5 hover:text-[#5E17EB]"
         >
           <UserPlus className="h-4 w-4" />
           Add a sibling or friend as co-hero
@@ -201,22 +181,20 @@ export function StepChildInfo() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-violet-500" />
-              <span className="text-sm font-semibold text-gray-700">
-                Sibling / Friend
-              </span>
+              <UserPlus className="h-4 w-4 text-[#5E17EB]" />
+              <span className="font-body text-sm font-bold text-[#262625]">Sibling / Friend</span>
             </div>
             <button
               type="button"
               onClick={() => setHasSecondChild(false)}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+              className="flex items-center gap-1 font-body text-xs text-[#262625]/40 hover:text-red-500 transition-colors"
             >
               <X className="h-3 w-3" />
               Remove
             </button>
           </div>
 
-          <div className="rounded-2xl border border-violet-100 bg-violet-50/30 p-5">
+          <div className="rounded-2xl border-2 border-[#CB6CE6]/30 bg-[#CB6CE6]/5 p-5">
             <ChildForm
               label="Second child"
               name={secondChildName}
@@ -230,7 +208,7 @@ export function StepChildInfo() {
         </div>
       )}
 
-      <Button
+      <button
         onClick={() => {
           posthog.capture("wizard_step_completed", {
             step: "child_info",
@@ -242,15 +220,15 @@ export function StepChildInfo() {
         }}
         disabled={!isValid}
         className={cn(
-          "h-12 w-full rounded-xl text-base font-semibold transition-all",
+          "btn-chunky h-12 w-full flex items-center justify-center gap-2 font-heading font-bold text-base transition-all",
           isValid
-            ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-200 hover:brightness-105"
-            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            ? "bg-[#FFDE59] text-[#262625] cursor-pointer"
+            : "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
         )}
       >
         Next
-        <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
+        <ArrowRight className="h-4 w-4" />
+      </button>
     </div>
   );
 }

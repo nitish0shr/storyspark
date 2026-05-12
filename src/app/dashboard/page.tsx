@@ -13,7 +13,7 @@ import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
 import { Sparkles, Plus, UserPlus, BookOpen, Receipt, Crown } from "lucide-react";
 
 export const metadata = {
-  title: "Dashboard | StorySpark",
+  title: "Dashboard | Starmee Stories",
 };
 
 export const dynamic = "force-dynamic";
@@ -25,91 +25,43 @@ export default async function DashboardPage() {
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
     redirect("/auth/login?redirectTo=/dashboard");
   }
 
-  // Fetch data in parallel
   const [childProfilesRes, booksRes, ordersRes, subscriptionsRes] = await Promise.all([
-    supabase
-      .from("child_profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("books")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("orders")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", user.id)
-      .in("status", ["active", "paused", "past_due"])
-      .order("created_at", { ascending: false })
-      .limit(1),
+    supabase.from("child_profiles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("books").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("subscriptions").select("*").eq("user_id", user.id).in("status", ["active", "paused", "past_due"]).order("created_at", { ascending: false }).limit(1),
   ]);
 
-  // Map snake_case DB columns to camelCase types
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const childProfiles: ChildProfile[] = (childProfilesRes.data ?? []).map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    age: row.age,
-    gender: row.gender,
-    photoUrl: row.photo_url,
-    photoProcessedUrl: row.photo_processed_url,
-    appearanceProfile: row.appearance_profile,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id, userId: row.user_id, name: row.name, age: row.age, gender: row.gender,
+    photoUrl: row.photo_url, photoProcessedUrl: row.photo_processed_url,
+    appearanceProfile: row.appearance_profile, createdAt: row.created_at, updatedAt: row.updated_at,
   }));
 
   const books: Book[] = (booksRes.data ?? []).map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    childProfileId: row.child_profile_id,
-    secondChildProfileId: row.second_child_profile_id ?? null,
-    themeId: row.theme_id,
-    language: row.language ?? "en",
-    status: row.status,
-    contextualAnswers: row.contextual_answers,
-    storyText: row.story_text,
-    illustrationUrls: row.illustration_urls,
-    previewPages: row.preview_pages,
-    pdfUrl: row.pdf_url,
-    pdfPrintUrl: row.pdf_print_url,
-    pageCount: row.page_count,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id, userId: row.user_id, childProfileId: row.child_profile_id,
+    secondChildProfileId: row.second_child_profile_id ?? null, themeId: row.theme_id,
+    language: row.language ?? "en", status: row.status, contextualAnswers: row.contextual_answers,
+    storyText: row.story_text, illustrationUrls: row.illustration_urls, previewPages: row.preview_pages,
+    pdfUrl: row.pdf_url, pdfPrintUrl: row.pdf_print_url, pageCount: row.page_count,
+    createdAt: row.created_at, updatedAt: row.updated_at,
   }));
 
   const orders: Order[] = (ordersRes.data ?? []).map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    bookId: row.book_id,
+    id: row.id, userId: row.user_id, bookId: row.book_id,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
-    status: row.status,
-    amountCents: row.amount_cents,
-    currency: row.currency,
-    tier: row.tier,
-    isGift: row.is_gift,
-    giftRecipientName: row.gift_recipient_name,
-    giftRecipientEmail: row.gift_recipient_email,
-    giftMessage: row.gift_message,
-    emailDelivered: row.email_delivered,
-    createdAt: row.created_at,
+    status: row.status, amountCents: row.amount_cents, currency: row.currency,
+    tier: row.tier, isGift: row.is_gift, giftRecipientName: row.gift_recipient_name,
+    giftRecipientEmail: row.gift_recipient_email, giftMessage: row.gift_message,
+    emailDelivered: row.email_delivered, createdAt: row.created_at,
   }));
   const activeSubscription = (subscriptionsRes.data ?? [])[0] ?? null;
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -122,22 +74,21 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5]">
+    <div className="min-h-screen bg-[#FDF5E7] bg-stars">
       <Navbar user={navUser} />
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
           <div>
-            <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900">
-              Welcome back
-              {navUser.name ? `, ${navUser.name.split(" ")[0]}` : ""}
+            <h1 className="font-heading text-3xl sm:text-4xl font-bold text-[#262625]">
+              Welcome back{navUser.name ? `, ${navUser.name.split(" ")[0]}` : ""}!
             </h1>
-            <p className="text-gray-500 mt-1">
+            <p className="font-body text-[#262625]/60 mt-1">
               Manage your storybooks and create new adventures.
             </p>
             {activeSubscription && (
-              <span className="inline-flex items-center gap-1.5 mt-2 bg-gradient-to-r from-violet-100 to-pink-100 border border-violet-200 text-violet-700 text-xs font-semibold px-3 py-1 rounded-full">
+              <span className="inline-flex items-center gap-1.5 mt-2 bg-[#FFDE59] border-2 border-[#262625] text-[#262625] text-xs font-bold px-3 py-1 rounded-full shadow-[2px_2px_0px_#262625]">
                 <Crown className="h-3.5 w-3.5" />
                 Book Club Member
               </span>
@@ -145,7 +96,7 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/create"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#DB2777] text-white font-semibold text-sm px-6 py-3 shadow-lg shadow-violet-200/50 transition-all duration-200 shrink-0"
+            className="btn-chunky inline-flex items-center justify-center gap-2 bg-[#FFDE59] px-6 py-3 font-heading font-bold text-[#262625] text-sm shrink-0"
           >
             <Sparkles className="h-4 w-4" />
             Create New Book
@@ -156,16 +107,12 @@ export default async function DashboardPage() {
         <section className="mb-12">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100">
-                <UserPlus className="h-4 w-4 text-violet-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#CB6CE6]/20 border border-[#CB6CE6]/30">
+                <UserPlus className="h-4 w-4 text-[#5E17EB]" />
               </div>
-              <h2 className="font-heading text-xl font-bold text-gray-900">
-                Child Profiles
-              </h2>
+              <h2 className="font-heading text-xl font-bold text-[#262625]">Child Profiles</h2>
               {childProfiles.length > 0 && (
-                <span className="text-sm text-gray-400 ml-1">
-                  ({childProfiles.length})
-                </span>
+                <span className="font-body text-sm text-[#262625]/40 ml-1">({childProfiles.length})</span>
               )}
             </div>
           </div>
@@ -175,36 +122,28 @@ export default async function DashboardPage() {
               {childProfiles.map((child) => (
                 <ChildProfileCard key={child.id} child={child} />
               ))}
-
-              {/* Add child card */}
               <Link
                 href="/create"
-                className="group flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-violet-200 bg-violet-50/30 hover:bg-violet-50 hover:border-violet-300 transition-all duration-200 p-8 min-h-[140px]"
+                className="group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#262625]/20 bg-white/50 hover:bg-[#CB6CE6]/5 hover:border-[#CB6CE6] transition-all duration-200 p-8 min-h-[140px]"
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 group-hover:bg-violet-200 transition-colors">
-                  <Plus className="h-5 w-5 text-violet-600" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#CB6CE6]/15 group-hover:bg-[#CB6CE6]/25 transition-colors border-2 border-[#CB6CE6]/30">
+                  <Plus className="h-5 w-5 text-[#5E17EB]" />
                 </div>
-                <span className="text-sm font-medium text-violet-600">
-                  Add a Child
-                </span>
+                <span className="font-body text-sm font-bold text-[#5E17EB]">Add a Child</span>
               </Link>
             </div>
           ) : (
-            <div className="text-center py-12 rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/30">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 mb-4">
-                <UserPlus className="h-7 w-7 text-violet-500" />
+            <div className="text-center py-12 rounded-2xl border-2 border-dashed border-[#262625]/15 bg-white/40">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#CB6CE6]/15 border-2 border-[#CB6CE6]/20 mb-4">
+                <UserPlus className="h-7 w-7 text-[#5E17EB]" />
               </div>
-              <h3 className="font-heading text-lg font-bold text-gray-900 mb-1">
+              <h3 className="font-heading text-lg font-bold text-[#262625] mb-1">
                 Add your first child profile
               </h3>
-              <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
-                Start by adding your child&apos;s details to create personalized
-                storybooks.
+              <p className="font-body text-sm text-[#262625]/50 mb-5 max-w-sm mx-auto">
+                Start by adding your child&apos;s details to create personalized storybooks.
               </p>
-              <Link
-                href="/create"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] hover:from-[#6D28D9] hover:to-[#5B21B6] text-white font-medium text-sm px-5 py-2.5 shadow-md shadow-violet-200/50 transition-all duration-200"
-              >
+              <Link href="/create" className="btn-chunky inline-flex items-center gap-2 bg-[#FFDE59] px-5 py-2.5 font-heading font-bold text-[#262625] text-sm">
                 <Plus className="h-4 w-4" />
                 Get Started
               </Link>
@@ -216,12 +155,10 @@ export default async function DashboardPage() {
         {activeSubscription && (
           <section className="mb-12">
             <div className="flex items-center gap-2.5 mb-5">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-100">
-                <Crown className="h-4 w-4 text-violet-600" />
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#FFDE59]/40 border border-[#FFDE59]">
+                <Crown className="h-4 w-4 text-[#262625]" />
               </div>
-              <h2 className="font-heading text-xl font-bold text-gray-900">
-                My Subscription
-              </h2>
+              <h2 className="font-heading text-xl font-bold text-[#262625]">My Subscription</h2>
             </div>
             <div className="max-w-md">
               <SubscriptionCard
@@ -233,11 +170,7 @@ export default async function DashboardPage() {
                   books_generated: activeSubscription.books_generated ?? 0,
                   child_profile_id: activeSubscription.child_profile_id,
                 }}
-                childName={
-                  childProfiles.find(
-                    (c) => c.id === activeSubscription.child_profile_id
-                  )?.name ?? "Your child"
-                }
+                childName={childProfiles.find((c) => c.id === activeSubscription.child_profile_id)?.name ?? "Your child"}
               />
             </div>
           </section>
@@ -246,16 +179,12 @@ export default async function DashboardPage() {
         {/* Book Library Section */}
         <section className="mb-12">
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-pink-100">
-              <BookOpen className="h-4 w-4 text-pink-600" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#5E17EB]/10 border border-[#5E17EB]/20">
+              <BookOpen className="h-4 w-4 text-[#5E17EB]" />
             </div>
-            <h2 className="font-heading text-xl font-bold text-gray-900">
-              Book Library
-            </h2>
+            <h2 className="font-heading text-xl font-bold text-[#262625]">Book Library</h2>
             {books.length > 0 && (
-              <span className="text-sm text-gray-400 ml-1">
-                ({books.length})
-              </span>
+              <span className="font-body text-sm text-[#262625]/40 ml-1">({books.length})</span>
             )}
           </div>
           <BookLibrary books={books} childProfiles={childProfiles} themes={themes} />
@@ -264,24 +193,15 @@ export default async function DashboardPage() {
         {/* Order History Section */}
         <section className="mb-8">
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200">
               <Receipt className="h-4 w-4 text-emerald-600" />
             </div>
-            <h2 className="font-heading text-xl font-bold text-gray-900">
-              Order History
-            </h2>
+            <h2 className="font-heading text-xl font-bold text-[#262625]">Order History</h2>
             {orders.length > 0 && (
-              <span className="text-sm text-gray-400 ml-1">
-                ({orders.length})
-              </span>
+              <span className="font-body text-sm text-[#262625]/40 ml-1">({orders.length})</span>
             )}
           </div>
-          <OrderHistory
-            orders={orders}
-            books={books}
-            childProfiles={childProfiles}
-            themes={themes}
-          />
+          <OrderHistory orders={orders} books={books} childProfiles={childProfiles} themes={themes} />
         </section>
       </main>
     </div>
