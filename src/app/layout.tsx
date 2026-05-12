@@ -1,22 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Nunito, Baloo_2 } from "next/font/google";
+import { Nunito, DynaPuff } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
-import { ThemeProvider } from "@/context/ThemeContext";
-import ThemeToggle from "@/components/shared/ThemeToggle";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  weight: ["400", "600", "700", "800"],
-});
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -24,27 +11,27 @@ const nunito = Nunito({
   weight: ["400", "600", "700", "800", "900"],
 });
 
-const baloo = Baloo_2({
+const dynapuff = DynaPuff({
   subsets: ["latin"],
-  variable: "--font-baloo",
-  weight: ["400", "600", "700", "800"],
+  variable: "--font-dynapuff",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "StorySpark — Personalized AI Storybooks for Kids",
   description:
-    "Upload a photo, pick an adventure, and AI creates a beautiful personalized storybook with your child as the hero. Free preview — no credit card needed!",
+    "Your child is the star of their own story! Upload a photo, pick an adventure, and AI creates a beautiful personalized storybook. Free preview — no credit card needed!",
   keywords: [
     "personalized children's book",
     "AI storybook",
     "custom kids book",
     "children's gift",
-    "personalized gift",
+    "personalized gift for kids",
   ],
   openGraph: {
-    title: "StorySpark — Your Child Is the Star of Their Own Storybook",
+    title: "StorySpark — Your Child Is the Star of Their Own Story!",
     description:
-      "Upload a photo, pick an adventure theme, and get a beautifully illustrated storybook featuring your child. Free preview in about 2 minutes!",
+      "Upload a photo, pick a magical adventure theme, and get a beautifully illustrated storybook with your child as the hero. Free preview in about 2 minutes!",
     type: "website",
   },
 };
@@ -58,20 +45,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
-        inter.variable,
-        playfair.variable,
         nunito.variable,
-        baloo.variable
+        dynapuff.variable
       )}
     >
       <body className="antialiased">
-        <ThemeProvider>
-          <PostHogProvider>
-            {children}
-            <ThemeToggle />
-            <Toaster />
-          </PostHogProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          {children}
+          <Toaster />
+        </PostHogProvider>
       </body>
     </html>
   );

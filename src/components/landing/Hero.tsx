@@ -2,19 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, Star, Heart, Zap } from "lucide-react";
-
-/* ── Decorative doodle components ── */
-function Cloud({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 120 60" className={className} fill="currentColor">
-      <ellipse cx="60" cy="45" rx="55" ry="20" />
-      <ellipse cx="40" cy="38" rx="30" ry="22" />
-      <ellipse cx="72" cy="33" rx="28" ry="24" />
-      <ellipse cx="90" cy="42" rx="22" ry="18" />
-    </svg>
-  );
-}
+import { Star, Heart, Zap } from "lucide-react";
 
 function Squiggle({ className }: { className?: string }) {
   return (
@@ -32,28 +20,36 @@ function StarBurst({ className }: { className?: string }) {
   );
 }
 
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} fill="currentColor">
+      <polygon points="20,1 22,17 38,20 22,23 20,39 18,23 2,20 18,17" />
+    </svg>
+  );
+}
+
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-[#FFF9E6] bg-dots py-16 sm:py-24 lg:py-28">
+    <section className="relative overflow-hidden bg-[#FDF5E7] bg-stars py-16 sm:py-24 lg:py-28">
 
       {/* Decorative floating shapes */}
-      <div className="absolute top-8 left-6 animate-float opacity-70 hidden sm:block">
-        <StarBurst className="w-10 h-10 text-[#FFD166]" />
+      <div className="absolute top-8 left-6 animate-float opacity-80 hidden sm:block">
+        <SparkleIcon className="w-10 h-10 text-[#FFDE59]" />
       </div>
-      <div className="absolute top-20 right-8 animate-float-reverse opacity-60 hidden sm:block">
-        <Heart className="w-8 h-8 text-[#FF6B6B] fill-[#FF6B6B]" />
+      <div className="absolute top-20 right-8 animate-float-reverse opacity-70 hidden sm:block">
+        <Heart className="w-8 h-8 text-[#CB6CE6] fill-[#CB6CE6]" />
       </div>
-      <div className="absolute top-1/3 left-4 animate-float opacity-50 hidden lg:block" style={{ animationDelay: "1s" }}>
-        <Cloud className="w-24 h-12 text-[#4FC3F7]/40" />
+      <div className="absolute bottom-24 right-6 animate-float opacity-70 hidden sm:block" style={{ animationDelay: "1.5s" }}>
+        <StarBurst className="w-8 h-8 text-[#5E17EB]" />
       </div>
-      <div className="absolute bottom-24 right-6 animate-float opacity-60 hidden sm:block" style={{ animationDelay: "1.5s" }}>
-        <StarBurst className="w-8 h-8 text-[#06D6A0]" />
+      <div className="absolute top-12 left-1/2 animate-spin-slow opacity-40 hidden lg:block">
+        <Star className="w-6 h-6 text-[#FFDE59] fill-[#FFDE59]" />
       </div>
-      <div className="absolute top-12 left-1/2 animate-spin-slow opacity-30 hidden lg:block">
-        <Star className="w-6 h-6 text-[#FF9F1C] fill-[#FF9F1C]" />
+      <div className="absolute bottom-16 left-1/4 animate-float-reverse opacity-60 hidden lg:block" style={{ animationDelay: "2s" }}>
+        <Zap className="w-7 h-7 text-[#CB6CE6] fill-[#CB6CE6]" />
       </div>
-      <div className="absolute bottom-16 left-1/4 animate-float-reverse opacity-50 hidden lg:block" style={{ animationDelay: "2s" }}>
-        <Zap className="w-7 h-7 text-[#FFD166] fill-[#FFD166]" />
+      <div className="absolute top-1/3 right-12 animate-float opacity-50 hidden lg:block" style={{ animationDelay: "0.8s" }}>
+        <SparkleIcon className="w-6 h-6 text-[#5E17EB]" />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative">
@@ -63,31 +59,30 @@ export default function Hero() {
           <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
 
             {/* Fun badge */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#FFD166] border-2 border-[#1a1a2e] px-4 py-1.5 mb-6 shadow-[3px_3px_0px_#1a1a2e]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#FFDE59] border-2 border-[#262625] px-4 py-1.5 mb-6 shadow-[3px_3px_0px_#262625]">
               <div className="flex -space-x-0.5">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 text-[#FF9F1C] fill-[#FF9F1C]" />
+                  <Star key={i} className="h-3.5 w-3.5 text-[#5E17EB] fill-[#5E17EB]" />
                 ))}
               </div>
-              <span className="font-body font-bold text-xs text-[#1a1a2e]">
+              <span className="font-body font-bold text-xs text-[#262625]">
                 Loved by 500+ families ✨
               </span>
             </div>
 
             {/* Headline */}
-            <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold text-[#1a1a2e] leading-[1.05] mb-6">
+            <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold text-[#262625] leading-[1.05] mb-6">
               Your Child Is{" "}
               <span className="relative inline-block">
-                <span className="text-[#7B2D8B] relative z-10">the Star</span>
-                {/* Wobbly underline */}
-                <Squiggle className="absolute -bottom-2 left-0 w-full text-[#FFD166]" />
+                <span className="text-[#5E17EB] relative z-10">the Star</span>
+                <Squiggle className="absolute -bottom-2 left-0 w-full text-[#FFDE59]" />
               </span>
               <br />
               of Their Own{" "}
-              <span className="text-[#FF6B6B]">Story!</span>
+              <span className="text-[#CB6CE6]">Story!</span>
             </h1>
 
-            <p className="font-body text-lg sm:text-xl text-[#1a1a2e]/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
+            <p className="font-body text-lg sm:text-xl text-[#262625]/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
               Create a magical, personalized storybook your child will treasure
               forever. <strong>Free preview — no credit card needed!</strong>
             </p>
@@ -95,13 +90,13 @@ export default function Hero() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
               <Link href="/create">
-                <button className="btn-chunky flex items-center gap-2.5 bg-[#7B2D8B] text-white font-heading font-bold text-lg px-8 py-4">
-                  <Sparkles className="h-5 w-5" />
+                <button className="btn-chunky flex items-center gap-2.5 bg-[#FFDE59] text-[#262625] font-heading font-bold text-lg px-8 py-4">
+                  <Star className="h-5 w-5 fill-[#262625]" />
                   Create Their Book
                 </button>
               </Link>
               <a href="#sample-book">
-                <button className="btn-chunky flex items-center gap-2 bg-white text-[#1a1a2e] font-heading font-bold text-base px-6 py-4">
+                <button className="btn-chunky flex items-center gap-2 bg-[#5E17EB] text-white font-heading font-bold text-base px-6 py-4">
                   See a Sample 📖
                 </button>
               </a>
@@ -116,7 +111,7 @@ export default function Hero() {
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-1.5">
                   <span>{item.emoji}</span>
-                  <span className="font-body font-bold text-sm text-[#1a1a2e]/60">{item.text}</span>
+                  <span className="font-body font-bold text-sm text-[#262625]/60">{item.text}</span>
                 </div>
               ))}
             </div>
@@ -126,44 +121,43 @@ export default function Hero() {
           <div className="relative flex items-center justify-center lg:justify-end">
 
             {/* Decorative circles behind book */}
-            <div className="absolute w-72 h-72 rounded-full bg-[#FFD166]/30 border-2 border-[#FFD166]/40 -translate-x-4 hidden sm:block" />
-            <div className="absolute w-52 h-52 rounded-full bg-[#7B2D8B]/10 translate-x-8 translate-y-8 hidden sm:block" />
+            <div className="absolute w-72 h-72 rounded-full bg-[#FFDE59]/25 border-2 border-[#FFDE59]/40 -translate-x-4 hidden sm:block" />
+            <div className="absolute w-52 h-52 rounded-full bg-[#CB6CE6]/15 translate-x-8 translate-y-8 hidden sm:block" />
 
             {/* The book */}
             <div className="relative group animate-bounce-gentle">
 
               {/* Floating stickers around book */}
               <div className="absolute -top-8 -left-6 animate-float z-20" style={{ animationDelay: "0.5s" }}>
-                <div className="bg-[#FFD166] border-2 border-[#1a1a2e] rounded-full px-2.5 py-1 shadow-[3px_3px_0px_#1a1a2e] font-body font-bold text-xs text-[#1a1a2e] whitespace-nowrap">
+                <div className="bg-[#FFDE59] border-2 border-[#262625] rounded-full px-2.5 py-1 shadow-[3px_3px_0px_#262625] font-body font-bold text-xs text-[#262625] whitespace-nowrap">
                   ⭐ Bestseller!
                 </div>
               </div>
               <div className="absolute -top-4 right-2 animate-float-reverse z-20" style={{ animationDelay: "1s" }}>
-                <StarBurst className="w-8 h-8 text-[#FF6B6B]" />
+                <StarBurst className="w-8 h-8 text-[#CB6CE6]" />
               </div>
               <div className="absolute bottom-8 -right-8 animate-float z-20" style={{ animationDelay: "1.8s" }}>
-                <div className="bg-[#06D6A0] border-2 border-[#1a1a2e] rounded-xl px-2.5 py-1 shadow-[3px_3px_0px_#1a1a2e] font-body font-bold text-xs text-[#1a1a2e]">
+                <div className="bg-[#5E17EB] border-2 border-[#262625] rounded-xl px-2.5 py-1 shadow-[3px_3px_0px_#262625] font-body font-bold text-xs text-white">
                   🎉 Personalized!
                 </div>
               </div>
               <div className="absolute -bottom-6 left-4 animate-spin-slow opacity-70">
-                <StarBurst className="w-10 h-10 text-[#FF9F1C]" />
+                <StarBurst className="w-10 h-10 text-[#FFDE59]" />
               </div>
 
               {/* Book body */}
               <div className="relative w-64 h-80 sm:w-72 sm:h-[22rem]">
                 {/* Spine */}
-                <div className="absolute -left-4 inset-y-1 w-8 bg-[#4A0E5C] rounded-l-2xl border-2 border-[#1a1a2e] border-r-0" />
+                <div className="absolute -left-4 inset-y-1 w-8 bg-[#3D0E99] rounded-l-2xl border-2 border-[#262625] border-r-0" />
 
                 {/* Cover */}
                 <div
                   className="relative w-full h-full rounded-r-3xl rounded-l-sm overflow-hidden"
                   style={{
-                    border: "2.5px solid #1a1a2e",
-                    boxShadow: "8px 8px 0px #1a1a2e",
+                    border: "2.5px solid #262625",
+                    boxShadow: "8px 8px 0px #262625",
                   }}
                 >
-                  {/* AI-generated book cover */}
                   <Image
                     src="/images/demo/book-cover.png"
                     alt="Sample personalized storybook cover featuring a child as the hero"
@@ -173,11 +167,11 @@ export default function Hero() {
                     priority
                   />
 
-                  {/* Title overlay to replace baked-in image text */}
+                  {/* Title overlay */}
                   <div className="absolute top-0 left-0 right-0 h-[35%] flex flex-col items-center justify-center px-4 pointer-events-none">
                     <div className="absolute inset-0 bg-gradient-to-b from-[#1a0e08] via-[#2a1810]/95 to-transparent" />
                     <span
-                      className="relative font-heading text-[#FFD166] text-[11px] sm:text-sm tracking-[0.2em] uppercase drop-shadow-lg"
+                      className="relative font-heading text-[#FFDE59] text-[11px] sm:text-sm tracking-[0.2em] uppercase drop-shadow-lg"
                       style={{ textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}
                     >
                       Emma&apos;s Adventure
@@ -195,7 +189,7 @@ export default function Hero() {
                 </div>
 
                 {/* Pages edge */}
-                <div className="absolute right-0 inset-y-2 w-3 bg-gradient-to-l from-gray-100 to-gray-200 rounded-r-sm border-y-2 border-r-2 border-[#1a1a2e]">
+                <div className="absolute right-0 inset-y-2 w-3 bg-gradient-to-l from-gray-100 to-gray-200 rounded-r-sm border-y-2 border-r-2 border-[#262625]">
                   {[...Array(10)].map((_, i) => (
                     <div key={i} className="h-px bg-gray-300/60 mt-[calc(10%)]" />
                   ))}
@@ -208,7 +202,7 @@ export default function Hero() {
 
       {/* Wavy bottom edge */}
       <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#FFFBF0">
+        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#FDF5E7">
           <path d="M0,48 L0,24 Q180,0 360,24 Q540,48 720,24 Q900,0 1080,24 Q1260,48 1440,24 L1440,48 Z" />
         </svg>
       </div>

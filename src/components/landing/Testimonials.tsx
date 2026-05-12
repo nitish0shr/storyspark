@@ -7,7 +7,7 @@ const trustPoints = [
     icon: Clock,
     title: "Preview in about 2 minutes",
     description: "See your child's personalized preview before you commit to anything.",
-    bg: "bg-[#FFD166]",
+    bg: "bg-[#FFDE59]",
   },
   {
     icon: Shield,
@@ -19,22 +19,22 @@ const trustPoints = [
     icon: CreditCard,
     title: "No credit card needed",
     description: "Get a free preview first. Only pay when you love the result.",
-    bg: "bg-[#C3B1E1]",
+    bg: "bg-[#CB6CE6]",
   },
 ];
 
 export default function Testimonials() {
   return (
-    <section className="py-20 sm:py-28 bg-[#FFF9E6] bg-dots relative">
+    <section className="py-20 sm:py-28 bg-[#FDF5E7] bg-stars relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
-          <div className="inline-block bg-[#06D6A0] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
-            <span className="font-body font-bold text-sm text-[#1a1a2e]">Why parents love it 💛</span>
+          <div className="inline-block bg-[#06D6A0] border-2 border-[#262625] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#262625] mb-5">
+            <span className="font-body font-bold text-sm text-[#262625]">Why parents love it 💛</span>
           </div>
-          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#262625] mb-4">
             Built for Families
           </h2>
-          <p className="font-body text-lg text-[#1a1a2e]/60 max-w-md mx-auto">
+          <p className="font-body text-lg text-[#262625]/60 max-w-md mx-auto">
             Every kid deserves to be the star of their own story!
           </p>
         </div>
@@ -45,13 +45,13 @@ export default function Testimonials() {
               key={point.title}
               className={`${point.bg} card-chunky p-6 flex flex-col items-center text-center gap-4`}
             >
-              <div className="w-14 h-14 rounded-full bg-white border-2 border-[#1a1a2e] flex items-center justify-center shadow-[3px_3px_0px_#1a1a2e]">
-                <point.icon className="h-6 w-6 text-[#1a1a2e]" />
+              <div className="w-14 h-14 rounded-full bg-white border-2 border-[#262625] flex items-center justify-center shadow-[3px_3px_0px_#262625]">
+                <point.icon className="h-6 w-6 text-[#262625]" />
               </div>
-              <h3 className="font-heading font-bold text-lg text-[#1a1a2e]">
+              <h3 className="font-heading font-bold text-lg text-[#262625]">
                 {point.title}
               </h3>
-              <p className="font-body text-sm text-[#1a1a2e]/70 leading-relaxed">
+              <p className="font-body text-sm text-[#262625]/70 leading-relaxed">
                 {point.description}
               </p>
             </div>
@@ -60,7 +60,7 @@ export default function Testimonials() {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#C3B1E1">
+        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#5E17EB">
           <path d="M0,48 L0,20 Q360,50 720,20 Q1080,-10 1440,30 L1440,48 Z" />
         </svg>
       </div>

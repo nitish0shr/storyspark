@@ -4,106 +4,93 @@
 
 @layer base {
   :root {
-    --background: 46 100% 97%;
-    --foreground: 240 40% 14%;
+    --background: 40 100% 96%;
+    --foreground: 0 1% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 240 40% 14%;
+    --card-foreground: 0 1% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 40% 14%;
-    --primary: 290 50% 36%;
+    --popover-foreground: 0 1% 15%;
+    --primary: 270 83% 51%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 38 100% 57%;
-    --secondary-foreground: 240 40% 14%;
-    --muted: 46 60% 94%;
-    --muted-foreground: 240 10% 46%;
-    --accent: 16 100% 55%;
+    --secondary: 47 100% 68%;
+    --secondary-foreground: 0 1% 15%;
+    --muted: 40 60% 94%;
+    --muted-foreground: 0 1% 46%;
+    --accent: 286 68% 66%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 46 40% 88%;
-    --input: 46 40% 88%;
-    --ring: 290 50% 36%;
+    --border: 40 40% 86%;
+    --input: 40 40% 86%;
+    --ring: 270 83% 51%;
     --radius: 1rem;
   }
 
   * { @apply border-border; }
   html { @apply scroll-smooth; }
 
-  /* ── Storybook theme (default) ── */
-  [data-site-theme="storybook"] body,
   body {
-    background-color: #FFFBF0;
-    color: #1a1a2e;
+    background-color: #FDF5E7;
+    color: #262625;
     font-family: var(--font-nunito), system-ui, sans-serif;
-  }
-
-  /* ── Classic / dark cosmic theme ── */
-  [data-site-theme="classic"] body {
-    background-color: #FFFBF5;
-    color: #1a1a1a;
-    font-family: var(--font-inter), system-ui, sans-serif;
   }
 }
 
 @layer utilities {
-  /* ── Storybook theme utilities ── */
   .font-heading {
-    font-family: var(--font-baloo), system-ui, sans-serif;
-  }
-  [data-site-theme="classic"] .font-heading {
-    font-family: var(--font-playfair), serif;
+    font-family: var(--font-dynapuff), system-ui, sans-serif;
   }
 
   .font-body {
     font-family: var(--font-nunito), system-ui, sans-serif;
   }
-  [data-site-theme="classic"] .font-body {
-    font-family: var(--font-inter), system-ui, sans-serif;
-  }
 
   .card-chunky {
-    border: 2.5px solid #1a1a2e;
+    border: 2.5px solid #262625;
     border-radius: 1.5rem;
-    box-shadow: 5px 5px 0px #1a1a2e;
+    box-shadow: 5px 5px 0px #262625;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .card-chunky:hover {
     transform: translate(-2px, -2px);
-    box-shadow: 7px 7px 0px #1a1a2e;
+    box-shadow: 7px 7px 0px #262625;
   }
 
   .btn-chunky {
-    border: 2.5px solid #1a1a2e;
-    box-shadow: 4px 4px 0px #1a1a2e;
+    border: 2.5px solid #262625;
+    box-shadow: 4px 4px 0px #262625;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
     font-weight: 800;
     border-radius: 100px;
   }
   .btn-chunky:hover {
     transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px #1a1a2e;
+    box-shadow: 2px 2px 0px #262625;
   }
   .btn-chunky:active {
     transform: translate(4px, 4px);
-    box-shadow: 0px 0px 0px #1a1a2e;
+    box-shadow: 0px 0px 0px #262625;
   }
 
-  /* ── Classic theme utilities ── */
-  .gradient-primary { @apply bg-gradient-to-r from-violet-600 to-pink-500; }
-  .gradient-text { @apply bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent; }
-  .gradient-text-light { @apply bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent; }
+  .bg-dots {
+    background-image: radial-gradient(circle, #CB6CE622 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+  }
+
+  .bg-stars {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpolygon points='20,2 22,16 36,18 26,27 30,42 20,33 10,42 14,27 4,18 18,16' fill='%23FFDE59' opacity='0.12'/%3E%3Cpolygon points='62,30 63,39 72,40 66,45 68,54 62,49 56,54 58,45 52,40 61,39' fill='%23CB6CE6' opacity='0.1'/%3E%3C/svg%3E");
+    background-size: 80px 80px;
+  }
+
+  .gradient-primary { @apply bg-gradient-to-r from-[#5E17EB] to-[#CB6CE6]; }
+  .gradient-text { @apply bg-gradient-to-r from-[#5E17EB] to-[#CB6CE6] bg-clip-text text-transparent; }
   .glass-card { @apply bg-white/10 backdrop-blur-md border border-white/20; }
   .glass-card-dark { @apply bg-black/20 backdrop-blur-md border border-white/10; }
-
-  /* Shared */
-  .bg-dots {
-    background-image: radial-gradient(circle, #1a1a2e18 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
 }
 
 /* ══════════════════════════════════════════
-   STORYBOOK ANIMATIONS
+   ANIMATIONS
    ══════════════════════════════════════════ */
 @keyframes wiggle {
   0%, 100% { transform: rotate(-2deg); }
@@ -121,6 +108,10 @@
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(10px) rotate(-4deg); }
 }
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(-2deg); }
+}
 @keyframes spin-slow {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -137,14 +128,6 @@
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* ══════════════════════════════════════════
-   CLASSIC ANIMATIONS
-   ══════════════════════════════════════════ */
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(-2deg); }
 }
 @keyframes shimmer {
   0% { background-position: -200% center; }
@@ -173,12 +156,8 @@
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
-@keyframes rainbow-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
 
-/* ── Animation classes ── */
+/* Animation classes */
 .animate-wiggle          { animation: wiggle 1.5s ease-in-out infinite; }
 .animate-bounce-gentle   { animation: bounce-gentle 2.5s ease-in-out infinite; }
 .animate-float           { animation: float 3.5s ease-in-out infinite; }
@@ -198,7 +177,7 @@
   animation: shimmer 3s linear infinite;
 }
 
-/* ── SVG Theme card animations ── */
+/* SVG card animations */
 @keyframes svg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes svg-sway { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } }
 @keyframes svg-twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }

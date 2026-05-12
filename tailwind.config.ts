@@ -44,6 +44,13 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: {
+          yellow: "#FFDE59",
+          purple: "#5E17EB",
+          lilac: "#CB6CE6",
+          dark: "#262625",
+          bg: "#FDF5E7",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -52,7 +59,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-nunito)", "system-ui", "sans-serif"],
-        heading: ["var(--font-baloo)", "system-ui", "sans-serif"],
+        heading: ["var(--font-dynapuff)", "system-ui", "sans-serif"],
+        body: ["var(--font-nunito)", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
