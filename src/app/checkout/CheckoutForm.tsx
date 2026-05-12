@@ -25,7 +25,7 @@ export default function CheckoutForm({
   childName,
   tiers,
 }: CheckoutFormProps) {
-  const [selectedTier, setSelectedTier] = useState<PricingTier>("mid");
+  const [selectedTier, setSelectedTier] = useState<PricingTier>("base");
   const [isGift, setIsGift] = useState(false);
   const [giftRecipientName, setGiftRecipientName] = useState("");
   const [giftRecipientEmail, setGiftRecipientEmail] = useState("");
@@ -76,12 +76,14 @@ export default function CheckoutForm({
   }
 
   const isGiftValid =
-    !isGift || (giftRecipientName.trim() && giftRecipientEmail.trim());
+    !isGift ||
+    (giftRecipientName.trim().length > 0 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(giftRecipientEmail.trim()));
 
   return (
     <div>
       {/* Tier selection */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+      <div className="mx-auto mb-10 grid max-w-md grid-cols-1 gap-4">
         {tiers.map((tier) => {
           const isSelected = selectedTier === tier.id;
           return (
@@ -136,11 +138,17 @@ export default function CheckoutForm({
       {/* Gift toggle */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isGift}
+            onChange={(e) => setIsGift(e.target.checked)}
+            className="sr-only"
+          />
           <div
             className={`relative w-12 h-7 rounded-full transition-colors ${
               isGift ? "bg-[#7C3AED]" : "bg-gray-200"
             }`}
-            onClick={() => setIsGift(!isGift)}
+            aria-hidden="true"
           >
             <div
               className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
@@ -205,6 +213,12 @@ export default function CheckoutForm({
                 className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent resize-none"
               />
             </div>
+            {!isGiftValid && (
+              <p className="text-sm text-red-600">
+                Enter the recipient&apos;s name and a valid email address to
+                send this as a gift.
+              </p>
+            )}
           </div>
         )}
       </div>

@@ -36,7 +36,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Delete the profile (books are kept for record-keeping)
+  const { count: bookCount } = await supabase
+    .from("books")
+    .select("id", { count: "exact", head: true })
+    .eq("child_profile_id", profileId);
+
+  if ((bookCount ?? 0) > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "This profile has storybooks attached and cannot be deleted from the launch dashboard.",
+      },
+      { status: 409 }
+    );
+  }
+
+  // Delete only unused profiles. Books cascade from child_profiles in the schema.
   const { error } = await supabase
     .from("child_profiles")
     .delete()

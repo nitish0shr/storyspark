@@ -71,7 +71,7 @@ export default function Footer() {
           </Link>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {["⚡ Ready in 2 minutes", "🔒 Photo stays private", "💯 30-day guarantee"].map((item) => (
+            {["✨ Free preview", "🔒 Photo stays private", "💯 7-day guarantee"].map((item) => (
               <span key={item} className="font-body font-bold text-sm text-[#1a1a2e]/60">
                 {item}
               </span>

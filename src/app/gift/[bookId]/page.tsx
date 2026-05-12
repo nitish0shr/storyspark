@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import Navbar from "@/components/shared/Navbar";
 import { Button } from "@/components/ui/button";
 import { Gift, BookOpen, Download, Sparkles, Heart } from "lucide-react";
@@ -10,17 +11,17 @@ export const dynamic = "force-dynamic";
 
 interface GiftPageProps {
   params: Promise<{ bookId: string }>;
+  searchParams?: Promise<{ token?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: GiftPageProps): Promise<Metadata> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!isAdminConfigured()) {
     return { title: "Starmee Gift" };
   }
   const { bookId } = await params;
-  const supabase = await createClient();
-  const { data: book } = await supabase
+  const { data: book } = await supabaseAdmin
     .from("books")
     .select("*, child_profiles(*)")
     .eq("id", bookId)
@@ -34,15 +35,19 @@ export async function generateMetadata({
   };
 }
 
-export default async function GiftPage({ params }: GiftPageProps) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+export default async function GiftPage({ params, searchParams }: GiftPageProps) {
+  if (!isAdminConfigured()) {
     redirect("/");
   }
   const { bookId } = await params;
-  const supabase = await createClient();
+  const { token } = (await searchParams) ?? {};
+
+  if (!token) {
+    redirect("/");
+  }
 
   // Fetch the book and related order
-  const { data: book } = await supabase
+  const { data: book } = await supabaseAdmin
     .from("books")
     .select("*, child_profiles(*)")
     .eq("id", bookId)
@@ -53,22 +58,34 @@ export default async function GiftPage({ params }: GiftPageProps) {
   }
 
   // Fetch the gift order
-  const { data: order } = await supabase
+  const { data: order } = await supabaseAdmin
     .from("orders")
     .select("*")
     .eq("book_id", bookId)
     .eq("is_gift", true)
-    .eq("status", "paid")
+    .eq("gift_access_token", token)
+    .in("status", ["paid", "fulfilled"])
+    .single();
+
+  if (!order) {
+    redirect("/");
+  }
+
+  const { data: buyerProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", order.user_id)
     .single();
 
   const childName = book.child_profiles?.name || "Your Little One";
 
   const giftMessage = order?.gift_message;
-  const senderName = order?.gift_recipient_name;
+  const senderName = buyerProfile?.full_name || "someone special";
   const isComplete = book.status === "complete";
   const pdfUrl = book.pdf_url;
 
   // Get user session for navbar
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -148,7 +165,7 @@ export default async function GiftPage({ params }: GiftPageProps) {
                       Download {childName}&apos;s Book
                     </Button>
                   </a>
-                  <Link href={`/preview/${bookId}`}>
+                  <Link href={`/preview/${bookId}?token=${token}`}>
                     <Button
                       variant="outline"
                       className="w-full h-12 rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50 mt-3"
@@ -164,10 +181,11 @@ export default async function GiftPage({ params }: GiftPageProps) {
                     <Sparkles className="h-6 w-6 text-violet-600" />
                   </div>
                   <p className="text-gray-600">
-                    {childName}&apos;s book is still being created...
+                    {childName}&apos;s book is being created and reviewed.
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
-                    Check back in a few minutes!
+                    The ready link will work as soon as the final PDF is
+                    approved.
                   </p>
                 </div>
               )}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { generatePreview } from "@/services/book-pipeline";
 import { isOpenAIConfigured } from "@/lib/openai";
 import { isReplicateConfigured } from "@/lib/replicate";
@@ -10,6 +10,12 @@ export async function POST(request: NextRequest) {
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
         { error: "Database not configured. Please add Supabase environment variables." },
+        { status: 503 }
+      );
+    }
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "Server database admin access is not configured." },
         { status: 503 }
       );
     }
@@ -56,10 +62,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Prevent re-generating if already in progress
-    if (book.status === "preview_generating" || book.status === "generating") {
+    if (!["draft", "failed"].includes(book.status)) {
       return NextResponse.json(
-        { error: "Book generation already in progress" },
+        { error: "Preview generation cannot be started for this book status." },
         { status: 409 }
       );
     }

@@ -30,7 +30,11 @@ export default function ChildProfileCard({ child }: ChildProfileCardProps) {
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
-    if (!confirm(`Delete ${child.name}'s profile? This cannot be undone. Books will be kept.`)) {
+    if (
+      !confirm(
+        `Delete ${child.name}'s profile? This only works for profiles with no storybooks attached.`
+      )
+    ) {
       return;
     }
 
@@ -44,6 +48,9 @@ export default function ChildProfileCard({ child }: ChildProfileCardProps) {
 
       if (res.ok) {
         router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not delete this profile.");
       }
     } finally {
       setDeleting(false);
@@ -94,7 +101,7 @@ export default function ChildProfileCard({ child }: ChildProfileCardProps) {
         </div>
 
         <div className="mt-4 pt-3 border-t border-violet-50">
-          <Link href={`/create?childId=${child.id}`}>
+          <Link href="/create">
             <Button
               variant="outline"
               className="w-full rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50 hover:border-violet-300 font-medium text-sm transition-colors"

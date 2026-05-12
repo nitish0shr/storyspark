@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 const guarantees = [
   {
     icon: Clock,
-    title: "10-minute delivery",
-    body: "Your personalized book arrives by email within minutes, not weeks.",
+    title: "Reviewed delivery",
+    body: "Your purchased book is generated, quality checked, then delivered by private email link.",
   },
   {
     icon: Undo2,

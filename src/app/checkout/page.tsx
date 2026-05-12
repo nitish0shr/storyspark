@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/utils";
-import { PRICE_BASE, PRICE_MID, PRICE_PREMIUM } from "@/lib/stripe";
+import { PRICE_BASE } from "@/lib/stripe";
 import Navbar from "@/components/shared/Navbar";
 import CheckoutForm from "./CheckoutForm";
 
@@ -48,7 +48,10 @@ export default async function CheckoutPage({
   const user = await getUser();
 
   if (!user) {
-    redirect("/auth/login?redirect=/checkout" + (bookId ? `?bookId=${bookId}` : ""));
+    const redirectTo = bookId
+      ? `/checkout?bookId=${encodeURIComponent(bookId)}`
+      : "/checkout";
+    redirect(`/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`);
   }
 
   if (!bookId) {
@@ -70,6 +73,10 @@ export default async function CheckoutPage({
     redirect(`/checkout/success?book_id=${bookId}`);
   }
 
+  if (book.status !== "preview_ready") {
+    redirect(`/preview/${bookId}`);
+  }
+
   // Get cover illustration for preview thumbnail
   const { data: coverPage } = await supabaseAdmin
     .from("book_pages")
@@ -81,39 +88,14 @@ export default async function CheckoutPage({
   const tiers = [
     {
       id: "base" as const,
-      name: "Digital Book",
+      name: "Digital PDF",
       price: PRICE_BASE,
       priceLabel: formatPrice(PRICE_BASE),
       features: [
-        "Full illustrated story",
-        "PDF download",
+        "Full 12-page illustrated story",
+        "Print-ready PDF download",
         "Read in browser",
         "Saved to your account",
-      ],
-    },
-    {
-      id: "mid" as const,
-      name: "Deluxe Digital",
-      price: PRICE_MID,
-      priceLabel: formatPrice(PRICE_MID),
-      popular: true,
-      features: [
-        "Everything in Digital Book",
-        "Print-ready high-res PDF",
-        "Bonus coloring pages",
-        "Audio narration",
-      ],
-    },
-    {
-      id: "premium" as const,
-      name: "Premium Bundle",
-      price: PRICE_PREMIUM,
-      priceLabel: formatPrice(PRICE_PREMIUM),
-      features: [
-        "Everything in Deluxe Digital",
-        "Hardcover shipped to you",
-        "Gift wrapping available",
-        "Priority support",
       ],
     },
   ];

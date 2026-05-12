@@ -25,15 +25,37 @@ export async function POST(request: NextRequest) {
       childAge,
       childGender,
       photoUrl,
+      photoConsent,
       themeId,
       contextualAnswers,
       email,
     } = body;
 
     // Validate required fields
-    if (!childName || childAge === undefined || !childGender || !themeId) {
+    const trimmedChildName =
+      typeof childName === "string" ? childName.trim() : "";
+    const validGender = ["boy", "girl", "neutral"].includes(childGender);
+    const validAge =
+      Number.isInteger(childAge) && childAge >= -1 && childAge <= 18;
+    const photoPath = typeof photoUrl === "string" ? photoUrl.trim() : "";
+
+    if (!trimmedChildName || !validAge || !validGender || !themeId) {
       return NextResponse.json(
-        { error: "Missing required fields: childName, childAge, childGender, themeId" },
+        { error: "Please provide a valid child name, age, gender, and theme." },
+        { status: 400 }
+      );
+    }
+
+    if (!photoPath || photoConsent !== true) {
+      return NextResponse.json(
+        { error: "Photo upload and parent/guardian consent are required." },
+        { status: 400 }
+      );
+    }
+
+    if (trimmedChildName.length > 60) {
+      return NextResponse.json(
+        { error: "Child name must be 60 characters or fewer." },
         { status: 400 }
       );
     }
@@ -52,10 +74,10 @@ export async function POST(request: NextRequest) {
       .from("child_profiles")
       .insert({
         user_id: user.id,
-        name: childName,
+        name: trimmedChildName,
         age: childAge,
         gender: childGender,
-        photo_url: photoUrl || null,
+        photo_url: photoPath,
       })
       .select("id")
       .single();
@@ -75,7 +97,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         child_profile_id: childProfile.id,
         theme_id: themeId,
-        child_name: childName,
+        child_name: trimmedChildName,
         theme_title: theme.name,
         contextual_answers: contextualAnswers || {},
         status: "draft",

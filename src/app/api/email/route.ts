@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { getAppUrl } from "@/lib/utils";
 
-type EmailType = "order_confirmation" | "gift_notification" | "preview_reminder";
+type EmailType = "order_confirmation" | "gift_notification" | "preview_reminder" | "preview_ready";
 
 interface OrderConfirmationData {
   buyerEmail: string;
@@ -20,6 +20,7 @@ interface GiftNotificationData {
   childName: string;
   giftMessage?: string;
   bookId: string;
+  giftAccessToken?: string;
 }
 
 interface PreviewReminderData {
@@ -28,13 +29,28 @@ interface PreviewReminderData {
   bookId: string;
 }
 
+interface PreviewReadyData {
+  email: string;
+  childName: string;
+  previewRequestId: string;
+  previewImageUrl: string;
+  themeLabel: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Simple auth check — only allow internal calls via a shared secret
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.INTERNAL_API_SECRET;
 
-    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+    if (!expectedToken) {
+      return NextResponse.json(
+        { error: "Internal email API is not configured." },
+        { status: 503 }
+      );
+    }
+
+    if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -88,9 +104,9 @@ export async function POST(request: NextRequest) {
 
       case "gift_notification": {
         const d = data as unknown as GiftNotificationData;
-        if (!d.recipientEmail) {
+        if (!d.recipientEmail || !d.giftAccessToken) {
           return NextResponse.json(
-            { error: "recipientEmail is required" },
+            { error: "recipientEmail and giftAccessToken are required" },
             { status: 400 }
           );
         }
@@ -104,7 +120,7 @@ export async function POST(request: NextRequest) {
             senderName: d.senderName || "Someone special",
             childName: d.childName,
             giftMessage: d.giftMessage || null,
-            bookUrl: `${appUrl}/gift/${d.bookId}`,
+            bookUrl: `${appUrl}/gift/${d.bookId}?token=${d.giftAccessToken}`,
             appUrl,
           }),
         });
@@ -129,6 +145,28 @@ export async function POST(request: NextRequest) {
             childName: d.childName,
             previewUrl: `${appUrl}/preview/${d.bookId}`,
             appUrl,
+          }),
+        });
+
+        return NextResponse.json({ sent: true });
+      }
+
+      case "preview_ready": {
+        const d = data as unknown as PreviewReadyData;
+        if (!d.email) {
+          return NextResponse.json({ error: "email is required" }, { status: 400 });
+        }
+
+        await resend.emails.send({
+          from: RESEND_FROM_EMAIL,
+          to: d.email,
+          subject: `✨ ${d.childName}'s magical preview is ready!`,
+          html: buildPreviewReady({
+            childName: d.childName,
+            previewUrl: `${appUrl}/preview/result/${d.previewRequestId}`,
+            previewImageUrl: d.previewImageUrl,
+            themeLabel: d.themeLabel,
+            createUrl: `${appUrl}/create`,
           }),
         });
 
@@ -165,7 +203,7 @@ function emailWrapper(headerTitle: string, headerSubtitle: string, bodyHtml: str
 <body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
+    <div style="background:linear-gradient(135deg,#E8417A,#FF9BBD);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
       <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">${headerTitle}</h1>
       <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">${headerSubtitle}</p>
     </div>
@@ -185,7 +223,7 @@ function emailWrapper(headerTitle: string, headerSubtitle: string, bodyHtml: str
 function ctaButton(url: string, label: string): string {
   return `
     <div style="text-align:center;margin:24px 0;">
-      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
+      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#E8417A,#FF9BBD);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
         ${label}
       </a>
     </div>`;
@@ -201,7 +239,7 @@ function buildOrderConfirmation(data: {
 }): string {
   const pdfBlock = data.pdfUrl
     ? `<div style="text-align:center;margin:8px 0 24px;">
-        <a href="${data.pdfUrl}" style="color:#7C3AED;font-size:14px;font-weight:600;text-decoration:underline;">
+        <a href="${data.pdfUrl}" style="color:#E8417A;font-size:14px;font-weight:600;text-decoration:underline;">
           Download PDF
         </a>
       </div>`
@@ -219,7 +257,7 @@ function buildOrderConfirmation(data: {
       ${pdfBlock}
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
         Your book is saved to your account at
-        <a href="${data.dashboardUrl}" style="color:#7C3AED;">your dashboard</a>.
+        <a href="${data.dashboardUrl}" style="color:#E8417A;">your dashboard</a>.
       </p>
     `
   );
@@ -234,9 +272,9 @@ function buildGiftNotification(data: {
   appUrl: string;
 }): string {
   const giftBlock = data.giftMessage
-    ? `<div style="background:#f8f0ff;border-left:4px solid #7C3AED;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
+    ? `<div style="background:#f8f0ff;border-left:4px solid #E8417A;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
         <p style="margin:0;color:#4a4a5a;font-size:14px;font-style:italic;line-height:1.6;">"${data.giftMessage}"</p>
-        <p style="margin:8px 0 0;color:#7C3AED;font-size:13px;font-weight:600;">&mdash; ${data.senderName}</p>
+        <p style="margin:8px 0 0;color:#E8417A;font-size:13px;font-weight:600;">&mdash; ${data.senderName}</p>
       </div>`
     : "";
 
@@ -252,7 +290,7 @@ function buildGiftNotification(data: {
       ${giftBlock}
       ${ctaButton(data.bookUrl, "View the Book")}
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
-        Want to create your own? <a href="${data.appUrl}" style="color:#7C3AED;">Get started here</a>.
+        Want to create your own? <a href="${data.appUrl}" style="color:#E8417A;">Get started here</a>.
       </p>
     `
   );
@@ -278,6 +316,56 @@ function buildPreviewReminder(data: {
       ${ctaButton(data.previewUrl, "See the Preview")}
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
         Questions? Just reply to this email.
+      </p>
+    `
+  );
+}
+
+function buildPreviewReady(data: {
+  childName: string;
+  previewUrl: string;
+  previewImageUrl: string;
+  themeLabel: string;
+  createUrl: string;
+}): string {
+  return emailWrapper(
+    "✨ Your free preview is ready!",
+    `${data.childName}'s ${data.themeLabel} adventure`,
+    `
+      <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">
+        ${data.childName}'s preview is ready! 🎉
+      </h2>
+      <p style="margin:0 0 20px;color:#4a4a5a;font-size:15px;line-height:1.6;">
+        We just created a magical illustrated preview of ${data.childName} as the hero of their very own
+        <strong>${data.themeLabel}</strong> storybook!
+      </p>
+
+      <!-- Preview image -->
+      <div style="text-align:center;margin:0 0 24px;">
+        <img
+          src="${data.previewImageUrl}"
+          alt="${data.childName}'s preview"
+          style="width:100%;max-width:320px;border-radius:16px;display:inline-block;"
+        />
+      </div>
+
+      ${ctaButton(data.previewUrl, "See Your Preview →")}
+
+      <div style="background:#fff5f8;border-radius:12px;padding:16px 20px;margin:20px 0;text-align:center;">
+        <p style="margin:0 0 12px;color:#1a1a2e;font-size:14px;font-weight:700;">
+          Love it? Get the full 12-page storybook for just $9.99
+        </p>
+        <div style="display:flex;justify-content:center;gap:16px;font-size:12px;color:#6b6b8a;">
+          <span>📖 12 illustrated pages</span>
+          <span>🖨️ Printable PDF</span>
+          <span>💝 Keepsake gift</span>
+        </div>
+      </div>
+
+      ${ctaButton(data.createUrl, "Create the Full Storybook — $9.99")}
+
+      <p style="margin:20px 0 0;color:#9a9aaa;font-size:12px;text-align:center;">
+        Questions? Just reply to this email — we're happy to help.
       </p>
     `
   );

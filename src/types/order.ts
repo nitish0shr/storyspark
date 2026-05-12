@@ -1,5 +1,5 @@
 export type OrderStatus = "pending" | "paid" | "fulfilled" | "refunded" | "failed";
-export type PricingTier = "base" | "mid" | "premium";
+export type PricingTier = "base";
 
 export interface Order {
   id: string;
@@ -15,6 +15,7 @@ export interface Order {
   giftRecipientName: string | null;
   giftRecipientEmail: string | null;
   giftMessage: string | null;
+  giftAccessToken?: string | null;
   emailDelivered: boolean;
   createdAt: string;
 }

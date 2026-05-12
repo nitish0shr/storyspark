@@ -11,6 +11,7 @@ interface WizardState {
   photoFile: File | null;
   photoPreviewUrl: string | null;
   photoUrl: string | null; // server URL after upload
+  photoConsent: boolean;
   selectedThemeId: string | null;
   contextualAnswers: Record<string, string>;
   email: string;
@@ -27,6 +28,7 @@ interface WizardState {
   setChildGender: (gender: "boy" | "girl" | "neutral") => void;
   setPhoto: (file: File, previewUrl: string) => void;
   setPhotoUrl: (url: string) => void;
+  setPhotoConsent: (consent: boolean) => void;
   setSelectedTheme: (themeId: string) => void;
   setContextualAnswer: (questionId: string, answer: string) => void;
   setEmail: (email: string) => void;
@@ -39,11 +41,12 @@ interface WizardState {
 const initialState = {
   step: 1,
   childName: "",
-  childAge: -1,
+  childAge: -99,
   childGender: "" as const,
   photoFile: null,
   photoPreviewUrl: null,
   photoUrl: null,
+  photoConsent: false,
   selectedThemeId: null,
   contextualAnswers: {},
   email: "",
@@ -67,6 +70,7 @@ export const useWizardStore = create<WizardState>()(
       setPhoto: (photoFile, photoPreviewUrl) =>
         set({ photoFile, photoPreviewUrl }),
       setPhotoUrl: (photoUrl) => set({ photoUrl }),
+      setPhotoConsent: (photoConsent) => set({ photoConsent }),
       setSelectedTheme: (selectedThemeId) =>
         set({ selectedThemeId, contextualAnswers: {} }),
       setContextualAnswer: (questionId, answer) =>
@@ -92,6 +96,7 @@ export const useWizardStore = create<WizardState>()(
         childAge: state.childAge,
         childGender: state.childGender,
         photoUrl: state.photoUrl,
+        photoConsent: state.photoConsent,
         selectedThemeId: state.selectedThemeId,
         contextualAnswers: state.contextualAnswers,
         email: state.email,

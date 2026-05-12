@@ -1,10 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { ReviewActions } from "./ReviewActions";
 
 async function getPendingBooks() {
+  if (!isAdminConfigured()) {
+    return { books: [], pendingCount: 0, orders: {} };
+  }
+
   const supabase = createAdminClient();
 
   const { data: books } = await supabase
@@ -23,7 +27,10 @@ async function getPendingBooks() {
 
   // Get order info for each book
   const bookIds = (books ?? []).map((b) => b.id);
-  let orders: Record<string, { buyer_email: string; tier: string; amount_cents: number }> = {};
+  const orders: Record<
+    string,
+    { buyer_email: string; tier: string; amount_cents: number }
+  > = {};
 
   if (bookIds.length > 0) {
     const { data: orderData } = await supabase
@@ -125,6 +132,7 @@ export default async function AdminReviewPage() {
                 {thumbnails.length > 0 && (
                   <div className="mt-4 flex gap-2 overflow-x-auto">
                     {thumbnails.map((url, idx) => (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         key={idx}
                         src={url}
@@ -159,7 +167,7 @@ export default async function AdminReviewPage() {
                       Download PDF
                     </a>
                   )}
-                  <ReviewActions bookId={book.id} />
+                  <ReviewActions bookId={book.id} canApprove={!!book.pdf_url} />
                 </div>
               </div>
             );

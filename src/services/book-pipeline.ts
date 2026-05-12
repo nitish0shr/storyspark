@@ -11,6 +11,7 @@ import {
   estimateFullBookCompletionCost,
 } from "@/lib/cost-estimator";
 import { logServerError } from "@/lib/monitor";
+import { createSignedPhotoUrl } from "@/lib/storage";
 
 /**
  * Fetches a book record and its associated child profile from the database.
@@ -59,6 +60,30 @@ async function updateBookStatus(
   }
 }
 
+async function upsertBookPages(
+  bookId: string,
+  themeId: string,
+  storyPages: BookPage[],
+  illustrationUrls: (string | null)[]
+) {
+  const skeleton = storySkeletons[themeId] ?? [];
+  const rows = storyPages.map((page, idx) => ({
+    book_id: bookId,
+    page_number: page.pageNumber,
+    text: page.text,
+    illustration_url: illustrationUrls[idx] ?? null,
+    scene_description: skeleton[idx]?.sceneDescription ?? null,
+  }));
+
+  const { error } = await supabaseAdmin
+    .from("book_pages")
+    .upsert(rows, { onConflict: "book_id,page_number" });
+
+  if (error) {
+    throw new Error(`Failed to save book pages: ${error.message}`);
+  }
+}
+
 /**
  * Generates a preview for the book:
  * 1. Runs face analysis if needed
@@ -76,7 +101,15 @@ export async function generatePreview(bookId: string): Promise<void> {
     let appearanceProfile: AppearanceProfile = child.appearance_profile;
 
     if (!appearanceProfile && child.photo_url) {
-      appearanceProfile = await analyzeFace(child.photo_url);
+      const signedPhotoUrl = await createSignedPhotoUrl(child.photo_url, 15 * 60);
+      appearanceProfile = signedPhotoUrl
+        ? await analyzeFace(signedPhotoUrl)
+        : {
+            skinTone: "warm medium",
+            hairColor: "brown",
+            hairStyle: "short straight",
+            eyeColor: "brown",
+          };
 
       // Save the appearance profile back to the child record
       await supabaseAdmin
@@ -142,6 +175,8 @@ export async function generatePreview(bookId: string): Promise<void> {
 
     // Track estimated cost (see cost-estimator.ts for rationale)
     const previewCost = estimatePreviewCost();
+
+    await upsertBookPages(bookId, book.theme_id, storyPages, allIllustrationUrls);
 
     await updateBookStatus(bookId, "preview_ready", {
       story_text: storyPages,
@@ -223,6 +258,8 @@ export async function generateFullBook(bookId: string): Promise<void> {
     }
 
     // Save illustration URLs before PDF assembly
+    await upsertBookPages(bookId, book.theme_id, storyPages, allIllustrationUrls);
+
     await updateBookStatus(bookId, "generating", {
       illustration_urls: allIllustrationUrls,
     });

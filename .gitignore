@@ -40,3 +40,4 @@ next-env.d.ts
 
 # local dev tooling
 /.claude/
+supabase/.temp/

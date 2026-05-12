@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const metadata = session.metadata ?? {};
+
+  // Route to the correct handler based on checkout flow
+  if (metadata.flow === "from_preview") {
+    await handleFromPreviewCheckout(session, metadata);
+    return;
+  }
+
   const bookId = metadata.book_id;
   const userId = metadata.user_id;
   const tier = metadata.tier;
@@ -89,20 +96,47 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : (session.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
+
   // 1. Update order status to paid
-  const { error: orderError } = await supabaseAdmin
+  const { data: updatedOrder, error: orderError } = await supabaseAdmin
     .from("orders")
     .update({
       status: "paid",
-      stripe_payment_intent_id:
-        typeof session.payment_intent === "string"
-          ? session.payment_intent
-          : (session.payment_intent as Stripe.PaymentIntent | null)?.id ?? null,
+      stripe_payment_intent_id: paymentIntentId,
     })
-    .eq("stripe_checkout_session_id", session.id);
+    .eq("stripe_checkout_session_id", session.id)
+    .select("id")
+    .maybeSingle();
 
   if (orderError) {
     console.error("Failed to update order to paid:", orderError);
+  }
+
+  if (!updatedOrder) {
+    const { error: insertOrderError } = await supabaseAdmin
+      .from("orders")
+      .insert({
+        user_id: userId,
+        book_id: bookId,
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        status: "paid",
+        amount_cents: session.amount_total ?? 0,
+        currency: session.currency ?? "usd",
+        tier: "base",
+        is_gift: isGift,
+        gift_recipient_name: giftRecipientName,
+        gift_recipient_email: giftRecipientEmail,
+        gift_access_token: metadata.gift_access_token || null,
+      });
+
+    if (insertOrderError) {
+      console.error("Failed to insert paid order from webhook:", insertOrderError);
+    }
   }
 
   // 2. Mark book as purchased
@@ -118,13 +152,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .eq("id", bookId)
     .single();
 
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("full_name, email")
-    .eq("id", userId)
-    .single();
+  const [{ data: profile }, { data: authUser }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userId)
+      .single(),
+    supabaseAdmin.auth.admin.getUserById(userId),
+  ]);
 
-  const buyerEmail = session.customer_email || profile?.email;
+  const buyerEmail = session.customer_email || authUser?.user?.email;
   const buyerName = profile?.full_name || "there";
   const childName = book?.child_name || "your child";
   const appUrl = getAppUrl();
@@ -141,14 +178,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         to: adminEmail,
         subject: `New Starmee Order — ${childName} (${amount})`,
         html: `<div style="font-family:sans-serif;padding:20px;">
-          <h2 style="color:#7C3AED;">New Order Received</h2>
+          <h2 style="color:#E8417A;">New Order Received</h2>
           <p><strong>Child:</strong> ${childName}</p>
           <p><strong>Buyer:</strong> ${buyerName} (${buyerEmail || "no email"})</p>
           <p><strong>Tier:</strong> ${tier || "base"}</p>
           <p><strong>Amount:</strong> ${amount}</p>
           <p><strong>Book ID:</strong> ${bookId}</p>
           <p><strong>Gift:</strong> ${isGift ? `Yes — to ${giftRecipientName} (${giftRecipientEmail})` : "No"}</p>
-          <p style="margin-top:20px;">The book is generating now. Once ready, it will appear in the <a href="${appUrl}/admin/review" style="color:#7C3AED;">Review Queue</a> for approval before delivery.</p>
+          <p style="margin-top:20px;">The book is generating now. Once ready, it will appear in the <a href="${appUrl}/admin/review" style="color:#E8417A;">Review Queue</a> for approval before delivery.</p>
         </div>`,
       });
     } catch (adminEmailErr) {
@@ -156,10 +193,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // 5. Trigger full book generation in background (don't await)
-  generateFullBook(bookId).catch((err) => {
-    console.error(`Background full-book generation failed for ${bookId}:`, err);
-  });
+  // 5. Trigger full book generation once. Railway runs this as a long-lived
+  // Node process, so the background promise can continue after the webhook
+  // response; the status checks below keep Stripe retries idempotent.
+  if (book?.status === "preview_ready") {
+    generateFullBook(bookId).catch((err) => {
+      console.error(`Background full-book generation failed for ${bookId}:`, err);
+    });
+  }
 
   // 6. Send order confirmation email to buyer
   if (buyerEmail && isResendConfigured()) {
@@ -177,41 +218,194 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         }),
       });
 
-      // Mark email delivered on order
-      await supabaseAdmin
-        .from("orders")
-        .update({ email_delivered: true })
-        .eq("stripe_checkout_session_id", session.id);
     } catch (emailErr) {
       console.error("Failed to send order confirmation email:", emailErr);
     }
   }
 
-  // 7. If gift, send notification to recipient
-  if (isGift && giftRecipientEmail && isResendConfigured()) {
-    try {
-      // Fetch gift message from order
-      const { data: order } = await supabaseAdmin
-        .from("orders")
-        .select("gift_message")
-        .eq("stripe_checkout_session_id", session.id)
-        .single();
+  // 7. Gift recipient delivery happens only after admin approval, when the
+  // reviewed book and PDF are complete.
+}
 
+// ---------------------------------------------------------------------------
+// from_preview checkout flow — creates user + book + order after payment
+// ---------------------------------------------------------------------------
+
+async function handleFromPreviewCheckout(
+  session: Stripe.Checkout.Session,
+  metadata: Record<string, string>
+) {
+  const previewRequestId = metadata.preview_request_id;
+  const buyerEmail = session.customer_email || metadata.buyer_email;
+
+  if (!previewRequestId || !buyerEmail) {
+    console.error("from_preview webhook missing preview_request_id or buyer_email");
+    return;
+  }
+
+  // Idempotency: if preview_request already has a converted_book_id, skip
+  const { data: previewReq } = await supabaseAdmin
+    .from("preview_requests")
+    .select("id, email, child_name, child_age, theme_id, photo_url, preferences, preview_image_url, converted_book_id")
+    .eq("id", previewRequestId)
+    .single();
+
+  if (!previewReq) {
+    console.error("Preview request not found:", previewRequestId);
+    return;
+  }
+
+  let bookId = previewReq.converted_book_id as string | null;
+
+  if (!bookId) {
+    // Step 1: Find or create Supabase user for this email
+    let userId: string;
+
+    const { data: created } = await supabaseAdmin.auth.admin.createUser({
+      email: buyerEmail.toLowerCase(),
+      email_confirm: true,
+      user_metadata: { source: "starmee_preview_checkout" },
+    });
+
+    if (created?.user) {
+      userId = created.user.id;
+    } else {
+      // User already exists — find them
+      const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      const existing = list?.users?.find(
+        (u) => u.email?.toLowerCase() === buyerEmail.toLowerCase()
+      );
+      if (!existing) {
+        console.error("Could not find or create user for:", buyerEmail);
+        return;
+      }
+      userId = existing.id;
+    }
+
+    // Track user_id on preview_request
+    await supabaseAdmin
+      .from("preview_requests")
+      .update({ supabase_user_id: userId })
+      .eq("id", previewRequestId);
+
+    // Step 2: Create child_profile from preview data
+    const prefs = (previewReq.preferences as Record<string, string>) || {};
+    const gender = prefs.gender || "neutral";
+
+    const { data: childProfile } = await supabaseAdmin
+      .from("child_profiles")
+      .insert({
+        user_id: userId,
+        name: previewReq.child_name || "Child",
+        age: previewReq.child_age || 5,
+        gender: ["boy", "girl", "neutral"].includes(gender) ? gender : "neutral",
+        photo_url: previewReq.photo_url || null,
+      })
+      .select("id")
+      .single();
+
+    if (!childProfile) {
+      console.error("Failed to create child profile for user:", userId);
+      return;
+    }
+
+    // Step 3: Create book record — mark preview_ready so generation can start
+    const { data: newBook } = await supabaseAdmin
+      .from("books")
+      .insert({
+        user_id: userId,
+        child_profile_id: childProfile.id,
+        child_name: previewReq.child_name || "Child",
+        theme_id: previewReq.theme_id || "royal-quest",
+        status: "preview_ready",
+        is_purchased: true,
+        preview_image_url: previewReq.preview_image_url || null,
+      })
+      .select("id")
+      .single();
+
+    if (!newBook) {
+      console.error("Failed to create book for user:", userId);
+      return;
+    }
+
+    bookId = newBook.id;
+
+    // Link preview_request → book
+    await supabaseAdmin
+      .from("preview_requests")
+      .update({ converted_book_id: bookId })
+      .eq("id", previewRequestId);
+  }
+
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : (session.payment_intent as Stripe.PaymentIntent | null)?.id ?? null;
+
+  // Step 4: Create order record
+  const { data: book } = await supabaseAdmin
+    .from("books")
+    .select("user_id, child_name, theme_id")
+    .eq("id", bookId)
+    .single();
+
+  if (!book) return;
+
+  await supabaseAdmin.from("orders").insert({
+    user_id: book.user_id,
+    book_id: bookId,
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id: paymentIntentId,
+    status: "paid",
+    amount_cents: session.amount_total ?? PRICE_BASE,
+    currency: session.currency ?? "usd",
+    tier: "base",
+    is_gift: false,
+  });
+
+  // Step 5: Trigger full book generation
+  generateFullBook(bookId).catch((err) => {
+    console.error(`from_preview full-book generation failed for ${bookId}:`, err);
+  });
+
+  // Step 6: Send confirmation email
+  const appUrl = getAppUrl();
+  const childName = book.child_name || previewReq.child_name || "your child";
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+
+  if (isResendConfigured()) {
+    // Buyer confirmation
+    await resend.emails.send({
+      from: RESEND_FROM_EMAIL,
+      to: buyerEmail,
+      subject: `✨ ${childName}'s Starmee book is being created!`,
+      html: buildOrderConfirmationEmail({
+        buyerName: "there",
+        childName,
+        tier: "base",
+        bookUrl: `${appUrl}/checkout/success?session_id=${session.id}`,
+        appUrl,
+      }),
+    }).catch((e) => console.error("Confirmation email failed:", e));
+
+    // Admin notification
+    if (adminEmail) {
       await resend.emails.send({
         from: RESEND_FROM_EMAIL,
-        to: giftRecipientEmail,
-        subject: `You've received a Starmee book!`,
-        html: buildGiftNotificationEmail({
-          recipientName: giftRecipientName || "Friend",
-          senderName: buyerName,
-          childName,
-          giftMessage: order?.gift_message || null,
-          bookUrl: `${appUrl}/gift/${bookId}`,
-          appUrl,
-        }),
-      });
-    } catch (emailErr) {
-      console.error("Failed to send gift notification email:", emailErr);
+        to: adminEmail,
+        subject: `New Starmee Order (from preview) — ${childName}`,
+        html: `<div style="font-family:sans-serif;padding:20px;">
+          <h2 style="color:#E8417A;">New Order (Preview Flow)</h2>
+          <p><strong>Child:</strong> ${childName}</p>
+          <p><strong>Buyer:</strong> ${buyerEmail}</p>
+          <p><strong>Amount:</strong> $${((session.amount_total ?? PRICE_BASE) / 100).toFixed(2)}</p>
+          <p><strong>Book ID:</strong> ${bookId}</p>
+          <p><strong>Preview Request:</strong> ${previewRequestId}</p>
+          <p style="margin-top:20px;">Book is generating. It will appear in the
+            <a href="${appUrl}/admin/review" style="color:#E8417A;">Review Queue</a> when ready.</p>
+        </div>`,
+      }).catch((e) => console.error("Admin notification failed:", e));
     }
   }
 }
@@ -252,7 +446,7 @@ function buildOrderConfirmationEmail(data: {
 <body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
+    <div style="background:linear-gradient(135deg,#E8417A,#FF9BBD);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
       <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Starmee</h1>
       <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">A magical story, just for ${data.childName}</p>
     </div>
@@ -269,77 +463,14 @@ function buildOrderConfirmationEmail(data: {
 
       <!-- CTA Button -->
       <div style="text-align:center;margin:24px 0;">
-        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
+        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#E8417A,#FF9BBD);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
           View Your Book
         </a>
       </div>
 
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
         Your book is saved to your account and available anytime at
-        <a href="${data.appUrl}/dashboard" style="color:#7C3AED;">your dashboard</a>.
-      </p>
-    </div>
-
-    <!-- Footer -->
-    <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
-      <p style="margin:0;">Made with love by Starmee</p>
-    </div>
-  </div>
-</body>
-</html>`;
-}
-
-function buildGiftNotificationEmail(data: {
-  recipientName: string;
-  senderName: string;
-  childName: string;
-  giftMessage: string | null;
-  bookUrl: string;
-  appUrl: string;
-}): string {
-  const giftMessageBlock = data.giftMessage
-    ? `
-      <div style="background:#f8f0ff;border-left:4px solid #7C3AED;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;">
-        <p style="margin:0;color:#4a4a5a;font-size:14px;font-style:italic;line-height:1.6;">"${data.giftMessage}"</p>
-        <p style="margin:8px 0 0;color:#7C3AED;font-size:13px;font-weight:600;">— ${data.senderName}</p>
-      </div>`
-    : "";
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Starmee</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">You've received a magical gift!</p>
-    </div>
-
-    <!-- Body -->
-    <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
-      <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.recipientName}!</h2>
-      <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        ${data.senderName} has gifted ${data.childName} a personalized storybook from Starmee!
-        It's a beautifully illustrated story where ${data.childName} is the hero.
-      </p>
-
-      ${giftMessageBlock}
-
-      <!-- CTA Button -->
-      <div style="text-align:center;margin:24px 0;">
-        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
-          View the Book
-        </a>
-      </div>
-
-      <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
-        Want to create a Starmee book of your own?
-        <a href="${data.appUrl}" style="color:#7C3AED;">Get started here</a>.
+        <a href="${data.appUrl}/dashboard" style="color:#E8417A;">your dashboard</a>.
       </p>
     </div>
 

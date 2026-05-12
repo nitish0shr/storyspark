@@ -16,12 +16,12 @@ const faqs = [
   {
     question: "Is my child's photo safe?",
     answer:
-      "Absolutely. Your child's photo is stored securely using industry-standard encryption and is never shared with third parties. We use the photo only to create the illustrations for your book. You can delete your child's profile and photo at any time from your dashboard, and it will be permanently removed from our servers.",
+      "Your child's photo is stored in a private bucket and used only to create the storybook experience. We send the minimum needed image context to our AI providers for generation and do not sell child data. Unused child profiles can be deleted from your dashboard; profiles tied to purchased books are retained so the book stays accessible.",
   },
   {
     question: "How long does it take?",
     answer:
-      "A preview of your storybook is ready in under 2 minutes! Once you purchase, the full high-resolution book with all illustrations is generated within 5 minutes. You'll receive a notification when your PDF is ready to download.",
+      "A preview is usually ready in a few minutes. After purchase, the full book is generated and then manually reviewed before delivery. Most launch orders should be ready the same day, and we'll email you as soon as the PDF is approved.",
   },
   {
     question: "What ages is this for?",
@@ -41,7 +41,7 @@ const faqs = [
   {
     question: "How do I access my book after purchasing?",
     answer:
-      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your Starmee account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
+      "After purchase, your book is generated and reviewed. Once approved, it is saved to your Starmee account and we email you a private download link.",
   },
   {
     question: "Can I print it at home?",
@@ -51,7 +51,7 @@ const faqs = [
   {
     question: "What's the return policy?",
     answer:
-      "If you\u2019re not completely happy with your storybook, email us at hello@starmee.com within 30 days for a full refund \u2014 no questions asked. We want every family to love their book, and we stand behind the quality of every story we create.",
+      "If you\u2019re not completely happy with your storybook, email us at hello@starmee.com within 7 days for a full refund. We want every family to love the book they receive.",
   },
 ];
 

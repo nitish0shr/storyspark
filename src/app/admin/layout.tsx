@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/auth";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -23,16 +24,6 @@ const navItems = [
   { href: "/admin/failed", label: "Failed Jobs", icon: AlertTriangle },
 ];
 
-function isAdmin(email: string | undefined): boolean {
-  if (!email) return false;
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
-  if (adminEmails.length === 0) {
-    // If no ADMIN_EMAILS set, allow the first user (dev mode)
-    return true;
-  }
-  return adminEmails.includes(email.toLowerCase());
-}
-
 export default async function AdminLayout({
   children,
 }: {
@@ -47,7 +38,7 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !isAdminEmail(user.email)) {
     redirect("/");
   }
 

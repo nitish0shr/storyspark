@@ -2,7 +2,7 @@
 
 Personalized AI-generated children's storybooks. Parents answer a few questions about their child, upload a photo, pick a theme, and get a 12-page illustrated book delivered as a print-ready PDF.
 
-**Live:** [starmee.com](https://starmee.com) · **Stack:** Next.js 14 · Supabase · Stripe · OpenAI · Replicate · Resend · Railway
+**Live:** [starmee.com](https://starmee.com) · **Stack:** Next.js 15 · Supabase · Stripe · OpenAI · Replicate · Resend · Railway
 
 ---
 
@@ -10,7 +10,7 @@ Personalized AI-generated children's storybooks. Parents answer a few questions 
 
 1. **Wizard** (`/create`) — child info → photo → theme → contextual questions → email capture
 2. **Preview generation** — OpenAI writes 5 preview pages, Replicate illustrates them
-3. **Checkout** (`/checkout`) — Stripe Checkout, 3 tiers ($9.99 / $19.99 / $34.99)
+3. **Checkout** (`/checkout`) — Stripe Checkout, launch digital PDF tier ($9.99)
 4. **Full book generation** — Stripe webhook triggers the remaining 7 pages + cover
 5. **Admin review** (`/admin/review`) — you approve before the customer gets the PDF
 6. **Delivery** — Resend emails the PDF link
@@ -22,6 +22,7 @@ Personalized AI-generated children's storybooks. Parents answer a few questions 
 ```bash
 git clone git@github.com:nitish0shr/storyspark.git starmee
 cd starmee
+nvm use 20                         # or any Node 20.x runtime
 npm install
 cp .env.local.example .env.local   # fill in real values (see below)
 npm run dev                        # starts on http://localhost:5000
@@ -40,8 +41,9 @@ Every var in `.env.local.example` must be set in both local `.env.local` **and**
 | `REPLICATE_API_TOKEN` | replicate.com/account/api-tokens |
 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | resend.com/api-keys (verify domain first) |
 | `NEXT_PUBLIC_APP_URL` | `https://starmee.com` in prod, `http://localhost:5000` in dev |
-| `ADMIN_EMAILS`, `ADMIN_NOTIFICATION_EMAIL` | Your email (comma-separated list for multi-admin) |
-| `PRICE_BASE`, `PRICE_MID`, `PRICE_PREMIUM` | Prices in cents (999 / 1999 / 3499) |
+| `INTERNAL_API_SECRET` | Long random value for internal-only API calls |
+| `ADMIN_EMAILS`, `ADMIN_NOTIFICATION_EMAIL` | Required admin email allowlist (comma-separated list for multi-admin) |
+| `PRICE_BASE` | Launch price in cents (999) |
 
 ### Supabase migrations
 
@@ -52,9 +54,12 @@ supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_add_missing_columns.sql
 supabase/migrations/003_fix_book_status_constraint.sql
 supabase/migrations/004_cost_tracking.sql
+supabase/migrations/005_launch_safety.sql
 ```
 
-Also create a Storage bucket named `child-photos` (public = false).
+Also create Storage buckets:
+- `child-photos` (public = false) for uploaded child photos
+- `books` (public = true) for generated PDFs
 
 ### Stripe webhook
 

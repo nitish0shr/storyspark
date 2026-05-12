@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/shared/Navbar";
 import BookStatusPoller from "./BookStatusPoller";
-import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
+import { Sparkles, BookOpen, PlusCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Order Complete - Starmee",
@@ -74,12 +74,22 @@ export default async function CheckoutSuccessPage({
   // Fetch book info
   const { data: book } = await supabaseAdmin
     .from("books")
-    .select("id, child_name, theme_title, status, pdf_url, is_purchased")
+    .select("id, user_id, child_name, theme_title, status, pdf_url, is_purchased")
     .eq("id", bookId)
     .single();
 
   if (!book) {
     redirect("/dashboard");
+  }
+
+  if (!user || user.id !== book.user_id) {
+    redirect(
+      `/auth/login?redirectTo=${encodeURIComponent(`/checkout/success?book_id=${bookId}`)}`
+    );
+  }
+
+  if (!book.is_purchased) {
+    redirect(`/preview/${bookId}`);
   }
 
   childName = book.child_name || "Your child";
@@ -150,14 +160,6 @@ export default async function CheckoutSuccessPage({
             <PlusCircle className="h-4 w-4" />
             Create Another Book
           </Link>
-          <button
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium hover:border-pink-300 hover:text-pink-600 transition-colors"
-            onClick={undefined}
-            title="Share feature coming soon"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </button>
         </div>
 
         {/* Confetti styles */}

@@ -29,7 +29,7 @@ AI image + text models now let us personalize the **entire** book in under 10 mi
 
 ## 3. Value proposition
 
-**In one sentence:** A one-of-a-kind illustrated storybook starring your child, generated in 10 minutes from one photo and three questions.
+**In one sentence:** A one-of-a-kind illustrated storybook starring your child, generated from one photo and a few questions, with manual quality review before paid delivery.
 
 **vs. Wonderbly:** Starmee uses the child's actual photo as the likeness basis — not a generic avatar. Story adapts to what you tell us about the child.
 **vs. Etsy custom:** Instant. No artist wait queue. Under $35.
@@ -41,7 +41,7 @@ AI image + text models now let us personalize the **entire** book in under 10 mi
 - [x] Auth: magic link + Google OAuth (Supabase)
 - [x] 6-step creation wizard: child info → photo → theme → questions → summary → preview
 - [x] Preview generation: 5 illustrated pages, free, no card required
-- [x] Stripe Checkout with 3 tiers ($9.99 / $19.99 / $34.99)
+- [x] Stripe Checkout with launch digital PDF tier ($9.99)
 - [x] Full 12-page book generation triggered on `checkout.session.completed` webhook
 - [x] Admin review workflow before customer delivery
 - [x] PDF delivery via Resend email
@@ -61,8 +61,8 @@ AI image + text models now let us personalize the **entire** book in under 10 mi
 | Tier | Price | What's included |
 |---|---|---|
 | **Base** | $9.99 | Digital PDF, 12 pages, read-only share link |
-| **Mid** | $19.99 | Base + editable dedication page + higher-res PDF |
-| **Premium** | $34.99 | Mid + print-ready 300dpi PDF + cover variant + family gift message card |
+| **Mid** | Deferred | Not launched in v1 |
+| **Premium** | Deferred | Not launched in v1 |
 
 Physical print/ship is **not** in v1.0. Users can take the print-ready PDF to any consumer photo-book service (Shutterfly, Mixbook) themselves.
 

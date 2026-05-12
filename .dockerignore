@@ -1,0 +1,14 @@
+.git
+.next
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.local.example
+coverage
+playwright-report
+test-results
+supabase/.temp
+*.log
+tsconfig.tsbuildinfo
+.DS_Store

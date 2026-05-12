@@ -4,25 +4,29 @@
 
 @layer base {
   :root {
+    --font-inter: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-playfair: Georgia, "Times New Roman", serif;
+    --font-nunito: "Trebuchet MS", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-baloo: "Trebuchet MS", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --background: 46 100% 97%;
     --foreground: 240 40% 14%;
     --card: 0 0% 100%;
     --card-foreground: 240 40% 14%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 40% 14%;
-    --primary: 290 50% 36%;
+    --primary: 338 85% 55%;
     --primary-foreground: 0 0% 100%;
     --secondary: 38 100% 57%;
     --secondary-foreground: 240 40% 14%;
-    --muted: 46 60% 94%;
+    --muted: 340 40% 95%;
     --muted-foreground: 240 10% 46%;
-    --accent: 16 100% 55%;
+    --accent: 196 80% 52%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 46 40% 88%;
-    --input: 46 40% 88%;
-    --ring: 290 50% 36%;
+    --border: 340 30% 88%;
+    --input: 340 30% 88%;
+    --ring: 338 85% 55%;
     --radius: 1rem;
   }
 

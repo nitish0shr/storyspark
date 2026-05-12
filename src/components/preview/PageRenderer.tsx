@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import { BookOpen } from "lucide-react";
 
 interface PageRendererProps {
@@ -49,13 +48,11 @@ export default function PageRenderer({
         {/* Cover illustration */}
         {illustrationUrl && (
           <div className="absolute inset-x-8 top-8 bottom-[45%] rounded-xl overflow-hidden ring-4 ring-white/20 shadow-xl">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={illustrationUrl}
               alt={`Cover illustration for ${childName}'s story`}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 500px"
-              priority
+              className="h-full w-full object-cover"
             />
           </div>
         )}
@@ -101,15 +98,14 @@ export default function PageRenderer({
         {illustrationUrl ? (
           <div className="relative h-full w-full p-4 pb-0">
             <div className="relative h-full w-full rounded-xl overflow-hidden ring-1 ring-violet-100/50 shadow-inner">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={illustrationUrl}
                 alt={`Illustration for page ${pageNumber}`}
-                fill
                 className={cn(
-                  "object-cover transition-all duration-500",
+                  "h-full w-full object-cover transition-all duration-500",
                   isBlurred && "blur-lg grayscale"
                 )}
-                sizes="(max-width: 768px) 100vw, 500px"
               />
             </div>
           </div>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
+import { randomUUID } from "crypto";
+import { PHOTO_BUCKET } from "@/lib/storage";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -64,9 +66,8 @@ export async function POST(request: NextRequest) {
 
     // Generate a unique filename
     const ext = photo.name.split(".").pop()?.toLowerCase() || "jpg";
-    const timestamp = Date.now();
-    const filename = `${timestamp}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const storagePath = `photos/${user.id}/${filename}`;
+    const filename = `${randomUUID()}.${ext}`;
+    const storagePath = `${user.id}/${filename}`;
 
     // Read file into buffer
     const arrayBuffer = await photo.arrayBuffer();
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabaseAdmin.storage
-      .from("photos")
+      .from(PHOTO_BUCKET)
       .upload(storagePath, buffer, {
         contentType: photo.type,
         upsert: false,
@@ -88,19 +89,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from("photos")
-      .getPublicUrl(storagePath);
-
-    const publicUrl = urlData.publicUrl;
-
     // If a child profile ID was provided, update the child profile
     if (childProfileId) {
       const { error: updateError } = await supabaseAdmin
         .from("child_profiles")
         .update({
-          photo_url: publicUrl,
+          photo_url: storagePath,
           updated_at: new Date().toISOString(),
         })
         .eq("id", childProfileId)
@@ -112,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ url: publicUrl }, { status: 200 });
+    return NextResponse.json({ path: storagePath }, { status: 200 });
   } catch (error) {
     console.error("Upload photo error:", error);
     return NextResponse.json(

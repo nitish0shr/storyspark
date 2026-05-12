@@ -20,12 +20,19 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
 
 export function StepPhotoUpload() {
-  const { childName, photoPreviewUrl, setPhoto, setPhotoUrl, nextStep } =
-    useWizardStore();
+  const {
+    childName,
+    photoPreviewUrl,
+    photoUrl,
+    photoConsent,
+    setPhoto,
+    setPhotoUrl,
+    setPhotoConsent,
+    nextStep,
+  } = useWizardStore();
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [consent, setConsent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const uploadToServer = useCallback(async (file: File) => {
@@ -41,12 +48,17 @@ export function StepPhotoUpload() {
 
       if (res.ok) {
         const data = await res.json();
-        setPhotoUrl(data.url);
+        setPhotoUrl(data.path);
+        return;
       }
-      // Non-blocking: if upload fails, we still have the local preview
-      // The photo URL is optional for book creation
-    } catch {
-      // Silent failure — photo upload is best-effort
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Photo upload failed. Please try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Photo upload failed. Please try again."
+      );
     } finally {
       setUploading(false);
     }
@@ -67,12 +79,14 @@ export function StepPhotoUpload() {
       }
 
       const previewUrl = URL.createObjectURL(file);
+      useWizardStore.setState({ photoUrl: null });
+      setPhotoConsent(false);
       setPhoto(file, previewUrl);
 
-      // Upload to server in background (non-blocking)
+      // Upload before allowing the user to continue so generation has the real image.
       uploadToServer(file);
     },
-    [setPhoto, uploadToServer]
+    [setPhoto, setPhotoConsent, uploadToServer]
   );
 
   const handleDrop = useCallback(
@@ -97,6 +111,8 @@ export function StepPhotoUpload() {
     useWizardStore.setState({
       photoFile: null,
       photoPreviewUrl: null,
+      photoUrl: null,
+      photoConsent: false,
     });
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -154,6 +170,9 @@ export function StepPhotoUpload() {
                 Uploading...
               </span>
             )}
+            {!uploading && photoPreviewUrl && !photoUrl && error && (
+              <span className="text-xs text-red-500">Upload failed</span>
+            )}
           </div>
         </div>
       ) : (
@@ -197,7 +216,7 @@ export function StepPhotoUpload() {
       {/* Privacy reassurance */}
       <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
         <Shield className="h-3.5 w-3.5" />
-        <span>Your photo is encrypted and never shared with third parties.</span>
+        <span>Your photo is stored privately and used only to create this book.</span>
       </div>
 
       {/* Parent/guardian consent (COPPA) */}
@@ -208,8 +227,8 @@ export function StepPhotoUpload() {
         <input
           id="parent-consent"
           type="checkbox"
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
+          checked={photoConsent}
+          onChange={(e) => setPhotoConsent(e.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500 cursor-pointer"
         />
         <span className="text-sm text-gray-700 leading-relaxed">
@@ -246,17 +265,23 @@ export function StepPhotoUpload() {
           onClick={() => {
             if (!photoPreviewUrl) {
               toast.info(`Please upload a photo of ${childName} to continue, or skip below.`);
-            } else if (!consent) {
+            } else if (uploading) {
+              toast.info("Photo upload is still finishing.");
+            } else if (!photoUrl) {
+              toast.info("Photo upload failed. Please choose the photo again or skip.");
+            } else if (!photoConsent) {
               toast.info("Please confirm you're the parent or guardian.");
             }
           }}
         >
           <Button
             onClick={() => nextStep()}
-            disabled={!photoPreviewUrl || !consent}
+            disabled={
+              !photoPreviewUrl || !photoConsent || uploading || !photoUrl
+            }
             className={cn(
               "h-12 w-full rounded-xl text-base font-semibold transition-all",
-              photoPreviewUrl && consent
+              photoPreviewUrl && photoConsent && !uploading && photoUrl
                 ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-lg hover:shadow-violet-200 hover:brightness-105"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}
@@ -265,12 +290,6 @@ export function StepPhotoUpload() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
-        <button
-          onClick={() => nextStep()}
-          className="text-sm font-medium text-gray-400 hover:text-violet-600 transition-colors"
-        >
-          Skip — illustrations won&apos;t match {childName}&apos;s appearance
-        </button>
       </div>
     </div>
   );

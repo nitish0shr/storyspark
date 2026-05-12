@@ -56,6 +56,13 @@ function statusConfig(status: Book["status"]) {
         className: "bg-amber-100 text-amber-700 border-amber-200",
         icon: Loader2,
       };
+    case "pending_review":
+      return {
+        label: "In Review",
+        variant: "default" as const,
+        className: "bg-orange-100 text-orange-700 border-orange-200",
+        icon: Clock,
+      };
     case "draft":
       return {
         label: "Draft",

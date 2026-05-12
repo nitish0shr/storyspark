@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { assemblePdf } from "@/services/pdf-assembly";
+import { requireAdmin, statusForAuthError } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,15 +12,19 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    // Authenticate user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "Server database admin access is not configured." },
+        { status: 503 }
+      );
+    }
+    try {
+      await requireAdmin();
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Unauthorized" },
+        { status: statusForAuthError(error) }
+      );
     }
 
     // Parse request body
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Verify the user owns this book
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status, story_text")
+      .select("id, status, story_text")
       .eq("id", bookId)
       .single();
 
@@ -44,12 +49,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    if (book.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Must have story text to assemble PDF
-    if (!book.story_text || !Array.isArray(book.story_text) || book.story_text.length === 0) {
+    if (
+      !book.story_text ||
+      !Array.isArray(book.story_text) ||
+      book.story_text.length === 0
+    ) {
       return NextResponse.json(
         { error: "Book has no story content to assemble into a PDF" },
         { status: 409 }

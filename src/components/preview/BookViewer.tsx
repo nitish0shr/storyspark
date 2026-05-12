@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
   ChevronRight,
-  Share2,
   BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +19,7 @@ interface BookPage {
 interface BookViewerProps {
   pages: BookPage[];
   previewPageCount: number;
+  totalPageCount?: number;
   childName: string;
   themeId?: string;
   themeTitle?: string;
@@ -31,21 +30,23 @@ interface BookViewerProps {
 export default function BookViewer({
   pages,
   previewPageCount,
+  totalPageCount,
   childName,
   themeTitle,
   bookId,
   price,
 }: BookViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
-  const [isShareCopied, setIsShareCopied] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Total visible pages = preview pages + 1 for paywall
-  const totalVisibleSlides = Math.min(previewPageCount, pages.length) + 1;
-  const isPaywallSlide = currentPage >= previewPageCount;
+  const visiblePageCount = Math.min(previewPageCount, pages.length);
+  const totalBookPages = Math.max(totalPageCount ?? pages.length, pages.length);
+  const hasPaywall = visiblePageCount < totalBookPages;
+  const totalVisibleSlides = visiblePageCount + (hasPaywall ? 1 : 0);
+  const isPaywallSlide = hasPaywall && currentPage >= visiblePageCount;
   const isFirstPage = currentPage === 0;
   const isLastSlide = currentPage === totalVisibleSlides - 1;
 
@@ -107,28 +108,7 @@ export default function BookViewer({
     touchStartY.current = null;
   };
 
-  const handleShare = async () => {
-    const url = `${window.location.origin}/preview/${bookId}`;
-    const shareData = {
-      title: `${childName}'s Story - Starmee`,
-      text: `Check out ${childName}'s personalized storybook!`,
-      url,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(url);
-        setIsShareCopied(true);
-        setTimeout(() => setIsShareCopied(false), 2000);
-      }
-    } catch {
-      // User cancelled or share failed, do nothing
-    }
-  };
-
-  const remainingPages = pages.length - previewPageCount;
+  const remainingPages = Math.max(totalBookPages - previewPageCount, 0);
 
   return (
     <div className="w-full max-w-lg mx-auto px-4 sm:px-0">
@@ -139,19 +119,13 @@ export default function BookViewer({
           <span>
             {isPaywallSlide
               ? `Preview complete`
-              : `Page ${currentPage + 1} of ${pages.length}`}
+              : `Page ${currentPage + 1} of ${totalBookPages}`}
           </span>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleShare}
-          className="text-gray-500 hover:text-[#7C3AED] gap-1.5"
-        >
-          <Share2 className="h-4 w-4" />
-          {isShareCopied ? "Link copied!" : "Share"}
-        </Button>
+        <span className="text-xs font-medium text-gray-400">
+          Private preview
+        </span>
       </div>
 
       {/* Book container */}

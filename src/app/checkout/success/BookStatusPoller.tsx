@@ -24,6 +24,7 @@ export default function BookStatusPoller({
 
   const isComplete = status === "complete" || status === "completed";
   const isFailed = status === "failed";
+  const isPendingReview = status === "pending_review";
   const isGenerating =
     status === "generating" || status === "preview_ready" || status === "paid";
 
@@ -111,6 +112,26 @@ export default function BookStatusPoller({
             View in Browser
           </a>
         </div>
+      </div>
+    );
+  }
+
+  if (isPendingReview) {
+    return (
+      <div className="bg-white rounded-2xl border border-violet-100 p-8 text-center">
+        <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-violet-50 mb-4">
+          <CheckCircle2 className="h-7 w-7 text-[#7C3AED]" />
+        </div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          Your book is being reviewed
+        </h2>
+        <p className="text-gray-500 mb-4">
+          {childName}&apos;s full storybook has been generated. We do one final
+          quality check before emailing your private download link.
+        </p>
+        <p className="text-sm text-gray-400">
+          This page will update automatically when review is complete.
+        </p>
       </div>
     );
   }

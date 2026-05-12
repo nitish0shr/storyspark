@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") || "/dashboard";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
   if (tokenHash && type) {
     const supabase = await createClient();
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       // OTP verified -- redirect to intended destination
-      const redirectUrl = new URL(next, origin);
+      const redirectUrl = new URL(safeNext, origin);
       return NextResponse.redirect(redirectUrl);
     }
   }

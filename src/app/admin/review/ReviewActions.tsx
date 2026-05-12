@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function ReviewActions({ bookId }: { bookId: string }) {
+export function ReviewActions({
+  bookId,
+  canApprove,
+}: {
+  bookId: string;
+  canApprove: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
 
@@ -48,14 +54,18 @@ export function ReviewActions({ bookId }: { bookId: string }) {
         disabled={loading !== null}
         className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
       >
-        {loading === "reject" ? "Rejecting…" : "Reject"}
+        {loading === "reject" ? "Rejecting..." : "Reject"}
       </button>
       <button
         onClick={() => handleAction("approve")}
-        disabled={loading !== null}
+        disabled={loading !== null || !canApprove}
         className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
       >
-        {loading === "approve" ? "Approving…" : "Approve & Deliver"}
+        {loading === "approve"
+          ? "Approving..."
+          : canApprove
+            ? "Approve & Deliver"
+            : "PDF Required"}
       </button>
     </div>
   );

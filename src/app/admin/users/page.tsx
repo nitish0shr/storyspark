@@ -1,8 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 
 async function getUsers() {
+  if (!isAdminConfigured()) {
+    return { users: [], emailCaptures: [] };
+  }
+
   const supabase = createAdminClient();
 
   // Get child profiles grouped by user_id as a proxy for "users with activity"

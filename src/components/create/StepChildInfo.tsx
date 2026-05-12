@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Baby, User, Smile, ArrowRight } from "lucide-react";
 
 const ageOptions = [
-  { value: -2, label: "Pre-birth (Sonogram)" },
+  { value: -1, label: "Pre-birth (Sonogram)" },
   { value: 0, label: "Newborn (0-1)" },
   { value: 1, label: "1 year old" },
   { value: 2, label: "2 years old" },
@@ -41,7 +41,7 @@ export function StepChildInfo() {
     nextStep,
   } = useWizardStore();
 
-  const isValid = childName.trim().length > 0 && childAge !== -1 && childGender !== "";
+  const isValid = childName.trim().length > 0 && childAge >= -1 && childGender !== "";
 
   return (
     <div className="mx-auto max-w-lg space-y-8">
@@ -83,10 +83,10 @@ export function StepChildInfo() {
             className={cn(
               "h-12 w-full appearance-none rounded-xl border border-gray-200 bg-white px-4 pr-10 text-base outline-none transition-colors",
               "focus:border-violet-400 focus:ring-2 focus:ring-violet-200",
-              childAge === -1 && "text-gray-400"
+              childAge === -99 && "text-gray-400"
             )}
           >
-            <option value={-1} disabled>
+            <option value={-99} disabled>
               Select age
             </option>
             {ageOptions.map((opt) => (

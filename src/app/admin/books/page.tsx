@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import Link from "next/link";
 
 const statusColor: Record<string, string> = {
@@ -14,6 +14,10 @@ const statusColor: Record<string, string> = {
 };
 
 async function getBooks() {
+  if (!isAdminConfigured()) {
+    return { books: [], statusCounts: {} };
+  }
+
   const supabase = createAdminClient();
 
   const { data: books } = await supabase

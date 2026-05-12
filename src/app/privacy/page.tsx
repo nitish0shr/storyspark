@@ -85,9 +85,9 @@ export default function PrivacyPage() {
               6. Your Rights
             </h2>
             <p>
-              You can access, update, or delete your account and all associated data
-              at any time from your dashboard. To request complete data deletion,
-              contact us at{" "}
+              You can access your books from your dashboard and delete unused child
+              profiles there. Profiles attached to purchased books are retained so
+              the book remains available; to request complete data deletion, contact us at{" "}
               <Link href="/contact" className="text-[#7C3AED] hover:underline">
                 our contact page
               </Link>

@@ -47,7 +47,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="font-body text-lg text-[#1a1a2e]/60 max-w-md mx-auto">
-            From upload to storybook in under 2 minutes. Promise! 🤞
+            Create a free preview, then unlock the full reviewed PDF.
           </p>
         </div>
 

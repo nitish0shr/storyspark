@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") || "/dashboard";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
   if (code) {
     const supabase = await createClient();
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       // Successful auth -- redirect to intended destination
-      const redirectUrl = new URL(next, origin);
+      const redirectUrl = new URL(safeNext, origin);
       return NextResponse.redirect(redirectUrl);
     }
   }

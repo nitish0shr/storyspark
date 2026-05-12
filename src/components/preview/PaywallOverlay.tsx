@@ -7,7 +7,6 @@ import {
   Sparkles,
   BookOpen,
   Download,
-  Gift,
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -104,15 +103,6 @@ export default function PaywallOverlay({
             <Lock className="h-4 w-4 mr-2" />
             Unlock Full Book — {price}
           </Button>
-        </Link>
-
-        {/* Secondary link */}
-        <Link
-          href={`/gift/${bookId}`}
-          className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#EC4899] transition-colors group"
-        >
-          <Gift className="h-4 w-4 group-hover:scale-110 transition-transform" />
-          Gift This Book
         </Link>
 
         {/* Trust badges */}

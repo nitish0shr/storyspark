@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { generateFullBook } from "@/services/book-pipeline";
 import { isOpenAIConfigured } from "@/lib/openai";
 import { isReplicateConfigured } from "@/lib/replicate";
+import { requireAdmin, statusForAuthError } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,21 +14,25 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "Server database admin access is not configured." },
+        { status: 503 }
+      );
+    }
     if (!isOpenAIConfigured() || !isReplicateConfigured()) {
       return NextResponse.json(
         { error: "AI services not configured. Please add OPENAI_API_KEY and REPLICATE_API_TOKEN." },
         { status: 503 }
       );
     }
-    // Authenticate user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    try {
+      await requireAdmin();
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Unauthorized" },
+        { status: statusForAuthError(error) }
+      );
     }
 
     // Parse request body
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Verify the user owns this book
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status")
+      .select("id, status, is_purchased")
       .eq("id", bookId)
       .single();
 
@@ -52,15 +57,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    if (book.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Must have preview_ready status before generating full book
-    if (book.status !== "preview_ready") {
+    if (!book.is_purchased || book.status !== "preview_ready") {
       return NextResponse.json(
         {
-          error: `Cannot generate full book from status "${book.status}". Expected "preview_ready".`,
+          error: "Full generation requires a purchased book in preview_ready status.",
         },
         { status: 409 }
       );

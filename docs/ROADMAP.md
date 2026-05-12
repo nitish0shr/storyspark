@@ -75,6 +75,6 @@
 |---|---|---|
 | 2026-04-17 | Renamed StorySpark → Starmee | Brand ownership, better memorability |
 | 2026-04-17 | Cut Sentry/PostHog/promo/feedback/rate-limit from v1 | Shipping friction > measurement value at pre-revenue |
-| 2026-04-17 | One-time purchase, 3 tiers — not subscription | Gifting is one-shot; subscription is v2.0 |
+| 2026-04-17 | One-time purchase, launch with one digital PDF tier — not subscription | Gifting is one-shot; subscription is v2.0 |
 | 2026-04-17 | No physical print in v1 | Fulfillment ops = full-time job; digital-only proves demand first |
 | 2026-04-17 | Admin manual review required | Brand risk of a bad book > scaling cost of reviewing |

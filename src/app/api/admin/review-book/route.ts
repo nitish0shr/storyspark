@@ -1,27 +1,18 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { getAppUrl } from "@/lib/utils";
-
-function isAdmin(email: string | undefined): boolean {
-  if (!email) return false;
-  const adminEmails =
-    process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) ??
-    [];
-  if (adminEmails.length === 0) return true; // dev mode
-  return adminEmails.includes(email.toLowerCase());
-}
+import { requireAdmin, statusForAuthError } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
-  // Auth check
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !isAdmin(user.email)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    await requireAdmin();
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unauthorized" },
+      { status: statusForAuthError(error) }
+    );
   }
 
   const body = await request.json();
@@ -56,10 +47,23 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "approve") {
-    // Mark as complete
+    if (!book.pdf_url) {
+      return NextResponse.json(
+        { error: "Book cannot be approved until a PDF has been generated." },
+        { status: 409 }
+      );
+    }
+
+    // Mark as complete and generate download token
+    const downloadToken = randomUUID();
     await supabaseAdmin
       .from("books")
-      .update({ status: "complete", updated_at: new Date().toISOString() })
+      .update({
+        status: "complete",
+        download_token: downloadToken,
+        download_token_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", bookId);
 
     // Update order status to fulfilled
@@ -70,22 +74,27 @@ export async function POST(request: NextRequest) {
       .eq("status", "paid");
 
     // Send delivery email to buyer
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", book.user_id)
-      .single();
+    const [{ data: profile }, { data: authUser }] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", book.user_id)
+        .single(),
+      supabaseAdmin.auth.admin.getUserById(book.user_id),
+    ]);
 
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(
-        "is_gift, gift_recipient_name, gift_recipient_email, gift_message"
+        "is_gift, gift_recipient_name, gift_recipient_email, gift_message, gift_access_token"
       )
       .eq("book_id", bookId)
+      .in("status", ["paid", "fulfilled"])
+      .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
-    const buyerEmail = profile?.email;
+    const buyerEmail = authUser?.user?.email;
     const buyerName = profile?.full_name || "there";
     const childName = book.child_name || "your child";
     const appUrl = getAppUrl();
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
           html: buildBookReadyEmail({
             buyerName,
             childName,
-            bookUrl: `${appUrl}/preview/${bookId}`,
+            bookUrl: `${appUrl}/book/${bookId}?token=${downloadToken}`,
             pdfUrl: book.pdf_url,
             appUrl,
           }),
@@ -115,17 +124,22 @@ export async function POST(request: NextRequest) {
     }
 
     // If gift, send to recipient too
-    if (order?.is_gift && order.gift_recipient_email && isResendConfigured()) {
+    if (
+      order?.is_gift &&
+      order.gift_recipient_email &&
+      order.gift_access_token &&
+      isResendConfigured()
+    ) {
       try {
         await resend.emails.send({
           from: RESEND_FROM_EMAIL,
           to: order.gift_recipient_email,
           subject: `You've received a Starmee book!`,
           html: `<div style="font-family:sans-serif;padding:20px;">
-            <h2 style="color:#7C3AED;">A magical book is waiting for you!</h2>
+            <h2 style="color:#E8417A;">A magical book is waiting for you!</h2>
             <p>${buyerName} gifted ${childName} a personalized storybook.</p>
-            ${order.gift_message ? `<blockquote style="border-left:4px solid #7C3AED;padding:12px 16px;margin:16px 0;color:#555;">"${order.gift_message}"<br><strong>— ${buyerName}</strong></blockquote>` : ""}
-            <p><a href="${appUrl}/gift/${bookId}" style="display:inline-block;background:#7C3AED;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View the Book</a></p>
+            ${order.gift_message ? `<blockquote style="border-left:4px solid #E8417A;padding:12px 16px;margin:16px 0;color:#555;">"${order.gift_message}"<br><strong>— ${buyerName}</strong></blockquote>` : ""}
+            <p><a href="${appUrl}/gift/${bookId}?token=${order.gift_access_token}" style="display:inline-block;background:#E8417A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View the Book</a></p>
           </div>`,
         });
       } catch (giftEmailErr) {
@@ -169,7 +183,7 @@ function buildBookReadyEmail(data: {
 </head>
 <body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
+    <div style="background:linear-gradient(135deg,#E8417A,#FF9BBD);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
       <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Starmee</h1>
       <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">${data.childName}'s book is ready!</p>
     </div>
@@ -181,7 +195,7 @@ function buildBookReadyEmail(data: {
       </p>
 
       <div style="text-align:center;margin:24px 0;">
-        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
+        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#E8417A,#FF9BBD);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
           Read the Book Online
         </a>
       </div>
@@ -189,7 +203,7 @@ function buildBookReadyEmail(data: {
       ${
         data.pdfUrl
           ? `<div style="text-align:center;margin:16px 0;">
-        <a href="${data.pdfUrl}" style="color:#7C3AED;font-size:14px;text-decoration:underline;">
+        <a href="${data.pdfUrl}" style="color:#E8417A;font-size:14px;text-decoration:underline;">
           Download as PDF
         </a>
       </div>`
@@ -198,7 +212,7 @@ function buildBookReadyEmail(data: {
 
       <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
         Your book is saved to your account at
-        <a href="${data.appUrl}/dashboard" style="color:#7C3AED;">your dashboard</a>.
+        <a href="${data.appUrl}/dashboard" style="color:#E8417A;">your dashboard</a>.
       </p>
     </div>
 

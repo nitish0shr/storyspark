@@ -1,9 +1,21 @@
 export const dynamic = "force-dynamic";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { Users, BookOpen, DollarSign, AlertTriangle, ClipboardCheck } from "lucide-react";
 
 async function getStats() {
+  if (!isAdminConfigured()) {
+    return {
+      childProfiles: 0,
+      totalBooks: 0,
+      totalRevenue: 0,
+      failedJobs: 0,
+      pendingReview: 0,
+      paidOrders: 0,
+      recentBooks: [],
+    };
+  }
+
   const supabase = createAdminClient();
 
   const [usersRes, booksRes, ordersRes, failedRes, pendingReviewRes, recentBooksRes] =

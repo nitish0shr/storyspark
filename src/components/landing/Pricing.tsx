@@ -5,8 +5,6 @@ import {
   Paintbrush,
   Download,
   FolderHeart,
-  Share2,
-  Printer,
   Check,
   ShieldCheck,
 } from "lucide-react";
@@ -14,10 +12,10 @@ import { PRICING } from "@/lib/stripe";
 
 const features = [
   { icon: BookOpen, text: "Personalized 12-page storybook" },
-  { icon: Paintbrush, text: "AI illustrations featuring your child" },
-  { icon: Download, text: "Instant PDF download" },
+  { icon: Paintbrush, text: "Stylized AI illustrations inspired by your child" },
+  { icon: Download, text: "Private PDF download after quality review" },
   { icon: FolderHeart, text: "Saved to your account" },
-  { icon: Share2, text: "Share with family" },
+  { icon: ShieldCheck, text: "Parent-controlled child data" },
 ];
 
 export default function Pricing() {
@@ -49,10 +47,6 @@ export default function Pricing() {
             <div className="flex flex-wrap items-center gap-2 mb-6 mt-2">
               <span className="bg-white border-2 border-[#1a1a2e] rounded-full px-3 py-1 font-body font-bold text-xs text-[#1a1a2e] shadow-[2px_2px_0px_#1a1a2e]">
                 📱 Digital Delivery
-              </span>
-              <span className="bg-[#C3B1E1] border-2 border-[#1a1a2e] rounded-full px-3 py-1 font-body font-bold text-xs text-[#1a1a2e] shadow-[2px_2px_0px_#1a1a2e]">
-                <Printer className="inline h-3 w-3 mr-1" />
-                Print soon — $24.99
               </span>
             </div>
 
@@ -96,7 +90,7 @@ export default function Pricing() {
             {/* Guarantee */}
             <div className="flex items-center justify-center gap-2 mt-4 text-xs text-[#1a1a2e]/60 font-body font-bold">
               <ShieldCheck className="h-4 w-4 text-[#06D6A0]" />
-              <span>100% happiness guarantee · 30-day refund</span>
+              <span>100% happiness guarantee · 7-day refund</span>
             </div>
           </div>
         </div>

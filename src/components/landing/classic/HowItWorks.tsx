@@ -69,7 +69,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="text-lg text-gray-500 max-w-lg mx-auto">
-            From photo to personalized storybook in under 2 minutes.
+            Create a free preview, then unlock the full reviewed PDF.
           </p>
         </div>
 
