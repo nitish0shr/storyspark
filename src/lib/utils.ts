@@ -55,3 +55,15 @@ export function getAppUrl(): string {
   }
   return "http://localhost:5000";
 }
+
+/**
+ * Returns the public marketing site URL (WordPress site at starmeestories.com).
+ * The Next.js app is the product engine; the marketing site is the front door.
+ * Priority: NEXT_PUBLIC_MARKETING_URL env var, else https://starmeestories.com.
+ */
+export function getMarketingUrl(path: string = "/"): string {
+  const base =
+    process.env.NEXT_PUBLIC_MARKETING_URL || "https://starmeestories.com";
+  if (!path || path === "/") return base;
+  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}

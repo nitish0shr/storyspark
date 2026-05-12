@@ -16,10 +16,13 @@ interface NavbarProps {
   user?: NavbarUser | null;
 }
 
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL || "https://starmeestories.com";
+
 const navLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Themes", href: "#themes" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "How It Works", href: `${MARKETING_URL}/#how-it-works` },
+  { label: "Themes", href: `${MARKETING_URL}/#themes` },
+  { label: "Pricing", href: `${MARKETING_URL}/#pricing` },
 ];
 
 export default function Navbar({ user }: NavbarProps) {
@@ -38,16 +41,16 @@ export default function Navbar({ user }: NavbarProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
+          {/* Logo — links back to the marketing site */}
+          <a href={MARKETING_URL} className="flex items-center">
             <img
               src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
-              alt="StorySpark"
+              alt="Starmee Stories"
               className="h-10 w-auto"
             />
-          </Link>
+          </a>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — points to marketing site sections */}
           <div className="hidden md:flex items-center gap-7">
             {navLinks.map((link) => (
               <a
