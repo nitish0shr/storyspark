@@ -34,14 +34,24 @@ export function formatPrice(cents: number): string {
 }
 
 /**
- * Returns the canonical app URL from the environment,
- * falling back to localhost in development.
+ * Returns the canonical app URL from the environment.
+ * Priority:
+ *  1. NEXT_PUBLIC_APP_URL (explicit production/staging override)
+ *  2. window.location.origin (browser context)
+ *  3. REPLIT_DEV_DOMAIN (Replit preview proxy — set automatically by Replit)
+ *  4. localhost:5000 (local fallback)
  */
 export function getAppUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (typeof window !== "undefined"
-      ? window.location.origin
-      : "http://localhost:3000")
-  );
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  // Server-side: use Replit's public dev domain when available
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (replitDomain) {
+    return `https://${replitDomain}`;
+  }
+  return "http://localhost:5000";
 }

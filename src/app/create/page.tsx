@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWizardStore } from "@/components/create/WizardProvider";
 import { ProgressSteps } from "@/components/shared/ProgressSteps";
@@ -36,9 +35,9 @@ export default function CreatePage() {
   const [fadeKey, setFadeKey] = useState(step);
   const [isVisible, setIsVisible] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
-  const router = useRouter();
 
-  // Auth gate: redirect to login if not authenticated
+  // Auth gate: sign in anonymously if no session exists so users can create
+  // books without a full account. When Supabase is not configured, skip auth.
   useEffect(() => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -54,14 +53,24 @@ export default function CreatePage() {
       setAuthChecked(true);
       return;
     }
+
     supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => {
       if (!user) {
-        router.replace("/auth/login?redirectTo=/create");
+        // No session — sign in anonymously so the user can create books
+        // without needing a full account. Anonymous sessions are valid Supabase
+        // auth users and can own books, child profiles, etc.
+        supabase.auth
+          .signInAnonymously()
+          .then(() => setAuthChecked(true))
+          .catch((err: unknown) => {
+            console.warn("Anonymous sign-in failed, continuing anyway:", err);
+            setAuthChecked(true);
+          });
       } else {
         setAuthChecked(true);
       }
     });
-  }, [router]);
+  }, []);
 
   // Animate step transitions
   useEffect(() => {

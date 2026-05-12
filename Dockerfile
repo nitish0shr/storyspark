@@ -15,4 +15,4 @@ COPY --from=base /app/package.json ./
 COPY --from=base /app/next.config.mjs ./
 COPY --from=base /app/public ./public
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm start"]

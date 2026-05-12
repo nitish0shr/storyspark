@@ -24,7 +24,6 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<SiteTheme>("storybook");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("ss-theme") as SiteTheme | null;
@@ -34,7 +33,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       document.documentElement.setAttribute("data-site-theme", "storybook");
     }
-    setMounted(true);
   }, []);
 
   const setTheme = (t: SiteTheme) => {
@@ -44,8 +42,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const toggle = () => setTheme(theme === "storybook" ? "classic" : "storybook");
-
-  if (!mounted) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggle }}>
