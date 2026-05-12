@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Mail, Star, Heart } from "lucide-react";
+import { Mail, Star, Heart } from "lucide-react";
 
 const footerLinks = [
   { label: "About", href: "/about" },
@@ -19,26 +19,26 @@ function StarBurst({ className }: { className?: string }) {
 export default function Footer() {
   return (
     <footer>
-      {/* CTA section — purple wave background */}
-      <div className="relative bg-[#C3B1E1] border-t-[2.5px] border-[#1a1a2e] overflow-hidden py-20 sm:py-28">
+      {/* CTA section — deep purple wave background */}
+      <div className="relative bg-[#5E17EB] border-t-[2.5px] border-[#262625] overflow-hidden py-20 sm:py-28">
         {/* Decorative elements */}
-        <div className="absolute top-8 left-8 animate-float opacity-70">
-          <StarBurst className="w-10 h-10 text-[#7B2D8B]" />
+        <div className="absolute top-8 left-8 animate-float opacity-50">
+          <StarBurst className="w-10 h-10 text-[#FFDE59]" />
         </div>
-        <div className="absolute top-12 right-10 animate-float-reverse opacity-60" style={{ animationDelay: "1s" }}>
-          <Heart className="w-8 h-8 text-[#FF6B6B] fill-[#FF6B6B]" />
+        <div className="absolute top-12 right-10 animate-float-reverse opacity-40" style={{ animationDelay: "1s" }}>
+          <Heart className="w-8 h-8 text-[#CB6CE6] fill-[#CB6CE6]" />
         </div>
-        <div className="absolute bottom-10 left-1/4 animate-float opacity-50" style={{ animationDelay: "2s" }}>
-          <Star className="w-7 h-7 text-[#FFD166] fill-[#FFD166]" />
+        <div className="absolute bottom-10 left-1/4 animate-float opacity-40" style={{ animationDelay: "2s" }}>
+          <Star className="w-7 h-7 text-[#FFDE59] fill-[#FFDE59]" />
         </div>
-        <div className="absolute bottom-8 right-1/4 animate-spin-slow opacity-40">
-          <StarBurst className="w-8 h-8 text-[#FF9F1C]" />
+        <div className="absolute bottom-8 right-1/4 animate-spin-slow opacity-30">
+          <StarBurst className="w-8 h-8 text-[#CB6CE6]" />
         </div>
 
         {/* Polka dots */}
         <div className="absolute inset-0 opacity-10"
           style={{
-            backgroundImage: "radial-gradient(circle, #1a1a2e 1.5px, transparent 1.5px)",
+            backgroundImage: "radial-gradient(circle, white 1.5px, transparent 1.5px)",
             backgroundSize: "28px 28px",
           }}
         />
@@ -47,31 +47,31 @@ export default function Footer() {
           {/* Stars */}
           <div className="flex justify-center gap-1.5 mb-6">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-5 w-5 text-[#FF9F1C] fill-[#FF9F1C]" />
+              <Star key={i} className="h-5 w-5 text-[#FFDE59] fill-[#FFDE59]" />
             ))}
           </div>
 
-          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-5 leading-tight">
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-5 leading-tight">
             Every kid deserves to be{" "}
-            <span className="text-[#7B2D8B]">the hero</span>{" "}
+            <span className="text-[#FFDE59]">the hero</span>{" "}
             of their own story! 🌟
           </h2>
 
-          <p className="font-body text-lg text-[#1a1a2e]/70 mb-10 max-w-lg mx-auto">
+          <p className="font-body text-lg text-white/80 mb-10 max-w-lg mx-auto">
             Create a magical, personalized storybook your child will treasure
             forever. Free preview — no credit card needed!
           </p>
 
           <Link href="/create">
-            <button className="btn-chunky inline-flex items-center gap-3 bg-[#FFD166] text-[#1a1a2e] font-heading font-bold text-xl px-10 py-5">
-              <Sparkles className="h-6 w-6" />
+            <button className="btn-chunky inline-flex items-center gap-3 bg-[#FFDE59] text-[#262625] font-heading font-bold text-xl px-10 py-5">
+              <Star className="h-6 w-6 fill-[#262625]" />
               Make Their Book — Free Preview!
             </button>
           </Link>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             {["⚡ Preview in about 2 minutes", "🔒 Photo stays private", "💳 No credit card needed"].map((item) => (
-              <span key={item} className="font-body font-bold text-sm text-[#1a1a2e]/60">
+              <span key={item} className="font-body font-bold text-sm text-white/60">
                 {item}
               </span>
             ))}
@@ -80,17 +80,16 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="bg-[#1a1a2e] border-t-[2.5px] border-[#1a1a2e]">
+      <div className="bg-[#262625]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-[#FFD166] border-2 border-[#FFD166]/40 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-[#1a1a2e]" />
-              </div>
-              <span className="font-heading text-xl font-bold text-white">
-                Story<span className="text-[#FFD166]">Spark</span>
-              </span>
+            <Link href="/" className="flex items-center">
+              <img
+                src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
+                alt="StorySpark"
+                className="h-9 w-auto brightness-0 invert"
+              />
             </Link>
 
             {/* Links */}
@@ -119,7 +118,7 @@ export default function Footer() {
           <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/30">
             <p>&copy; {new Date().getFullYear()} StorySpark. All rights reserved.</p>
             <p className="flex items-center gap-1.5">
-              Made with <Heart className="h-3 w-3 text-[#FF6B6B] fill-[#FF6B6B]" /> for
+              Made with <Heart className="h-3 w-3 text-[#CB6CE6] fill-[#CB6CE6]" /> for
               families everywhere
             </p>
           </div>

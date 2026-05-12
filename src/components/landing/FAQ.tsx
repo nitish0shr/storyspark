@@ -41,7 +41,7 @@ const faqs = [
   {
     question: "How do I access my book after purchasing?",
     answer:
-      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your StorySpark account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
+      "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",
   },
   {
     question: "Can I print it at home?",
@@ -52,13 +52,13 @@ const faqs = [
 
 export default function FAQ() {
   return (
-    <section id="faq" className="py-20 sm:py-28 relative bg-[#E0F4FD]">
+    <section id="faq" className="py-20 sm:py-28 relative bg-[#EDE4FF]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
-          <div className="inline-block bg-[#4FC3F7] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
-            <span className="font-body font-bold text-sm text-[#1a1a2e]">Got questions? 🤔</span>
+          <div className="inline-block bg-[#CB6CE6] border-2 border-[#262625] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#262625] mb-5">
+            <span className="font-body font-bold text-sm text-white">Got questions? 🤔</span>
           </div>
-          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#262625] mb-4">
             You Asked, We Answered!
           </h2>
         </div>
@@ -68,12 +68,12 @@ export default function FAQ() {
             {faqs.map((faq, index) => (
               <AccordionItem
                 key={index}
-                className="bg-white border-2 border-[#1a1a2e] rounded-2xl px-6 shadow-[4px_4px_0px_#1a1a2e] transition-shadow"
+                className="bg-white border-2 border-[#262625] rounded-2xl px-6 shadow-[4px_4px_0px_#262625] transition-shadow"
               >
-                <AccordionTrigger className="text-left font-heading text-base font-bold text-[#1a1a2e] hover:text-[#7B2D8B] hover:no-underline py-4 data-[open]:text-[#7B2D8B]">
+                <AccordionTrigger className="text-left font-heading text-base font-bold text-[#262625] hover:text-[#5E17EB] hover:no-underline py-4 data-[open]:text-[#5E17EB]">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="font-body text-sm text-[#1a1a2e]/70 leading-relaxed pb-4">
+                <AccordionContent className="font-body text-sm text-[#262625]/70 leading-relaxed pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

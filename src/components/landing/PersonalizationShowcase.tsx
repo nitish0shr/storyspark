@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Star, ArrowRight } from "lucide-react";
 
 const spreadOverlays: Record<string, { title: string; body: string }> = {
   "/images/demo/spread-space.png": {
@@ -32,9 +32,9 @@ function SpreadWithOverlay({
 }) {
   const overlay = spreadOverlays[src];
   return (
-    <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e]">
+    <div className="relative rounded-2xl overflow-hidden border-2 border-[#262625] shadow-[5px_5px_0px_#262625]">
       <div className="absolute top-3 left-3 z-10">
-        <div className={`${labelColor} border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]`}>
+        <div className={`${labelColor} border-2 border-[#262625] rounded-full px-3 py-1 shadow-[2px_2px_0px_#262625]`}>
           <span className="font-body font-bold text-xs text-white">{label}</span>
         </div>
       </div>
@@ -49,12 +49,12 @@ function SpreadWithOverlay({
         />
         {overlay && (
           <div className="absolute left-[3%] top-[5%] w-[44%] h-[90%] flex flex-col pointer-events-none">
-            <div className="absolute inset-0 bg-[#FFF8EE]/90 backdrop-blur-sm rounded-lg" />
+            <div className="absolute inset-0 bg-[#FDF5E7]/90 backdrop-blur-sm rounded-lg" />
             <div className="relative p-[8%] flex flex-col h-full">
-              <h3 className="font-heading text-[clamp(8px,1.6vw,16px)] font-bold text-[#1a1a2e] leading-tight mb-[4%]">
+              <h3 className="font-heading text-[clamp(8px,1.6vw,16px)] font-bold text-[#262625] leading-tight mb-[4%]">
                 {overlay.title}
               </h3>
-              <p className="font-body text-[clamp(6px,1.1vw,11px)] text-[#1a1a2e]/80 leading-relaxed">
+              <p className="font-body text-[clamp(6px,1.1vw,11px)] text-[#262625]/80 leading-relaxed">
                 {overlay.body}
               </p>
             </div>
@@ -67,26 +67,26 @@ function SpreadWithOverlay({
 
 export default function PersonalizationShowcase() {
   return (
-    <section className="relative py-20 sm:py-28 bg-[#FFF9E6] overflow-hidden">
+    <section className="relative py-20 sm:py-28 bg-[#FDF5E7] bg-stars overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
-          <div className="inline-block bg-[#FF6B6B] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
+          <div className="inline-block bg-[#CB6CE6] border-2 border-[#262625] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#262625] mb-5">
             <span className="font-body font-bold text-sm text-white">See the magic in action</span>
           </div>
-          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
-            From Photo to <span className="text-[#7B2D8B]">Storybook Hero</span>
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#262625] mb-4">
+            From Photo to <span className="text-[#5E17EB]">Storybook Hero</span>
           </h2>
-          <p className="font-body text-lg text-[#1a1a2e]/60 max-w-lg mx-auto">
+          <p className="font-body text-lg text-[#262625]/60 max-w-lg mx-auto">
             Upload a photo and our AI transforms your child into the star of their very own illustrated adventure.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
           <div className="grid grid-cols-1 gap-6">
-            <div className="relative rounded-2xl overflow-hidden border-2 border-[#1a1a2e] shadow-[5px_5px_0px_#1a1a2e] bg-white">
+            <div className="relative rounded-2xl overflow-hidden border-2 border-[#262625] shadow-[5px_5px_0px_#262625] bg-white">
               <div className="absolute top-3 left-3 z-10">
-                <div className="bg-white border-2 border-[#1a1a2e] rounded-full px-3 py-1 shadow-[2px_2px_0px_#1a1a2e]">
-                  <span className="font-body font-bold text-xs text-[#1a1a2e]">Upload a photo</span>
+                <div className="bg-white border-2 border-[#262625] rounded-full px-3 py-1 shadow-[2px_2px_0px_#262625]">
+                  <span className="font-body font-bold text-xs text-[#262625]">Upload a photo</span>
                 </div>
               </div>
               <Image
@@ -112,35 +112,35 @@ export default function PersonalizationShowcase() {
               src="/images/demo/spread-space.png"
               alt="Storybook spread showing the child as an astronaut on the moon"
               label="Space Adventure"
-              labelColor="bg-indigo-500"
+              labelColor="bg-[#5E17EB]"
             />
 
             <SpreadWithOverlay
               src="/images/demo/spread-castle.png"
               alt="Storybook spread showing a royal castle adventure"
               label="Enchanted Castle"
-              labelColor="bg-pink-500"
+              labelColor="bg-[#CB6CE6]"
             />
           </div>
         </div>
 
         <div className="mt-10 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-3 bg-white border-2 border-[#1a1a2e] rounded-2xl px-6 py-3 shadow-[3px_3px_0px_#1a1a2e]">
-            <Sparkles className="w-5 h-5 text-[#7B2D8B]" />
-            <span className="font-body font-bold text-sm text-[#1a1a2e]">
+          <div className="flex items-center gap-3 bg-white border-2 border-[#262625] rounded-2xl px-6 py-3 shadow-[3px_3px_0px_#262625]">
+            <Star className="w-5 h-5 text-[#5E17EB] fill-[#5E17EB]" />
+            <span className="font-body font-bold text-sm text-[#262625]">
               Same child. Different adventure. Every book is unique.
             </span>
           </div>
 
           <Link href="/create">
-            <button className="btn-chunky flex items-center gap-2 bg-[#7B2D8B] text-white font-heading font-bold text-lg px-8 py-4 mt-2">
-              <Sparkles className="h-5 w-5" />
+            <button className="btn-chunky flex items-center gap-2 bg-[#FFDE59] text-[#262625] font-heading font-bold text-lg px-8 py-4 mt-2">
+              <Star className="h-5 w-5 fill-[#262625]" />
               Create Their Book
               <ArrowRight className="h-5 w-5" />
             </button>
           </Link>
 
-          <p className="font-body text-xs text-[#1a1a2e]/40 max-w-sm mx-auto text-center mt-2">
+          <p className="font-body text-xs text-[#262625]/40 max-w-sm mx-auto text-center mt-2">
             Demo images shown above are AI-generated examples. Your child&apos;s storybook will be uniquely created from their own photo.
           </p>
         </div>

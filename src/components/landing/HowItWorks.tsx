@@ -7,9 +7,8 @@ const steps = [
     title: "Upload a Photo",
     description:
       "Provide just one clear photo of your child's face. Our AI studies their features — hair color, eye color, and skin tone — to make them the star of their own book.",
-    bg: "bg-[#FFD166]",
-    border: "border-[#1a1a2e]",
-    numBg: "bg-[#FF9F1C]",
+    bg: "bg-[#FFDE59]",
+    numBg: "bg-[#CB6CE6]",
   },
   {
     number: "2",
@@ -17,9 +16,8 @@ const steps = [
     title: "Pick Their Adventure",
     description:
       "Choose from magical worlds — a mission across the stars, an adventure with friendly dinosaurs, an underwater journey, a royal quest, a brave rescue mission, or a whimsical enchanted quest. Then add your child's name and a few fun details.",
-    bg: "bg-[#C3B1E1]",
-    border: "border-[#1a1a2e]",
-    numBg: "bg-[#7B2D8B]",
+    bg: "bg-[#CB6CE6]",
+    numBg: "bg-[#5E17EB]",
   },
   {
     number: "3",
@@ -28,25 +26,24 @@ const steps = [
     description:
       "In about 2 minutes, AI writes a unique 12-page story and creates beautiful illustrations with your child as the star. Download the PDF, print it, or share a link with family!",
     bg: "bg-[#DCFBF2]",
-    border: "border-[#1a1a2e]",
     numBg: "bg-[#06D6A0]",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-28 bg-[#FFFBF0] relative">
+    <section id="how-it-works" className="py-20 sm:py-28 bg-[#FDF5E7] relative">
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-block bg-[#FF6B6B] border-2 border-[#1a1a2e] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#1a1a2e] mb-5">
+          <div className="inline-block bg-[#5E17EB] border-2 border-[#262625] rounded-full px-5 py-1.5 shadow-[3px_3px_0px_#262625] mb-5">
             <span className="font-body font-bold text-sm text-white">Super simple! 🎈</span>
           </div>
-          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-[#262625] mb-4">
             How It Works
           </h2>
-          <p className="font-body text-lg text-[#1a1a2e]/60 max-w-md mx-auto">
+          <p className="font-body text-lg text-[#262625]/60 max-w-md mx-auto">
             From photo to personalized preview in about 2 minutes!
           </p>
         </div>
@@ -57,17 +54,15 @@ export default function HowItWorks() {
             <div key={i} className="relative">
               {/* Connector arrow (desktop) */}
               {i < steps.length - 1 && (
-                <div className="hidden md:block absolute top-12 -right-4 z-10 font-heading text-3xl font-bold text-[#1a1a2e]/30">
+                <div className="hidden md:block absolute top-12 -right-4 z-10 font-heading text-3xl font-bold text-[#262625]/30">
                   →
                 </div>
               )}
 
-              <div
-                className={`${step.bg} card-chunky p-6 flex flex-col items-center text-center h-full`}
-              >
+              <div className={`${step.bg} card-chunky p-6 flex flex-col items-center text-center h-full`}>
                 {/* Number bubble */}
                 <div
-                  className={`${step.numBg} w-14 h-14 rounded-full border-2 border-[#1a1a2e] flex items-center justify-center mb-4 shadow-[3px_3px_0px_#1a1a2e] -mt-2`}
+                  className={`${step.numBg} w-14 h-14 rounded-full border-2 border-[#262625] flex items-center justify-center mb-4 shadow-[3px_3px_0px_#262625] -mt-2`}
                 >
                   <span className="font-heading font-bold text-2xl text-white">{step.number}</span>
                 </div>
@@ -77,10 +72,10 @@ export default function HowItWorks() {
                   {step.emoji}
                 </div>
 
-                <h3 className="font-heading font-bold text-xl text-[#1a1a2e] mb-3">
+                <h3 className="font-heading font-bold text-xl text-[#262625] mb-3">
                   {step.title}
                 </h3>
-                <p className="font-body text-sm text-[#1a1a2e]/70 leading-relaxed">
+                <p className="font-body text-sm text-[#262625]/70 leading-relaxed">
                   {step.description}
                 </p>
               </div>
@@ -90,9 +85,9 @@ export default function HowItWorks() {
 
         {/* Bottom note */}
         <div className="mt-12 text-center">
-          <div className="inline-flex items-center gap-2 bg-white border-2 border-dashed border-[#1a1a2e]/30 rounded-2xl px-6 py-3">
+          <div className="inline-flex items-center gap-2 bg-white border-2 border-dashed border-[#262625]/30 rounded-2xl px-6 py-3">
             <span className="text-lg">🎁</span>
-            <span className="font-body font-bold text-sm text-[#1a1a2e]/60">
+            <span className="font-body font-bold text-sm text-[#262625]/60">
               No account needed to get started! Just jump right in.
             </span>
           </div>
@@ -101,7 +96,7 @@ export default function HowItWorks() {
 
       {/* Wave to next section */}
       <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#FFF4CC">
+        <svg viewBox="0 0 1440 48" className="w-full" preserveAspectRatio="none" fill="#FFDE5930">
           <path d="M0,48 L0,30 Q360,0 720,30 Q1080,60 1440,20 L1440,48 Z" />
         </svg>
       </div>
