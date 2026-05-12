@@ -1,0 +1,133 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Nunito",
+      "role": "body"
+    },
+    {
+      "family": "DynaPuff",
+      "role": "heading"
+    }
+  ],
+  "colors": {
+    "primary": "#CB6CE6",
+    "secondary": "#5E17EB",
+    "accent": "#FFDE59",
+    "background": "#FDF5E7",
+    "textPrimary": "#262625",
+    "link": "#FFDE59"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Nunito",
+      "heading": "DynaPuff"
+    },
+    "fontStacks": {
+      "heading": [
+        "DynaPuff",
+        "sans-serif"
+      ],
+      "body": [
+        "Nunito",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Nunito",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "50px",
+      "h2": "32px",
+      "body": "14px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "3px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#FFDE59",
+      "textColor": "#262625",
+      "borderColor": "#262625",
+      "borderRadius": "25px",
+      "borderRadiusCorners": {
+        "topLeft": "25px",
+        "topRight": "25px",
+        "bottomRight": "25px",
+        "bottomLeft": "25px"
+      },
+      "shadow": "rgba(0, 0, 0, 0.5) 0px 0px 15px 0px"
+    },
+    "buttonSecondary": {
+      "background": "#5E17EB",
+      "textColor": "#FFFFFF",
+      "borderColor": "#262625",
+      "borderRadius": "35px",
+      "borderRadiusCorners": {
+        "topLeft": "35px",
+        "topRight": "35px",
+        "bottomRight": "35px",
+        "bottomLeft": "35px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png",
+    "favicon": "https://starmeestories.com/wp-content/uploads/2026/04/Starmee-favicon.png",
+    "ogImage": "https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png",
+    "logoHref": "https://starmeestories.com"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name 'Starmee'.",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 1,
+      "text": "Create Your Child's Book - Free Preview!",
+      "reasoning": "Button #1 has a vibrant accent color (#FFDE59) and action-oriented text ('Create Your Child's Book - Free Preview!'), making it a strong primary CTA."
+    },
+    "secondary": {
+      "index": 4,
+      "text": "Create Your Book",
+      "reasoning": "Button #4 has a different vibrant color (#5E17EB) and a less prominent call to action ('Create Your Book'), suitable as a secondary CTA."
+    },
+    "confidence": 0.9
+  },
+  "personality": {
+    "tone": "playful",
+    "energy": "high",
+    "targetAudience": "parents of young children"
+  },
+  "designSystem": {
+    "framework": "custom",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.9,
+    "colors": 0.95,
+    "overall": 0.925
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name 'Starmee'.",
+        "confidence": 0.95
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}

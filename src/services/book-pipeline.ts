@@ -8,6 +8,7 @@ import { generateIllustrations } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
 import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
+import { sendPreviewReadyEmail, sendBookReadyEmail } from "@/lib/email-notifications";
 
 async function fetchBookWithChildren(bookId: string) {
   const { data: book, error: bookError } = await supabaseAdmin
@@ -51,6 +52,22 @@ async function fetchBookWithChildren(bookId: string) {
 }
 
 /**
+ * Fetches the email address captured for a book (from email_captures table).
+ * Returns null if no email was captured.
+ */
+async function fetchBookEmail(bookId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("email_captures")
+    .select("email")
+    .eq("book_id", bookId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.email ?? null;
+}
+
+/**
  * Updates a book's status in the database.
  */
 async function updateBookStatus(
@@ -69,11 +86,54 @@ async function updateBookStatus(
 }
 
 /**
+ * Upserts pages into the book_pages table so the preview page can display them.
+ * Uses the unique constraint on (book_id, page_number) to update existing rows.
+ */
+async function upsertBookPages(
+  bookId: string,
+  storyPages: BookPage[],
+  illustrationUrls: (string | null)[],
+  pageNumbers?: number[]
+): Promise<void> {
+  const pagesToUpsert = storyPages
+    .filter((page) =>
+      pageNumbers ? pageNumbers.includes(page.pageNumber) : true
+    )
+    .map((page, _idx) => {
+      const pageIdx = storyPages.indexOf(page);
+      return {
+        book_id: bookId,
+        page_number: page.pageNumber,
+        text: page.text,
+        illustration_url: illustrationUrls[pageIdx] ?? null,
+      };
+    });
+
+  if (pagesToUpsert.length === 0) return;
+
+  const { error } = await supabaseAdmin
+    .from("book_pages")
+    .upsert(pagesToUpsert, {
+      onConflict: "book_id,page_number",
+      ignoreDuplicates: false,
+    });
+
+  if (error) {
+    console.error(`Failed to upsert book_pages for book ${bookId}:`, error);
+    throw error;
+  }
+
+  console.log(`Upserted ${pagesToUpsert.length} pages for book ${bookId}`);
+}
+
+/**
  * Generates a preview for the book:
  * 1. Runs face analysis if needed
  * 2. Generates the full story text
  * 3. Generates 3 preview illustrations (cover + first 2 pages)
  * 4. Saves everything and marks status as preview_ready
+ * 5. Inserts preview pages into book_pages table
+ * 6. Sends preview-ready email to parent
  */
 export async function generatePreview(bookId: string): Promise<void> {
   try {
@@ -176,17 +236,36 @@ export async function generatePreview(bookId: string): Promise<void> {
       return previewIdx >= 0 ? previewIllustrationUrls[previewIdx] : null;
     });
 
-    // Step 4: Save to DB
     const previewPages = storyPages.filter((p) =>
       previewPageNumbers.includes(p.pageNumber)
     );
 
+    // Save story + illustration data to the books table
     await updateBookStatus(bookId, "preview_ready", {
       story_text: storyPages,
       illustration_urls: allIllustrationUrls,
       preview_pages: previewPages,
       page_count: storyPages.length,
     });
+
+    // Populate book_pages table (required by the preview page UI)
+    await upsertBookPages(bookId, storyPages, allIllustrationUrls, previewPageNumbers);
+
+    // Send preview-ready email to parent (fire-and-forget — don't fail the pipeline)
+    fetchBookEmail(bookId)
+      .then((email) => {
+        if (email) {
+          return sendPreviewReadyEmail({
+            email,
+            childName: child.name,
+            bookId,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error(`Failed to send preview email for book ${bookId}:`, err);
+      });
+
   } catch (error) {
     console.error(`Preview generation failed for book ${bookId}:`, error);
     await updateBookStatus(bookId, "failed");
@@ -197,8 +276,11 @@ export async function generatePreview(bookId: string): Promise<void> {
 /**
  * Generates the full book after preview approval:
  * 1. Generates remaining illustrations (pages 4+)
- * 2. Triggers PDF assembly
- * 3. Marks status as complete
+ * 2. Generates TTS audio narration (optional)
+ * 3. Assembles PDF
+ * 4. Populates all book_pages rows
+ * 5. Marks status as complete
+ * 6. Sends book-ready email to parent
  */
 export async function generateFullBook(bookId: string): Promise<void> {
   try {
@@ -276,6 +358,9 @@ export async function generateFullBook(bookId: string): Promise<void> {
       illustration_urls: allIllustrationUrls,
     });
 
+    // Upsert all remaining pages into book_pages now that we have all illustrations
+    await upsertBookPages(bookId, storyPages, allIllustrationUrls);
+
     // Generate audio narration (if OpenAI is configured)
     let audioStatus: "complete" | "failed" | "skipped" = "skipped";
     if (isOpenAIConfigured()) {
@@ -306,6 +391,23 @@ export async function generateFullBook(bookId: string): Promise<void> {
       pdf_print_url: pdfPrintUrl,
       audio_status: audioStatus,
     });
+
+    // Send book-ready email to parent (fire-and-forget)
+    fetchBookEmail(bookId)
+      .then((email) => {
+        if (email) {
+          return sendBookReadyEmail({
+            email,
+            childName: child.name,
+            bookId,
+            pdfUrl,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error(`Failed to send book-ready email for book ${bookId}:`, err);
+      });
+
   } catch (error) {
     console.error(`Full book generation failed for book ${bookId}:`, error);
     await updateBookStatus(bookId, "failed");
