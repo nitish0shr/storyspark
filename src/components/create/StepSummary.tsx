@@ -7,18 +7,9 @@ import { getQuestionsForTheme } from "@/data/questions";
 import { supportedLanguages } from "@/data/languages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  Sparkles,
-  Shield,
-  AlertCircle,
-  User,
-  Palette,
-  Camera,
-  MessageCircle,
-  Heart,
-  Globe,
+  Sparkles, Shield, AlertCircle, User, Palette, Camera, MessageCircle, Heart, Globe,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
@@ -34,28 +25,13 @@ const genderLabel: Record<string, string> = {
 
 export function StepSummary() {
   const {
-    childName,
-    childAge,
-    childGender,
-    photoPreviewUrl,
-    hasSecondChild,
-    secondChildName,
-    secondChildAge,
-    secondChildGender,
-    secondChildPhotoPreviewUrl,
-    selectedThemeId,
-    contextualAnswers,
-    dedication,
-    setDedication,
-    language,
-    setLanguage,
-    email,
-    setEmail,
-    setChildProfileId,
-    setSecondChildProfileId,
-    setBookId,
-    setGenerating,
-    nextStep,
+    childName, childAge, childGender, photoPreviewUrl,
+    hasSecondChild, secondChildName, secondChildAge, secondChildGender, secondChildPhotoPreviewUrl,
+    selectedThemeId, contextualAnswers,
+    dedication, setDedication,
+    language, setLanguage,
+    email, setEmail,
+    setChildProfileId, setSecondChildProfileId, setBookId, setGenerating, nextStep,
   } = useWizardStore();
 
   const posthog = usePostHog();
@@ -67,16 +43,11 @@ export function StepSummary() {
   const showEmailError = touched && !valid && email.length > 0;
 
   const theme = selectedThemeId ? getThemeById(selectedThemeId) : null;
-  const questions = selectedThemeId
-    ? getQuestionsForTheme(selectedThemeId)
-    : [];
-
-  const ageLabel =
-    childAge === -1 ? "Not yet born" : `${childAge} year${childAge !== 1 ? "s" : ""} old`;
+  const questions = selectedThemeId ? getQuestionsForTheme(selectedThemeId) : [];
+  const ageLabel = childAge === -1 ? "Not yet born" : `${childAge} year${childAge !== 1 ? "s" : ""} old`;
 
   const handleGenerate = async () => {
     if (!valid || submitting) return;
-
     setSubmitting(true);
     setError(null);
 
@@ -85,19 +56,13 @@ export function StepSummary() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          childName,
-          childAge,
-          childGender,
+          childName, childAge, childGender,
           photoUrl: useWizardStore.getState().photoUrl || undefined,
-          themeId: selectedThemeId,
-          contextualAnswers,
+          themeId: selectedThemeId, contextualAnswers,
           dedication: dedication.trim() || undefined,
-          language,
-          email,
+          language, email,
           ...(hasSecondChild ? {
-            secondChildName,
-            secondChildAge,
-            secondChildGender,
+            secondChildName, secondChildAge, secondChildGender,
             secondChildPhotoUrl: useWizardStore.getState().secondChildPhotoUrl || undefined,
           } : {}),
         }),
@@ -105,9 +70,7 @@ export function StepSummary() {
 
       if (!createRes.ok) {
         const data = await createRes.json().catch(() => ({}));
-        throw new Error(
-          data.error || "Failed to create book. Please try again."
-        );
+        throw new Error(data.error || "Failed to create book. Please try again.");
       }
 
       const resData = await createRes.json();
@@ -124,18 +87,14 @@ export function StepSummary() {
 
       if (!genRes.ok) {
         const data = await genRes.json().catch(() => ({}));
-        throw new Error(
-          data.error || "Failed to start generation. Please try again."
-        );
+        throw new Error(data.error || "Failed to start generation. Please try again.");
       }
 
       posthog.capture("book_preview_requested", { theme_id: selectedThemeId, book_id: bookId });
       setGenerating(true, "Preparing your story...");
       nextStep();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
     }
   };
@@ -143,33 +102,29 @@ export function StepSummary() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div className="text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-gray-900">
+        <h2 className="font-heading text-2xl md:text-3xl font-bold text-[#262625]">
           Review &amp; Create
         </h2>
-        <p className="mt-2 text-gray-500">
+        <p className="mt-2 font-body text-[#262625]/60">
           Everything look right? Let&apos;s make {childName}&apos;s story!
         </p>
       </div>
 
       {/* Summary card */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm divide-y divide-gray-100">
+      <div className="card-chunky divide-y divide-[#262625]/10 bg-white">
         {/* Child info */}
         <div className="flex items-center gap-4 p-4">
           {photoPreviewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoPreviewUrl}
-              alt={childName}
-              className="h-14 w-14 rounded-xl object-cover"
-            />
+            <img src={photoPreviewUrl} alt={childName} className="h-14 w-14 rounded-xl border-2 border-[#262625]/10 object-cover" />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-violet-100">
-              <User className="h-6 w-6 text-violet-500" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#CB6CE6]/20 border-2 border-[#CB6CE6]/30">
+              <User className="h-6 w-6 text-[#5E17EB]" />
             </div>
           )}
           <div>
-            <p className="font-semibold text-gray-900">{childName}</p>
-            <p className="text-sm text-gray-500">
+            <p className="font-heading font-bold text-[#262625]">{childName}</p>
+            <p className="font-body text-sm text-[#262625]/50">
               {ageLabel} · {genderLabel[childGender] || childGender}
             </p>
           </div>
@@ -178,17 +133,12 @@ export function StepSummary() {
         {/* Theme */}
         {theme && (
           <div className="flex items-center gap-3 p-4">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg",
-                theme.colorScheme.bg
-              )}
-            >
+            <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", theme.colorScheme.bg)}>
               <Palette className={cn("h-5 w-5", theme.colorScheme.accent)} />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700">{theme.name}</p>
-              <p className="text-xs text-gray-400">Story theme</p>
+              <p className="font-body text-sm font-bold text-[#262625]">{theme.name}</p>
+              <p className="font-body text-xs text-[#262625]/40">Story theme</p>
             </div>
           </div>
         )}
@@ -196,8 +146,8 @@ export function StepSummary() {
         {/* Contextual answers */}
         {questions.length > 0 && (
           <div className="p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <MessageCircle className="h-4 w-4 text-pink-500" />
+            <div className="flex items-center gap-2 font-body text-sm font-bold text-[#262625]">
+              <MessageCircle className="h-4 w-4 text-[#CB6CE6]" />
               Personalization
             </div>
             {questions.map((q) => {
@@ -205,35 +155,29 @@ export function StepSummary() {
               if (!answer) return null;
               const label = q.question.replace("{name}", childName);
               return (
-                <div key={q.id} className="text-sm">
-                  <span className="text-gray-400">{label}</span>
-                  <span className="ml-1 font-medium text-gray-700">
-                    {answer}
-                  </span>
+                <div key={q.id} className="font-body text-sm">
+                  <span className="text-[#262625]/40">{label}</span>
+                  <span className="ml-1 font-bold text-[#262625]">{answer}</span>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Second child info */}
+        {/* Second child */}
         {hasSecondChild && secondChildName && (
           <div className="flex items-center gap-4 p-4">
             {secondChildPhotoPreviewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={secondChildPhotoPreviewUrl}
-                alt={secondChildName}
-                className="h-14 w-14 rounded-xl object-cover"
-              />
+              <img src={secondChildPhotoPreviewUrl} alt={secondChildName} className="h-14 w-14 rounded-xl border-2 border-[#262625]/10 object-cover" />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-pink-100">
-                <User className="h-6 w-6 text-pink-500" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#FFDE59]/30 border-2 border-[#FFDE59]/50">
+                <User className="h-6 w-6 text-[#262625]" />
               </div>
             )}
             <div>
-              <p className="font-semibold text-gray-900">{secondChildName}</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-heading font-bold text-[#262625]">{secondChildName}</p>
+              <p className="font-body text-sm text-[#262625]/50">
                 {secondChildAge === -1 ? "Not yet born" : `${secondChildAge} year${secondChildAge !== 1 ? "s" : ""} old`} · {genderLabel[secondChildGender] || secondChildGender} · Co-hero
               </p>
             </div>
@@ -242,20 +186,20 @@ export function StepSummary() {
 
         {/* Photo indicator */}
         {photoPreviewUrl && (
-          <div className="flex items-center gap-2 p-4 text-sm text-gray-500">
-            <Camera className="h-4 w-4 text-violet-500" />
+          <div className="flex items-center gap-2 p-4 font-body text-sm text-[#262625]/50">
+            <Camera className="h-4 w-4 text-[#5E17EB]" />
             Photo{hasSecondChild ? "s" : ""} uploaded
           </div>
         )}
       </div>
 
       {/* Dedication */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+      <div className="card-chunky bg-white p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Heart className="h-4 w-4 text-pink-500" />
-          <Label htmlFor="dedication" className="text-sm font-medium text-gray-700">
+          <Heart className="h-4 w-4 text-[#CB6CE6]" />
+          <Label htmlFor="dedication" className="font-body text-sm font-bold text-[#262625]">
             Add a dedication{" "}
-            <span className="text-gray-400 font-normal">(optional)</span>
+            <span className="font-normal text-[#262625]/40">(optional)</span>
           </Label>
         </div>
         <textarea
@@ -265,18 +209,18 @@ export function StepSummary() {
           onChange={(e) => setDedication(e.target.value)}
           maxLength={300}
           rows={2}
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent resize-none"
+          className="w-full rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 py-3 font-body text-sm focus:outline-none focus:ring-2 focus:ring-[#CB6CE6]/30 focus:border-[#5E17EB] resize-none"
         />
-        <p className="text-xs text-gray-400">
+        <p className="font-body text-xs text-[#262625]/40">
           This will appear as a special page right after the cover.
         </p>
       </div>
 
       {/* Language selector */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-3">
+      <div className="card-chunky bg-white p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-violet-500" />
-          <Label htmlFor="language" className="text-sm font-medium text-gray-700">
+          <Globe className="h-4 w-4 text-[#5E17EB]" />
+          <Label htmlFor="language" className="font-body text-sm font-bold text-[#262625]">
             Story language
           </Label>
         </div>
@@ -284,7 +228,7 @@ export function StepSummary() {
           id="language"
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent appearance-none cursor-pointer"
+          className="w-full rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 py-3 font-body text-sm focus:outline-none focus:ring-2 focus:ring-[#CB6CE6]/30 focus:border-[#5E17EB] appearance-none cursor-pointer"
         >
           {supportedLanguages.map((lang) => (
             <option key={lang.code} value={lang.code}>
@@ -293,20 +237,19 @@ export function StepSummary() {
           ))}
         </select>
         {language !== "en" && (
-          <p className="text-xs text-violet-500">
+          <p className="font-body text-xs text-[#5E17EB] font-bold">
             The story text will be written in {supportedLanguages.find((l) => l.code === language)?.name}. UI stays in English.
           </p>
         )}
       </div>
 
-      {/* Value prop */}
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center font-body text-sm text-[#262625]/60">
         You&apos;ll get a 5-page illustrated preview — free, no credit card needed.
       </p>
 
       {/* Email input */}
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+        <Label htmlFor="email" className="font-body text-sm font-bold text-[#262625]">
           Email address
         </Label>
         <Input
@@ -317,43 +260,38 @@ export function StepSummary() {
           onBlur={() => setTouched(true)}
           onChange={(e) => setEmail(e.target.value)}
           className={cn(
-            "h-12 rounded-xl bg-white px-4 text-base focus-visible:border-violet-400 focus-visible:ring-violet-200",
-            showEmailError &&
-              "border-red-300 focus-visible:border-red-400 focus-visible:ring-red-200"
+            "h-12 rounded-xl border-2 border-[#262625]/15 bg-white px-4 font-body text-base focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20",
+            showEmailError && "border-red-400 focus-visible:border-red-400 focus-visible:ring-red-100"
           )}
         />
         {showEmailError && (
-          <p className="text-sm text-red-500">
-            Please enter a valid email address.
-          </p>
+          <p className="font-body text-sm text-red-500">Please enter a valid email address.</p>
         )}
-        <p className="text-xs text-gray-400">
-          We&apos;ll save your preview to this email.
-        </p>
+        <p className="font-body text-xs text-[#262625]/40">We&apos;ll save your preview to this email.</p>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+        <div className="flex items-start gap-2 rounded-xl bg-red-50 border-2 border-red-100 px-4 py-3 font-body text-sm text-red-600">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* CTA */}
-      <Button
+      <button
         onClick={handleGenerate}
         disabled={!valid || submitting}
         className={cn(
-          "h-14 w-full rounded-xl text-lg font-semibold transition-all",
+          "btn-chunky h-14 w-full flex items-center justify-center gap-2 font-heading font-bold text-lg transition-all",
           valid && !submitting
-            ? "bg-gradient-to-r from-violet-600 to-pink-500 text-white hover:shadow-xl hover:shadow-violet-200 hover:brightness-105"
-            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            ? "bg-[#FFDE59] text-[#262625] cursor-pointer"
+            : "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
         )}
       >
         {submitting ? (
           <>
-            <span className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            <span className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-[#262625] border-t-transparent" />
             Creating...
           </>
         ) : (
@@ -362,9 +300,9 @@ export function StepSummary() {
             Generate My Free 5-Page Preview
           </>
         )}
-      </Button>
+      </button>
 
-      <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+      <div className="flex items-center justify-center gap-2 font-body text-xs text-[#262625]/40">
         <Shield className="h-3.5 w-3.5" />
         <span>We never share your email. Unsubscribe anytime.</span>
       </div>

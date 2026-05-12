@@ -11,22 +11,13 @@ import { StepQuestions } from "@/components/create/StepQuestions";
 import { StepSummary } from "@/components/create/StepSummary";
 import { StepPreview } from "@/components/create/StepPreview";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Internal step mapping:
- * 1 = Child Info       (progress step 1)
- * 2 = Photo Upload     (progress step 2)
- * 3 = Theme Select     (progress step 3)
- * 4 = Questions        (progress step 4 — "Personalize")
- * 5 = Summary + Email  (progress step 5 — "Preview" since it triggers generation)
- * 6 = Preview          (progress step 5)
- */
 function stepToProgress(step: number): number {
   if (step <= 4) return step;
-  return 5; // summary + preview both map to step 5
+  return 5;
 }
 
 export default function CreatePage() {
@@ -36,14 +27,11 @@ export default function CreatePage() {
   const [isVisible, setIsVisible] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Auth gate: sign in anonymously if no session exists so users can create
-  // books without a full account. When Supabase is not configured, skip auth.
   useEffect(() => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      // No Supabase configured — allow wizard for demo/dev
       setAuthChecked(true);
       return;
     }
@@ -56,9 +44,6 @@ export default function CreatePage() {
 
     supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => {
       if (!user) {
-        // No session — sign in anonymously so the user can create books
-        // without needing a full account. Anonymous sessions are valid Supabase
-        // auth users and can own books, child profiles, etc.
         supabase.auth
           .signInAnonymously()
           .then(() => setAuthChecked(true))
@@ -72,7 +57,6 @@ export default function CreatePage() {
     });
   }, []);
 
-  // Animate step transitions
   useEffect(() => {
     setIsVisible(false);
     const timeout = setTimeout(() => {
@@ -84,8 +68,8 @@ export default function CreatePage() {
 
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FFFBF5]">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+      <div className="flex min-h-screen items-center justify-center bg-[#FDF5E7]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#5E17EB]" />
       </div>
     );
   }
@@ -94,21 +78,21 @@ export default function CreatePage() {
   const showBack = step > 1 && step < 6;
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5]">
+    <div className="min-h-screen bg-[#FDF5E7] bg-stars">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 border-b border-gray-100 bg-[#FFFBF5]/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b-[2.5px] border-[#262625] bg-[#FDF5E7]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-lg font-bold text-violet-700"
-          >
-            <BookOpen className="h-5 w-5" />
-            <span className="font-heading">StorySpark</span>
+          <Link href="/" className="flex items-center">
+            <img
+              src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
+              alt="StorySpark"
+              className="h-9 w-auto"
+            />
           </Link>
 
           {step < 6 && (
-            <span className="text-xs font-medium text-gray-400 hidden sm:block">
-              Create Your Book
+            <span className="font-body text-xs font-bold text-[#262625]/50 hidden sm:block">
+              Create Their Book
             </span>
           )}
         </div>
@@ -121,13 +105,12 @@ export default function CreatePage() {
 
       {/* Content */}
       <main className="mx-auto max-w-5xl px-4 py-6 md:py-10">
-        {/* Back button */}
         {showBack && (
           <div className="mb-6">
             <Button
               variant="ghost"
               onClick={prevStep}
-              className="gap-1.5 text-gray-500 hover:text-violet-600"
+              className="gap-1.5 text-[#262625]/60 hover:text-[#5E17EB] font-body font-bold"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -135,13 +118,10 @@ export default function CreatePage() {
           </div>
         )}
 
-        {/* Step content with fade */}
         <div
           className={cn(
             "transition-all duration-200 ease-in-out",
-            isVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-2"
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           )}
         >
           {fadeKey === 1 && <StepChildInfo />}
