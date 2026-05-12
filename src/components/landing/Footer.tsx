@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Mail, Star, Heart } from "lucide-react";
 
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL || "https://starmeestories.com";
+
 const footerLinks = [
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
+  { label: "About", href: `${MARKETING_URL}/about` },
+  { label: "Contact", href: `${MARKETING_URL}/contact` },
+  { label: "Privacy Policy", href: `${MARKETING_URL}/privacy` },
+  { label: "Terms of Service", href: `${MARKETING_URL}/terms` },
 ];
 
 function StarBurst({ className }: { className?: string }) {
@@ -83,40 +86,40 @@ export default function Footer() {
       <div className="bg-[#262625]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
+            {/* Logo — back to marketing site */}
+            <a href={MARKETING_URL} className="flex items-center">
               <img
                 src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
-                alt="StorySpark"
+                alt="Starmee Stories"
                 className="h-9 w-auto brightness-0 invert"
               />
-            </Link>
+            </a>
 
             {/* Links */}
             <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
               {footerLinks.map((link) => (
-                <Link
+                <a
                   key={link.href}
                   href={link.href}
                   className="font-body text-sm text-white/50 hover:text-white transition-colors"
                 >
                   {link.label}
-                </Link>
+                </a>
               ))}
             </nav>
 
             {/* Email */}
             <a
-              href="mailto:hello@storyspark.com"
+              href="mailto:hello@starmeestories.com"
               className="flex items-center gap-2 font-body text-sm text-white/50 hover:text-white transition-colors"
             >
               <Mail className="h-4 w-4" />
-              hello@storyspark.com
+              hello@starmeestories.com
             </a>
           </div>
 
           <div className="mt-6 pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/30">
-            <p>&copy; {new Date().getFullYear()} StorySpark. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Starmee Stories. All rights reserved.</p>
             <p className="flex items-center gap-1.5">
               Made with <Heart className="h-3 w-3 text-[#CB6CE6] fill-[#CB6CE6]" /> for
               families everywhere

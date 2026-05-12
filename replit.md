@@ -99,3 +99,37 @@ src/
 - Runs on port 5000 with `-H 0.0.0.0`
 - Workflow: "Start application" → `npm run dev`
 - Cross-origin dev origins configured in `next.config.mjs`
+- Iframe-friendly headers: `X-Frame-Options: ALLOWALL` + `Content-Security-Policy: frame-ancestors *;` (so the app can be embedded by the WordPress site or Replit canvas)
+
+## WordPress / Marketing Site Integration
+
+The marketing site at **https://starmeestories.com** (WordPress + Elementor) stays the customer-facing front door. This Next.js app is the **product engine** and should be deployed at a subdomain such as `https://app.starmeestories.com`.
+
+### How they connect
+
+- **Logo + nav links** in the app's Navbar/Footer point back to the marketing site (`NEXT_PUBLIC_MARKETING_URL`, default `https://starmeestories.com`). The customer feels like they never left.
+- **Marketing CTAs** (WordPress buttons like "Create Their Book", "Free Preview", "Sign In") should link to the corresponding app routes:
+
+  | WordPress button | Link to |
+  |---|---|
+  | Create Their Book / Get Started / Free Preview | `https://app.starmeestories.com/create` |
+  | Sign In / My Books | `https://app.starmeestories.com/auth/login` |
+  | Pricing → "Subscribe" | `https://app.starmeestories.com/checkout?plan=subscription` |
+  | Gift a Book | `https://app.starmeestories.com/gift` |
+
+- **Email/lead capture form** on WordPress can POST to `https://app.starmeestories.com/api/leads` (CORS-enabled for the marketing domain) — accepts JSON `{ email, source?, childName? }` and upserts into the `leads` Supabase table. Gracefully no-ops if Supabase isn't configured.
+- **Stripe webhooks** stay pointed at `https://app.starmeestories.com/api/webhooks/stripe`.
+- **Order confirmation + book delivery emails** are sent by the app via Resend; the customer receives a download link that opens `https://app.starmeestories.com/preview/[bookId]`.
+
+### Deployment checklist
+
+1. Deploy this Next.js app on Replit (Autoscale).
+2. Add custom domain `app.starmeestories.com` in the deployment (CNAME provided by Replit).
+3. Set production env vars: `NEXT_PUBLIC_APP_URL=https://app.starmeestories.com`, `NEXT_PUBLIC_MARKETING_URL=https://starmeestories.com`, plus all Supabase/Stripe/OpenAI/Replicate/Resend secrets.
+4. In WordPress/Elementor, edit each CTA button's URL to point to the app routes above.
+5. In Stripe dashboard, set the webhook endpoint to `https://app.starmeestories.com/api/webhooks/stripe`.
+
+### Env vars for integration
+
+- `NEXT_PUBLIC_APP_URL` — public URL of this backend app (used in emails, OG tags, share links)
+- `NEXT_PUBLIC_MARKETING_URL` — public URL of the WordPress site (used by the app's logo + nav links to send users back to marketing)
