@@ -99,7 +99,7 @@ async function upsertBookPages(
     .filter((page) =>
       pageNumbers ? pageNumbers.includes(page.pageNumber) : true
     )
-    .map((page, _idx) => {
+    .map((page) => {
       const pageIdx = storyPages.indexOf(page);
       return {
         book_id: bookId,
