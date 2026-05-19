@@ -18,7 +18,7 @@ const trustPoints = [
   {
     icon: CreditCard,
     title: "No credit card needed",
-    description: "Get a free preview first. Only pay when you love the result.",
+    description: "See a free sample first. Only pay when you love the result.",
     bg: "bg-[#CB6CE6]",
   },
 ];

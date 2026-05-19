@@ -1,0 +1,181 @@
+You are working on my Starmee Stories app. Do not rely on assumptions. First inspect the existing app structure, current upload/order flow, storybook selection flow, backend APIs, database schema, email delivery logic, file storage logic, and UI components before making changes.
+
+Goal:
+Improve the customer experience, polish the UI, fix content inconsistencies, strengthen upload security, and add a premium post-order progress experience for personalized digital books.
+
+This is not a demo. Make production-safe changes only. Do not break the existing order form, payment flow, email logic, admin submissions page, backend APIs, or current production deployment.
+
+Core positioning:
+Do NOT overpromise “instant delivery” or exact timing like “3 minutes.”
+Use softer language:
+- “We’ll start creating your book immediately.”
+- “As soon as it’s ready, we’ll email it straight to your inbox.”
+- “This usually takes just a few minutes.”
+- “You can keep this page open to follow the progress.”
+
+Important UX/copy correction:
+The button/copy “Create Their Book” currently suggests the customer may receive a free 5-page preview. That is not the intended experience.
+
+Update the language so it is clear that after a customer uploads a child’s photo, they only receive a small sample/preview of what their child could look like inside the story — not a free multi-page book preview.
+
+Use clearer wording such as:
+- “See a Sample”
+- “Preview Their Character”
+- “See Your Child in the Story”
+- “Create a Sample Image”
+- “Start Their Story”
+
+Do not promise a 5-page preview unless that feature actually exists.
+
+Required fixes and improvements:
+
+1. Fix story/content inconsistency
+There is a Dinosaur story where the image shows a dinosaur with brown eyes, but the story text says the dinosaur has green eyes.
+Find and fix this mismatch.
+Either update the text to match the image or update the image prompt/content so both are consistent.
+
+2. Make clickable buttons obvious
+Because of the current site theme, it is not easy to tell which elements are clickable buttons versus placeholder/information cards.
+
+Improve the visual design so clickable elements are clearly recognizable:
+- Stronger button styling
+- Clear hover/focus states
+- Consistent CTA colors
+- Cursor pointer on clickable elements
+- Better separation between cards, labels, and buttons
+- Avoid making non-clickable informational cards look like buttons
+
+Keep the design premium, warm, magical, and family-friendly.
+
+3. Fix spacing/layout issue
+There is a section where the child’s actual uploaded picture appears with 3 sample storybooks, but the spacing/layout is off and it covers the book titles.
+
+Fix the layout so:
+- The child image does not overlap book titles
+- Storybook titles remain readable
+- Cards are responsive on mobile and desktop
+- Images are properly contained with object-fit/object-position
+- Spacing feels polished and intentional
+
+4. Strengthen file upload security
+Review the upload flow for child photos and any other file uploads.
+
+Add production-safe upload protections:
+- Accept only approved image formats, such as jpg, jpeg, png, webp
+- Reject unsupported file types
+- Validate MIME type server-side, not only by file extension
+- Add file size limit
+- Handle corrupt/unreadable files gracefully
+- Do not expose raw upload paths directly if unsafe
+- Sanitize file names
+- Avoid executing or rendering uploaded files as HTML/script
+- Store uploads safely
+- Return friendly customer-facing errors
+- Log technical errors only server-side
+- Prevent users from uploading files that could damage or compromise the app
+
+If the app already has some of this protection, verify it and improve only where needed.
+
+5. Add post-order progress tracker
+After the customer submits an order, redirect them to a polished “Your book is being created” progress page.
+
+The tracker should feel similar to a pizza delivery/order tracker, but for a personalized digital storybook.
+
+Suggested stages:
+- Order received
+- Creating your personalized story
+- Designing your digital book
+- Quality checking your book
+- Packaging your digital copy
+- Sending it to your inbox
+- Delivered
+
+Use warm microcopy:
+- “We’ve received your photos and story details.”
+- “Your personalized story is now being written.”
+- “We’re turning it into a beautiful digital book.”
+- “Final checks are being completed.”
+- “Your book is being prepared for email delivery.”
+- “Your book is on its way to your inbox.”
+
+Do not falsely imply manual human review unless there is real human review. The progress can be time-based for now, but structure it so it can later connect to real backend job status.
+
+6. Add order status model if appropriate
+If useful, store basic order status in the database:
+- received
+- creating_story
+- designing_book
+- quality_check
+- packaging
+- sending
+- delivered
+- failed
+
+If real async job status already exists, connect the UI to real backend status.
+If not, create a clean simulated progress layer that can easily be replaced later.
+
+7. Add delivery expectation copy
+On confirmation/progress pages, use:
+“Your personalized book is now being created. It usually takes just a few minutes, and we’ll send it directly to your inbox as soon as it’s ready.”
+
+Also add:
+“You don’t need to stay on this page — we’ll email your book as soon as it’s ready.”
+
+8. Add graceful failure handling
+If book generation or email delivery fails, show a calm message:
+“We’re checking on your book and will still send it to your email as soon as it’s ready.”
+
+Do not show technical errors to the customer.
+
+9. Future idea — do not build unless simple/low-risk
+Capture this as a future feature idea, but do not prioritize it over the core fixes above:
+
+A parent could upload an audio clip of their child telling a story. The app would transcribe or interpret the child’s story, generate visuals from the child’s imagination, and create a digital storybook from the audio. Ideally, the digital book could auto-turn pages as the audio/story progresses.
+
+Do not build this full feature now unless the current app already has most of the required infrastructure. If not, add it as a “future enhancement” note or backlog item.
+
+Suggested future feature name:
+“Turn Their Own Story Into a Book”
+
+Possible future flow:
+- Parent uploads child’s audio
+- App transcribes the story
+- App turns the story into pages
+- App generates matching visuals
+- App creates a narrated/auto-turning digital book
+
+Current priority:
+Focus on polishing the current purchase/upload/book creation flow before expanding into audio storytelling.
+
+10. Testing requirements
+After implementation, test:
+- Upload accepts valid image files
+- Upload rejects unsupported/corrupt files safely
+- Customer sees clear friendly error messages
+- “Create Their Book” or related CTA copy no longer implies a free 5-page preview
+- Dinosaur story image/text consistency is fixed
+- Clickable buttons are visually obvious
+- Non-clickable placeholders do not look like buttons
+- Child image + 3 sample storybooks layout no longer overlaps titles
+- Mobile layout works
+- Desktop layout works
+- Order flow redirects to progress page
+- Progress stages advance correctly
+- Email expectation copy is visible
+- Existing APIs still work
+- Admin submissions page still works
+- No console errors
+- No broken routes
+
+Deliverables:
+1. Implement the required fixes and progress tracker
+2. Update customer-facing copy
+3. Improve upload security
+4. Keep changes minimal, production-safe, and aligned with the existing app structure
+5. Provide final summary with:
+   - What changed
+   - Files changed
+   - How to test
+   - Security improvements made
+   - Any remaining risks
+   - Any future enhancement notes

@@ -84,7 +84,7 @@ export default function Hero() {
 
             <p className="font-body text-lg sm:text-xl text-[#262625]/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
               Create a magical, personalized storybook your child will treasure
-              forever. <strong>Free preview — no credit card needed!</strong>
+              forever. <strong>See a free sample of your child as the hero — no credit card needed.</strong>
             </p>
 
             {/* CTAs */}

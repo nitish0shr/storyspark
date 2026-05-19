@@ -244,7 +244,7 @@ export function StepSummary() {
       </div>
 
       <p className="text-center font-body text-sm text-[#262625]/60">
-        You&apos;ll get a 5-page illustrated preview — free, no credit card needed.
+        You&apos;ll see a free sample illustration of your child as the hero — no credit card needed.
       </p>
 
       {/* Email input */}
@@ -297,7 +297,7 @@ export function StepSummary() {
         ) : (
           <>
             <Sparkles className="mr-2 h-5 w-5" />
-            Generate My Free 5-Page Preview
+            See My Free Sample
           </>
         )}
       </button>

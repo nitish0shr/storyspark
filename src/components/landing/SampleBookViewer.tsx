@@ -17,7 +17,7 @@ const samplePages = [
     theme: "Dinosaur Discovery",
     color: "bg-emerald-500",
     overlayTitle: "The Dinosaur Valley",
-    overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
+    overlayBody: "Deep in the jungle, he met a friendly little dinosaur with bright, curious eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano in the distance.",
   },
   {
     image: "/images/demo/spread-castle.png",
@@ -79,9 +79,9 @@ export default function SampleBookViewer() {
                   </div>
                 </div>
 
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <div className={`${page.color} border-2 border-[#262625] rounded-full px-3 py-1 shadow-[2px_2px_0px_#262625]`}>
-                    <span className="font-body font-bold text-xs text-white">{page.theme}</span>
+                    <span className="font-body font-bold text-xs text-white whitespace-nowrap">{page.theme}</span>
                   </div>
                 </div>
               </div>

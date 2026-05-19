@@ -127,7 +127,7 @@ export function StepPreview() {
         </div>
         <h3 className="font-heading text-lg font-bold text-[#262625]">Preview Available</h3>
         <p className="mt-1 font-body text-sm text-[#262625]/60">
-          5 pages of illustrated story with {childName} as the star
+          A free sample illustration showing {childName} as the star of the story
         </p>
       </div>
 

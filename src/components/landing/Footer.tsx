@@ -62,13 +62,13 @@ export default function Footer() {
 
           <p className="font-body text-lg text-white/80 mb-10 max-w-lg mx-auto">
             Create a magical, personalized storybook your child will treasure
-            forever. Free preview — no credit card needed!
+            forever. See a free sample of your child as the hero — no credit card needed.
           </p>
 
           <Link href="/create">
             <button className="btn-chunky inline-flex items-center gap-3 bg-[#FFDE59] text-[#262625] font-heading font-bold text-xl px-10 py-5">
               <Star className="h-6 w-6 fill-[#262625]" />
-              Make Their Book — Free Preview!
+              Start Their Story
             </button>
           </Link>
 
