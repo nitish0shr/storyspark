@@ -11,7 +11,7 @@ const spreadOverlays: Record<string, { title: string; body: string }> = {
   },
   "/images/demo/spread-dino.png": {
     title: "The Dinosaur Valley",
-    body: "Deep in the jungle, he met a friendly little dinosaur with bright green eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano.",
+    body: "Deep in the jungle, he met a friendly little dinosaur with bright, curious eyes. \u201CHi there! Want to explore with me?\u201D The dinosaur wagged its tail happily. Together, they set off toward the rumbling volcano.",
   },
   "/images/demo/spread-castle.png": {
     title: "The Royal Adventure",
@@ -33,9 +33,10 @@ function SpreadWithOverlay({
   const overlay = spreadOverlays[src];
   return (
     <div className="relative rounded-2xl overflow-hidden border-2 border-[#262625] shadow-[5px_5px_0px_#262625]">
-      <div className="absolute top-3 left-3 z-10">
+      {/* Label pill moved to top-right so the left-side story overlay never covers it */}
+      <div className="absolute top-3 right-3 z-10">
         <div className={`${labelColor} border-2 border-[#262625] rounded-full px-3 py-1 shadow-[2px_2px_0px_#262625]`}>
-          <span className="font-body font-bold text-xs text-white">{label}</span>
+          <span className="font-body font-bold text-xs text-white whitespace-nowrap">{label}</span>
         </div>
       </div>
       <div className="relative">

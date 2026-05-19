@@ -36,7 +36,7 @@ const faqs = [
   {
     question: "How does the preview work?",
     answer:
-      "After uploading a photo and choosing a theme, you'll get a free preview with a sample illustration and story excerpt \u2014 no credit card needed. If you love it, you can purchase the full 12-page storybook.",
+      "After uploading a photo and choosing a theme, you'll see a free sample illustration of your child as the hero \u2014 no credit card needed. If you love how it looks, you can order the full 12-page storybook.",
   },
   {
     question: "How do I access my book after purchasing?",
