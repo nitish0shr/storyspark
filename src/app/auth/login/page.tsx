@@ -33,6 +33,9 @@ function LoginPageContent() {
         : null
   );
 
+  const NOT_CONFIGURED_MSG =
+    "Sign-in is temporarily unavailable. Please try again later — our team has been notified.";
+
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -40,16 +43,29 @@ function LoginPageContent() {
     setError(null);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectTo)}`,
-      },
-    });
+    if (!supabase) {
+      console.error("Supabase client unavailable: auth env vars are missing.");
+      setLoading(false);
+      setError(NOT_CONFIGURED_MSG);
+      return;
+    }
 
-    setLoading(false);
-    if (signInError) setError(signInError.message);
-    else setSent(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectTo)}`,
+        },
+      });
+
+      if (signInError) setError(signInError.message);
+      else setSent(true);
+    } catch (err) {
+      console.error("Magic link sign-in failed:", err);
+      setError("We couldn't send your magic link. Please try again in a moment.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -57,14 +73,31 @@ function LoginPageContent() {
     setError(null);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-      },
-    });
+    if (!supabase) {
+      console.error("Supabase client unavailable: auth env vars are missing.");
+      setGoogleLoading(false);
+      setError(NOT_CONFIGURED_MSG);
+      return;
+    }
 
-    if (signInError) { setGoogleLoading(false); setError(signInError.message); }
+    try {
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        },
+      });
+
+      // On success the browser redirects to Google, so we keep the spinner.
+      if (signInError) {
+        setGoogleLoading(false);
+        setError(signInError.message);
+      }
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
+      setGoogleLoading(false);
+      setError("We couldn't start Google sign-in. Please try again in a moment.");
+    }
   };
 
   return (
