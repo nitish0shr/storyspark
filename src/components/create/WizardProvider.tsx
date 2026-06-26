@@ -87,8 +87,9 @@ export const useWizardStore = create<WizardState>()(
       ...initialState,
 
       setStep: (step) => set({ step }),
-      nextStep: () => set((state) => ({ step: state.step + 1 })),
-      prevStep: () => set((state) => ({ step: Math.max(1, state.step - 1) })),
+      // Step 2 (Photo Upload) is hidden for v1 — skip it in both directions
+      nextStep: () => set((state) => ({ step: state.step === 1 ? 3 : state.step + 1 })),
+      prevStep: () => set((state) => ({ step: state.step === 3 ? 1 : Math.max(1, state.step - 1) })),
       setChildName: (childName) => set({ childName }),
       setChildAge: (childAge) => set({ childAge }),
       setChildGender: (childGender) => set({ childGender }),
