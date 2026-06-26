@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/utils";
 import BookViewer from "@/components/preview/BookViewer";
 import Navbar from "@/components/shared/Navbar";
@@ -17,10 +18,11 @@ export const dynamic = "force-dynamic";
 const PREVIEW_PAGE_COUNT = 3;
 
 async function getBook(bookId: string) {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
-  const supabase = await createClient();
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
 
-  const { data: book, error } = await supabase
+  // Use admin client so anonymous visitors (user_id = null) can read their own preview.
+  // The preview page is intentionally public — anyone with the link can view it.
+  const { data: book, error } = await supabaseAdmin
     .from("books")
     .select(
       `
@@ -31,7 +33,6 @@ async function getBook(bookId: string) {
       status,
       user_id,
       is_purchased,
-      price_cents,
       dedication,
       pages:book_pages(
         page_number,
@@ -167,10 +168,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
   const isOwner = user?.id === book.user_id;
   const isNewCreation = isOwner && book.status === "preview_ready";
 
-  // Format price
-  const priceDollars = book.price_cents
-    ? `$${(book.price_cents / 100).toFixed(2)}`
-    : "$9.99";
+  const priceDollars = "$9.99";
 
   return (
     <div className="min-h-screen bg-[#FFFBF5]">
