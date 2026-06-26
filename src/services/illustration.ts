@@ -133,7 +133,7 @@ async function generateSingleIllustration(
           n: 1,
           size: "1024x1024",
         });
-        b64 = res.data[0]?.b64_json ?? undefined;
+        b64 = res.data?.[0]?.b64_json ?? undefined;
         if (!b64) throw new Error("No b64_json from gpt-image-1");
       } catch (e1) {
         console.warn(`gpt-image-1 failed (attempt ${attempt + 1}): ${e1 instanceof Error ? e1.message : e1}`);
@@ -146,7 +146,7 @@ async function generateSingleIllustration(
           response_format: "b64_json",
           quality: "standard",
         });
-        b64 = res.data[0]?.b64_json ?? undefined;
+        b64 = res.data?.[0]?.b64_json ?? undefined;
         if (!b64) throw new Error("No b64_json from dall-e-3");
       }
 
