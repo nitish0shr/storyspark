@@ -3,7 +3,6 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generatePreview } from "@/services/book-pipeline";
 import { isOpenAIConfigured } from "@/lib/openai";
-import { isReplicateConfigured } from "@/lib/replicate";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,9 +12,9 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    if (!isOpenAIConfigured() || !isReplicateConfigured()) {
+    if (!isOpenAIConfigured()) {
       return NextResponse.json(
-        { error: "AI services not configured. Please add OPENAI_API_KEY and REPLICATE_API_TOKEN." },
+        { error: "AI service not configured. Please add OPENAI_API_KEY." },
         { status: 503 }
       );
     }
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start preview generation (fire-and-forget for long operations)
+    // Start preview generation (fire-and-forget — client polls /api/book-status)
     generatePreview(bookId).catch((err) => {
       console.error(`Background preview generation failed for ${bookId}:`, err);
     });
