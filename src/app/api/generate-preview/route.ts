@@ -19,15 +19,15 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    // Authenticate user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Try to get the authenticated user — anonymous visitors are allowed for free preview
+    let userId: string | null = null;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      // No session — fine for free preview
     }
 
     // Parse request body
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the user owns this book
+    // Fetch the book using admin client (bypasses RLS for anonymous books)
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .select("id, user_id, status")
@@ -52,7 +52,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    if (book.user_id !== user.id) {
+    // Ownership check:
+    // - If the book belongs to a specific user, only that user may trigger generation.
+    // - If the book has no user_id (anonymous), allow anyone who knows the bookId.
+    if (book.user_id !== null && book.user_id !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -65,7 +68,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Start preview generation (fire-and-forget for long operations)
-    // We don't await here so the client gets a quick response
     generatePreview(bookId).catch((err) => {
       console.error(`Background preview generation failed for ${bookId}:`, err);
     });

@@ -1,23 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { getThemeById } from "@/data/themes";
 import { isValidLanguageCode } from "@/data/languages";
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !isAdminConfigured()) {
       return NextResponse.json(
         { error: "Database not configured. Please add Supabase environment variables." },
         { status: 503 }
       );
     }
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // Try to get the authenticated user — but do NOT block anonymous visitors
+    let userId: string | null = null;
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      // No session — that's fine for free preview
     }
 
     const body = await request.json();
@@ -54,11 +57,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Subscriber-only themes require an authenticated, active subscriber
     if (theme.subscriberOnly) {
-      const { data: activeSub } = await supabase
+      if (!userId) {
+        return NextResponse.json(
+          { error: "This theme is exclusive to subscribers. Subscribe to the Monthly Book Club to unlock it!" },
+          { status: 403 }
+        );
+      }
+      const { data: activeSub } = await supabaseAdmin
         .from("subscriptions")
         .select("id, status")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle();
 
@@ -70,11 +80,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 1. Create child profile
-    const { data: childProfile, error: childError } = await supabase
+    // Use admin client for all inserts so RLS doesn't block anonymous visitors
+    const { data: childProfile, error: childError } = await supabaseAdmin
       .from("child_profiles")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         name: childName,
         age: childAge,
         gender: childGender,
@@ -94,10 +104,10 @@ export async function POST(request: NextRequest) {
     let secondChildProfileId: string | null = null;
 
     if (secondChildName && secondChildAge !== undefined && secondChildGender) {
-      const { data: secondProfile, error: secondError } = await supabase
+      const { data: secondProfile, error: secondError } = await supabaseAdmin
         .from("child_profiles")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           name: secondChildName,
           age: secondChildAge,
           gender: secondChildGender,
@@ -120,10 +130,10 @@ export async function POST(request: NextRequest) {
       ? `${childName} & ${secondChildName}'s ${theme.name}`
       : theme.titleTemplate?.replace("[Child]", childName) || `${childName}'s ${theme.name}`;
 
-    const { data: book, error: bookError } = await supabase
+    const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         child_profile_id: childProfile.id,
         second_child_profile_id: secondChildProfileId,
         theme_id: themeId,
@@ -145,11 +155,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Capture email (if provided)
+    // Capture email for anonymous visitors (and optionally for logged-in users too)
     if (email) {
-      await supabase.from("email_captures").insert({
+      await supabaseAdmin.from("email_captures").insert({
         email,
         book_id: book.id,
+      }).then(({ error }) => {
+        if (error) console.warn("email_captures insert failed:", error.message);
       });
     }
 
