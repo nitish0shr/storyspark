@@ -1,7 +1,13 @@
-import { replicate } from "@/lib/replicate";
+import { getOpenAI } from "@/lib/openai";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
 import { ILLUSTRATION_PROMPT_TEMPLATE, fillPromptTemplate } from "@/data/prompts";
+
+const STORAGE_BUCKET = "book-illustrations";
+
+const PLACEHOLDER_URL =
+  "https://placehold.co/1024x1024/FDF5E7/5E17EB?text=Illustration+Coming+Soon";
 
 /** Outfit descriptions per theme for prompt consistency. */
 const THEME_OUTFITS: Record<string, string> = {
@@ -31,9 +37,7 @@ const THEME_OUTFITS: Record<string, string> = {
     "a creative Halloween costume with fun accessories, slightly oversized and full of personality",
 };
 
-/**
- * Simple semaphore for limiting concurrent async operations.
- */
+/** Simple semaphore for limiting concurrent async operations. */
 class Semaphore {
   private queue: (() => void)[] = [];
   private current = 0;
@@ -61,73 +65,109 @@ class Semaphore {
 }
 
 /**
- * Generates a single illustration using Replicate's Flux model.
- * Retries up to 2 times on failure.
+ * Ensures the illustration storage bucket exists (creates it as public if missing).
+ */
+async function ensureBucket(): Promise<void> {
+  const { error } = await supabaseAdmin.storage.getBucket(STORAGE_BUCKET);
+  if (error) {
+    const { error: createError } = await supabaseAdmin.storage.createBucket(
+      STORAGE_BUCKET,
+      { public: true, fileSizeLimit: 10 * 1024 * 1024 }
+    );
+    if (createError && !createError.message.includes("already exists")) {
+      console.warn("Could not create storage bucket:", createError.message);
+    }
+  }
+}
+
+let bucketReady = false;
+
+/**
+ * Uploads an image buffer to Supabase Storage and returns the public URL.
+ */
+async function uploadImageToStorage(
+  buffer: Buffer,
+  storagePath: string,
+  contentType = "image/png"
+): Promise<string> {
+  if (!bucketReady) {
+    await ensureBucket();
+    bucketReady = true;
+  }
+
+  const { error } = await supabaseAdmin.storage
+    .from(STORAGE_BUCKET)
+    .upload(storagePath, buffer, { contentType, upsert: true });
+
+  if (error) {
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+
+  const { data } = supabaseAdmin.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(storagePath);
+
+  return data.publicUrl;
+}
+
+/**
+ * Generates a single illustration using OpenAI image generation.
+ * Tries gpt-image-1 first; falls back to dall-e-3.
+ * Returns a placeholder URL if both models fail after one retry.
  */
 async function generateSingleIllustration(
   prompt: string,
-  retries = 2
+  storagePath: string
 ): Promise<string> {
-  let lastError: Error | null = null;
+  const openai = getOpenAI();
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt <= 1; attempt++) {
     try {
-      const output = await replicate.run(
-        "black-forest-labs/flux-schnell",
-        {
-          input: {
-            prompt,
-            num_outputs: 1,
-            aspect_ratio: "3:4",
-            output_format: "webp",
-            output_quality: 90,
-          },
-        }
-      );
+      let b64: string | undefined;
 
-      // Flux returns an array of FileOutput objects or URL strings
-      if (Array.isArray(output) && output.length > 0) {
-        const firstOutput = output[0];
-        // FileOutput has a .url() method or can be cast to string
-        const url = typeof firstOutput === "string"
-          ? firstOutput
-          : String(firstOutput);
-        if (!url || url.length === 0) {
-          throw new Error("Empty URL returned from image generation");
-        }
-        return url;
+      // Attempt 1: gpt-image-1 (returns b64_json by default)
+      try {
+        const res = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: prompt.slice(0, 32000),
+          n: 1,
+          size: "1024x1024",
+        });
+        b64 = res.data[0]?.b64_json ?? undefined;
+        if (!b64) throw new Error("No b64_json from gpt-image-1");
+      } catch (e1) {
+        console.warn(`gpt-image-1 failed (attempt ${attempt + 1}): ${e1 instanceof Error ? e1.message : e1}`);
+        // Fall back to dall-e-3
+        const res = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: prompt.slice(0, 4000),
+          n: 1,
+          size: "1024x1024",
+          response_format: "b64_json",
+          quality: "standard",
+        });
+        b64 = res.data[0]?.b64_json ?? undefined;
+        if (!b64) throw new Error("No b64_json from dall-e-3");
       }
 
-      throw new Error("Unexpected output format from Replicate");
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      const buffer = Buffer.from(b64, "base64");
+      return await uploadImageToStorage(buffer, storagePath);
+    } catch (err) {
       console.warn(
-        `Illustration attempt ${attempt + 1} failed: ${lastError.message}`
+        `Illustration attempt ${attempt + 1} failed for ${storagePath}: ${
+          err instanceof Error ? err.message : err
+        }`
       );
-      if (attempt < retries) {
-        // Brief delay before retry
-        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
   }
 
-  throw new Error(
-    `Illustration generation failed after ${retries + 1} attempts: ${lastError?.message}`
-  );
+  console.error(`All illustration attempts exhausted for ${storagePath}, using placeholder`);
+  return PLACEHOLDER_URL;
 }
 
-/**
- * Generates illustrations for story pages in parallel with a concurrency limit.
- *
- * @param params.storyPages - The story text pages
- * @param params.appearanceProfile - Child's physical appearance
- * @param params.themeId - Theme identifier
- * @param params.childAge - Child's age
- * @param params.childGender - Child's gender
- * @param params.sceneDescriptions - Scene descriptions matching page order
- * @param params.pageNumbers - If provided, only generate for these page numbers (1-indexed)
- * @returns Array of image URLs in the same order as input pages/pageNumbers
- */
 export interface SecondChildAppearance {
   name: string;
   age: number;
@@ -135,7 +175,22 @@ export interface SecondChildAppearance {
   appearanceProfile: AppearanceProfile;
 }
 
+/**
+ * Generates illustrations for story pages in parallel (max 2 concurrent).
+ *
+ * @param params.bookId         - Used for constructing Supabase Storage paths
+ * @param params.storyPages     - All story text pages
+ * @param params.appearanceProfile - Child's physical appearance
+ * @param params.themeId        - Theme identifier
+ * @param params.childAge       - Child's age
+ * @param params.childGender    - Child's gender
+ * @param params.sceneDescriptions - Scene descriptions matching page order
+ * @param params.pageNumbers    - If provided, only generate for these page numbers (1-indexed)
+ * @param params.secondChild    - Optional second child appearance for dual-hero books
+ * @returns Array of image URLs in the same order as input pages/pageNumbers
+ */
 export async function generateIllustrations(params: {
+  bookId: string;
   storyPages: BookPage[];
   appearanceProfile: AppearanceProfile;
   themeId: string;
@@ -146,6 +201,7 @@ export async function generateIllustrations(params: {
   secondChild?: SecondChildAppearance;
 }): Promise<string[]> {
   const {
+    bookId,
     storyPages,
     appearanceProfile,
     themeId,
@@ -156,8 +212,7 @@ export async function generateIllustrations(params: {
     secondChild,
   } = params;
 
-  const outfit =
-    THEME_OUTFITS[themeId] || "a colorful, age-appropriate outfit";
+  const outfit = THEME_OUTFITS[themeId] || "a colorful, age-appropriate outfit";
   const genderLabel = childGender === "neutral" ? "child" : childGender;
   const ageLabel = childAge < 0 ? "baby" : String(childAge);
 
@@ -165,11 +220,11 @@ export async function generateIllustrations(params: {
     ? storyPages.filter((p) => pageNumbers.includes(p.pageNumber))
     : storyPages;
 
-  const prompts: string[] = targetPages.map((page) => {
+  const jobs: Array<{ prompt: string; storagePath: string }> = targetPages.map((page) => {
     const sceneIdx = page.pageNumber - 1;
     const scene =
       sceneDescriptions[sceneIdx] ||
-      `A scene from the story: ${page.text.substring(0, 100)}`;
+      `A scene from the story: ${page.text.substring(0, 150)}`;
 
     let prompt = fillPromptTemplate(ILLUSTRATION_PROMPT_TEMPLATE, {
       scene_description: scene,
@@ -190,16 +245,17 @@ export async function generateIllustrations(params: {
       prompt += `\n\nSecond main character: A ${a2}-year-old ${g2} with ${ap.skinTone} skin, ${ap.hairColor} ${ap.hairStyle} hair, and ${ap.eyeColor} eyes. Also wearing ${outfit}. Both children should appear together in every scene, interacting and adventuring side by side.`;
     }
 
-    return prompt;
+    const storagePath = `${bookId}/page-${page.pageNumber}.png`;
+    return { prompt, storagePath };
   });
 
-  // Generate illustrations in parallel with concurrency limit of 3
-  const semaphore = new Semaphore(3);
+  // Generate with concurrency limit of 2 (OpenAI rate-limit friendly)
+  const semaphore = new Semaphore(2);
   const results = await Promise.all(
-    prompts.map(async (prompt) => {
+    jobs.map(async ({ prompt, storagePath }) => {
       await semaphore.acquire();
       try {
-        return await generateSingleIllustration(prompt);
+        return await generateSingleIllustration(prompt, storagePath);
       } finally {
         semaphore.release();
       }

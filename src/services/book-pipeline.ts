@@ -220,6 +220,7 @@ export async function generatePreview(bookId: string): Promise<void> {
     const previewPageNumbers = [1, 2, 3];
 
     const previewIllustrationUrls = await generateIllustrations({
+      bookId,
       storyPages,
       appearanceProfile,
       themeId: book.theme_id,
@@ -333,6 +334,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
         : [];
 
       const newUrls = await generateIllustrations({
+        bookId,
         storyPages,
         appearanceProfile,
         themeId: book.theme_id,
