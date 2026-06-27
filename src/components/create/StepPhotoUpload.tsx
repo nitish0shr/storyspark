@@ -1,239 +1,285 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { useWizardStore } from "./WizardProvider";
+import { useRef, useState, useEffect } from "react";
+import { useWizardStore } from "@/components/create/WizardProvider";
+import { Button } from "@/components/ui/button";
+import { Camera, Loader2, X, CheckCircle2, ArrowRight, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Camera, Upload, ArrowRight, X, ImageIcon, Lightbulb, Loader2, Shield,
-} from "lucide-react";
-import { toast } from "sonner";
-import { usePostHog } from "posthog-js/react";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_BYTES = 10 * 1024 * 1024;
 
-function PhotoUploader({
-  label, previewUrl, onFile, onClear, uploading,
-}: {
-  label: string;
-  previewUrl: string | null;
-  onFile: (file: File) => void;
-  onClear: () => void;
-  uploading: boolean;
-}) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+const CONSENT_TEXT =
+  "I am the parent or legal guardian of the child in this photo and consent to it being used only to create this storybook. It is deleted right after the book is made and is never used to train AI.";
 
-  const handleFile = useCallback((file: File) => {
-    setError(null);
-    if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith(".heic")) {
-      setError("Please upload a JPG, PNG, or HEIC image.");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setError("Image must be under 10MB.");
-      return;
-    }
-    onFile(file);
-  }, [onFile]);
-
-  return (
-    <div className="space-y-3">
-      {previewUrl ? (
-        <div className="relative overflow-hidden rounded-2xl border-2 border-[#CB6CE6] bg-[#CB6CE6]/5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt={label} className="mx-auto max-h-52 w-full object-contain p-4" />
-          <button
-            onClick={() => { onClear(); if (inputRef.current) inputRef.current.value = ""; }}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#262625]/50 text-white backdrop-blur-sm transition-colors hover:bg-[#262625]/70"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <div className="border-t-2 border-[#CB6CE6]/20 bg-[#CB6CE6]/5 px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="font-body text-sm font-bold text-[#5E17EB] hover:text-[#CB6CE6] transition-colors"
-            >
-              <Camera className="mr-1.5 inline h-4 w-4 -mt-0.5" />
-              Change Photo
-            </button>
-            {uploading && (
-              <span className="font-body text-xs text-[#262625]/40 flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Uploading...
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-          onClick={() => inputRef.current?.click()}
-          className={cn(
-            "group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 transition-all duration-200",
-            isDragging
-              ? "border-[#5E17EB] bg-[#5E17EB]/5 scale-[1.02]"
-              : "border-[#262625]/20 bg-white hover:border-[#CB6CE6] hover:bg-[#CB6CE6]/5"
-          )}
-        >
-          <div className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
-            isDragging ? "bg-[#5E17EB] text-white" : "bg-[#CB6CE6]/20 text-[#5E17EB] group-hover:bg-[#CB6CE6]/30"
-          )}>
-            <ImageIcon className="h-6 w-6" />
-          </div>
-          <div className="text-center">
-            <p className="font-body font-bold text-[#262625]/70 text-sm">
-              <Upload className="mr-1 inline h-3.5 w-3.5 -mt-0.5" />
-              Drop photo or click to browse
-            </p>
-            <p className="mt-0.5 font-body text-xs text-[#262625]/40">JPG, PNG, or HEIC — up to 10MB</p>
-          </div>
-        </div>
-      )}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".jpg,.jpeg,.png,.heic,.heif"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-        className="hidden"
-      />
-      {error && <p className="font-body text-sm text-red-500 text-center">{error}</p>}
-    </div>
-  );
-}
+const PRIVACY_NOTE =
+  "Your photo is used only to match your child's look in the illustrations. It's deleted from our servers right after — never stored, never used to train AI.";
 
 export function StepPhotoUpload() {
-  const {
-    childName, photoPreviewUrl, setPhoto, setPhotoUrl,
-    hasSecondChild, secondChildName, secondChildPhotoPreviewUrl,
-    setSecondChildPhoto, setSecondChildPhotoUrl, nextStep,
-  } = useWizardStore();
-  const posthog = usePostHog();
-  const [uploading, setUploading] = useState(false);
-  const [uploading2, setUploading2] = useState(false);
+  const childName = useWizardStore((s) => s.childName);
+  const nextStep = useWizardStore((s) => s.nextStep);
+  const setAppearanceDescription = useWizardStore((s) => s.setAppearanceDescription);
 
-  const uploadToServer = useCallback(async (file: File, setUrl: (url: string) => void, setLoading: (b: boolean) => void) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function validateAndSetFile(f: File) {
+    setError(null);
+
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      setError("Please choose a JPG, PNG, or WEBP photo.");
+      return;
+    }
+
+    if (f.size > MAX_BYTES) {
+      setError(`That photo is too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Please choose one under 10 MB.`);
+      return;
+    }
+
+    if (f.size === 0) {
+      setError("That file looks empty. Please try a different photo.");
+      return;
+    }
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(f);
+    setPreviewUrl(URL.createObjectURL(f));
+    setConsentChecked(false);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    if (picked) validateAndSetFile(picked);
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) validateAndSetFile(dropped);
+  }
+
+  function clearFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setConsentChecked(false);
+    setError(null);
+  }
+
+  function handleSkip() {
+    setAppearanceDescription(null);
+    nextStep();
+  }
+
+  async function handleUsePhoto() {
+    if (!file || !consentChecked) return;
     setLoading(true);
+    setError(null);
+
     try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      const res = await fetch("/api/upload-photo", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        setUrl(data.url);
+      const form = new FormData();
+      form.append("photo", file);
+
+      const res = await fetch("/api/analyze-photo", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not analyze the photo. Please try again or skip.");
+        setLoading(false);
+        return;
       }
-    } catch { } finally {
+
+      setAppearanceDescription(data.description ?? null);
+      nextStep();
+    } catch {
+      setError("Something went wrong. Please try again or skip this step.");
       setLoading(false);
     }
-  }, []);
+  }
 
-  const handleFirstFile = useCallback((file: File) => {
-    const previewUrl = URL.createObjectURL(file);
-    setPhoto(file, previewUrl);
-    uploadToServer(file, setPhotoUrl, setUploading);
-  }, [setPhoto, setPhotoUrl, uploadToServer]);
-
-  const handleSecondFile = useCallback((file: File) => {
-    const previewUrl = URL.createObjectURL(file);
-    setSecondChildPhoto(file, previewUrl);
-    uploadToServer(file, setSecondChildPhotoUrl, setUploading2);
-  }, [setSecondChildPhoto, setSecondChildPhotoUrl, uploadToServer]);
-
-  const clearFirst = () => {
-    useWizardStore.setState({ photoFile: null, photoPreviewUrl: null, photoUrl: null });
-  };
-  const clearSecond = () => {
-    useWizardStore.setState({ secondChildPhotoFile: null, secondChildPhotoPreviewUrl: null, secondChildPhotoUrl: null });
-  };
+  const name = childName || "your child";
+  const canSubmit = !!file && consentChecked && !loading;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <div className="text-center">
-        <h2 className="font-heading text-2xl md:text-3xl font-bold text-[#262625]">
-          Upload photo{hasSecondChild ? "s" : ""} {hasSecondChild ? "" : `of ${childName}`}
+    <div className="mx-auto max-w-lg">
+      <div className="mb-8 text-center">
+        <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#262625] mb-2">
+          Add a photo{" "}
+          <span className="text-[#262625]/40 text-xl font-medium">(optional)</span>
         </h2>
-        <p className="mt-2 font-body text-[#262625]/60">
-          We&apos;ll use {hasSecondChild ? "these" : "this"} to create illustrations that look like{" "}
-          {hasSecondChild ? `${childName} and ${secondChildName}` : childName}.
+        <p className="font-body text-[#262625]/60 text-sm">
+          We&apos;ll match {name}&apos;s look in every illustration — hair color, skin tone, and more.
         </p>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl bg-[#FFDE59]/20 border-2 border-[#FFDE59] p-4">
-        <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-[#262625]" />
-        <div className="font-body text-sm text-[#262625]">
-          <p className="font-bold">For best results:</p>
-          <ul className="mt-1 list-disc pl-4 space-y-0.5 text-[#262625]/70">
-            <li>Clear view of face</li>
-            <li>Good lighting</li>
-            <li>No sunglasses or masks</li>
-          </ul>
+      <div className="card-chunky bg-white p-6 space-y-5">
+        {/* Drop zone / preview */}
+        {!previewUrl ? (
+          <div
+            className="border-2 border-dashed border-[#262625]/20 rounded-2xl p-8 text-center cursor-pointer hover:border-[#5E17EB]/40 hover:bg-[#FDF5E7]/60 transition-all duration-200"
+            onClick={() => inputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-[#FFDE59]/30 border-2 border-[#262625]/10 flex items-center justify-center">
+              <Camera className="h-7 w-7 text-[#262625]/50" />
+            </div>
+            <p className="font-body font-bold text-[#262625] mb-1">
+              Tap to choose a photo
+            </p>
+            <p className="font-body text-xs text-[#262625]/40">
+              JPG, PNG, or WEBP · max 10 MB
+            </p>
+          </div>
+        ) : (
+          <div className="relative rounded-2xl overflow-hidden border-2 border-[#262625]/10 bg-[#FDF5E7]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt="Selected photo preview"
+              className="w-full max-h-64 object-contain"
+            />
+            <button
+              onClick={clearFile}
+              className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white border-2 border-[#262625]/20 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-colors"
+              aria-label="Remove photo"
+            >
+              <X className="h-4 w-4 text-[#262625]" />
+            </button>
+            <div className="px-4 py-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="font-body text-xs text-[#262625]/60 truncate">{file?.name}</span>
+            </div>
+          </div>
+        )}
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        {/* Privacy microcopy */}
+        <div className="flex gap-2.5 bg-[#FDF5E7] rounded-xl px-4 py-3 border border-[#262625]/10">
+          <ShieldCheck className="h-4 w-4 text-[#5E17EB] shrink-0 mt-0.5" />
+          <p className="font-body text-xs text-[#262625]/60 leading-relaxed">
+            {PRIVACY_NOTE}
+          </p>
         </div>
-      </div>
 
-      {hasSecondChild && (
-        <p className="font-body text-sm font-bold text-[#262625]">{childName}&apos;s photo</p>
-      )}
-      <PhotoUploader
-        label={`Photo of ${childName}`}
-        previewUrl={photoPreviewUrl}
-        onFile={handleFirstFile}
-        onClear={clearFirst}
-        uploading={uploading}
-      />
-
-      {hasSecondChild && (
-        <>
-          <p className="font-body text-sm font-bold text-[#262625]">{secondChildName || "Second child"}&apos;s photo</p>
-          <PhotoUploader
-            label={`Photo of ${secondChildName}`}
-            previewUrl={secondChildPhotoPreviewUrl}
-            onFile={handleSecondFile}
-            onClear={clearSecond}
-            uploading={uploading2}
-          />
-        </>
-      )}
-
-      <div className="flex items-center justify-center gap-2 font-body text-xs text-[#262625]/40">
-        <Shield className="h-3.5 w-3.5" />
-        <span>Your photos are encrypted and never shared with third parties.</span>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div onClick={() => {
-          if (!photoPreviewUrl) toast.info(`Please upload a photo of ${childName} to continue, or skip below.`);
-        }}>
-          <button
-            onClick={() => {
-              posthog.capture("wizard_step_completed", { step: "photo_upload", has_second_child: hasSecondChild });
-              nextStep();
-            }}
-            disabled={!photoPreviewUrl}
+        {/* Consent checkbox — only shown when a file is selected */}
+        {file && (
+          <label
             className={cn(
-              "btn-chunky h-12 w-full flex items-center justify-center gap-2 font-heading font-bold text-base transition-all",
-              photoPreviewUrl
-                ? "bg-[#FFDE59] text-[#262625] cursor-pointer"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
+              "flex gap-3 cursor-pointer p-3 rounded-xl border-2 transition-colors",
+              consentChecked
+                ? "border-[#5E17EB]/30 bg-[#5E17EB]/5"
+                : "border-[#262625]/12 bg-white hover:border-[#5E17EB]/20"
             )}
           >
-            Next
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            <div className="relative mt-0.5 shrink-0">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={consentChecked}
+                onChange={(e) => setConsentChecked(e.target.checked)}
+              />
+              <div
+                className={cn(
+                  "h-5 w-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                  consentChecked
+                    ? "bg-[#5E17EB] border-[#5E17EB]"
+                    : "bg-white border-[#262625]/30"
+                )}
+              >
+                {consentChecked && (
+                  <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12">
+                    <path
+                      d="M2 6l3 3 5-5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <p className="font-body text-xs text-[#262625]/70 leading-relaxed">
+              {CONSENT_TEXT}
+            </p>
+          </label>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="rounded-xl bg-red-50 border-2 border-red-100 px-4 py-3 font-body text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSkip}
+            disabled={loading}
+            className="sm:flex-1 h-11 rounded-xl border-2 border-[#262625]/15 font-body font-bold text-[#262625]/60 hover:text-[#262625] hover:border-[#262625]/30"
+          >
+            Skip this step
+          </Button>
+          <Button
+            type="button"
+            onClick={handleUsePhoto}
+            disabled={!canSubmit}
+            className="sm:flex-[2] btn-chunky h-11 bg-[#FFDE59] text-[#262625] font-heading font-bold border-0 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Analyzing photo…
+              </>
+            ) : (
+              <>
+                Use this photo
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
         </div>
-        <button
-          onClick={() => {
-            posthog.capture("wizard_step_completed", { step: "photo_skipped" });
-            nextStep();
-          }}
-          className="font-body text-sm font-bold text-[#262625]/40 hover:text-[#5E17EB] transition-colors"
-        >
-          Skip — illustrations won&apos;t match {hasSecondChild ? "their appearances" : `${childName}'s appearance`}
-        </button>
+
+        {!file && (
+          <p className="text-center font-body text-xs text-[#262625]/40">
+            No photo? No problem —{" "}
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="text-[#5E17EB] font-bold hover:underline"
+            >
+              skip this step
+            </button>{" "}
+            and we&apos;ll still make a beautiful book.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const stepLabels = ["Child Info", "Theme", "Personalize", "Preview"];
+const stepLabels = ["Child Info", "Photo", "Theme", "Personalize", "Preview"];
 
 interface ProgressStepsProps {
   currentStep: number;
