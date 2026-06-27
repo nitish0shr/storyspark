@@ -113,7 +113,7 @@ function previewEmailHtml({
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
             StorySpark &middot; Personalized storybooks for every child<br>
-            You received this because you created a story at storyspark.co
+            You received this because you created a story at starmeestories.com
           </p>
         </td></tr>
 
@@ -181,7 +181,7 @@ function bookReadyEmailHtml({
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
             StorySpark &middot; Personalized storybooks for every child<br>
-            You received this because you purchased a story at storyspark.co
+            You received this because you purchased a story at starmeestories.com
           </p>
         </td></tr>
 

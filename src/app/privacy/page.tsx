@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-sm text-gray-400 mb-10">Last updated: April 2026</p>
+        <p className="text-sm text-gray-400 mb-10">Last updated: June 2026</p>
 
         <div className="prose prose-gray max-w-none space-y-8 text-gray-600 text-[15px] leading-relaxed">
           <section>
@@ -33,15 +33,56 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              2. How We Use Your Child&apos;s Photo
+              2. Children&apos;s Photos
             </h2>
-            <p>
-              Your child&apos;s photo is used solely to generate a stylized,
-              illustrated character for their personalized storybook. We never create
-              photorealistic images of children. Photos are processed by our AI
-              illustration service and are not used to train AI models. You can request
-              deletion of any uploaded photos at any time.
+            <p className="mb-4">
+              We take extra care with photos of children. Here is exactly what happens
+              when you choose to upload one:
             </p>
+            <ul className="list-disc pl-6 space-y-3">
+              <li>
+                <strong>Uploading a photo is completely optional.</strong> You can
+                create a full, beautiful storybook without ever providing a photo. This
+                step can be skipped at any time.
+              </li>
+              <li>
+                <strong>The photo is used only to create that child&apos;s storybook.</strong>{" "}
+                It is sent to our AI system, which reads it to write a brief description
+                of your child&apos;s appearance (for example, hair color, skin tone, and
+                eye color). That description is then used to make the storybook
+                illustrations look like your child.
+              </li>
+              <li>
+                <strong>The photo is deleted immediately after analysis.</strong> It is
+                not saved to our servers, not stored in any database, and not retained
+                in any backup. Only the short text description (e.g. &quot;curly auburn
+                hair, fair skin, green eyes&quot;) is kept — and only for as long as
+                your book exists.
+              </li>
+              <li>
+                <strong>Photos are never used to train AI models.</strong> Your
+                child&apos;s image is not shared with any AI training dataset, used to
+                improve machine-learning systems, or retained for any purpose beyond
+                generating your specific book.
+              </li>
+              <li>
+                <strong>Only a parent or legal guardian may upload a photo.</strong> By
+                uploading a photo, you confirm that you are the parent or legal guardian
+                of the child pictured and that you have the right to use the photo for
+                this purpose.
+              </li>
+              <li>
+                <strong>To request deletion of your data</strong> — including the
+                appearance description stored with your book — email us at{" "}
+                <a
+                  href="mailto:hello@starmeestories.com"
+                  className="text-[#7C3AED] hover:underline"
+                >
+                  hello@starmeestories.com
+                </a>{" "}
+                and we will remove it promptly.
+              </li>
+            </ul>
           </section>
 
           <section>
@@ -75,8 +116,9 @@ export default function PrivacyPage() {
             <p>
               We do not sell your personal information. We share data only with service
               providers necessary to operate StorySpark: Supabase (database), Stripe
-              (payments), Resend (email), OpenAI (story generation), and Replicate
-              (illustration generation). Each provider has their own privacy policy.
+              (payments), Resend (email), OpenAI (story and appearance analysis), and
+              Replicate (illustration generation). Each provider has their own privacy
+              policy.
             </p>
           </section>
 
@@ -102,10 +144,10 @@ export default function PrivacyPage() {
             <p>
               For privacy-related questions, email us at{" "}
               <a
-                href="mailto:privacy@storyspark.co"
+                href="mailto:hello@starmeestories.com"
                 className="text-[#7C3AED] hover:underline"
               >
-                privacy@storyspark.co
+                hello@starmeestories.com
               </a>
               .
             </p>
