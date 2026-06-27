@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") || "/dashboard";
 
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const proto = request.headers.get("x-forwarded-proto") ?? "https";
+  const base = forwardedHost ? `${proto}://${forwardedHost}` : origin;
+
   if (tokenHash && type) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({
@@ -16,14 +20,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!error) {
-      // OTP verified -- redirect to intended destination
-      const redirectUrl = new URL(next, origin);
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(`${base}${next}`);
     }
   }
 
-  // Verification failed -- redirect to login with error
-  const loginUrl = new URL("/auth/login", origin);
-  loginUrl.searchParams.set("error", "confirm");
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.redirect(`${base}/auth/login?error=confirm`);
 }
