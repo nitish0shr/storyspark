@@ -32,10 +32,10 @@ export default function ContactPage() {
                 For general inquiries, support, or order help:
               </p>
               <a
-                href="mailto:hello@storyspark.co"
+                href="mailto:hello@starmeestories.com"
                 className="text-[#7C3AED] font-medium hover:underline"
               >
-                hello@storyspark.co
+                hello@starmeestories.com
               </a>
             </div>
           </div>
