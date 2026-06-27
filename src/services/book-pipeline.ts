@@ -200,13 +200,23 @@ export async function generatePreview(bookId: string): Promise<void> {
     const contextualAnswers: Record<string, string> =
       book.contextual_answers || {};
 
+    // Extract the AI-generated appearance description (stored by create-book route).
+    // Strip it from contextualAnswers so it doesn't appear in the story prompt Q&A.
+    const appearanceDescription: string | undefined =
+      typeof contextualAnswers.__appearance_desc === "string" && contextualAnswers.__appearance_desc
+        ? contextualAnswers.__appearance_desc
+        : undefined;
+    const storyContextualAnswers = Object.fromEntries(
+      Object.entries(contextualAnswers).filter(([k]) => k !== "__appearance_desc")
+    );
+
     const storyPages: BookPage[] = await generateStory({
       childName: child.name,
       childAge: child.age,
       childGender: child.gender,
       appearanceProfile,
       themeId: book.theme_id,
-      contextualAnswers,
+      contextualAnswers: storyContextualAnswers,
       language: book.language || "en",
       secondChild: secondChildData,
     });
@@ -229,6 +239,7 @@ export async function generatePreview(bookId: string): Promise<void> {
       sceneDescriptions,
       pageNumbers: previewPageNumbers,
       secondChild: secondChildAppearance,
+      appearanceDescription,
     });
 
     // Build the full illustration_urls array with nulls for non-preview pages
@@ -333,6 +344,12 @@ export async function generateFullBook(bookId: string): Promise<void> {
         ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
         : [];
 
+      const fullBookAppearanceDescription: string | undefined =
+        typeof book.contextual_answers?.__appearance_desc === "string" &&
+        book.contextual_answers.__appearance_desc
+          ? book.contextual_answers.__appearance_desc
+          : undefined;
+
       const newUrls = await generateIllustrations({
         bookId,
         storyPages,
@@ -343,6 +360,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
         sceneDescriptions,
         pageNumbers: remainingPageNumbers,
         secondChild: secondChildAppearance,
+        appearanceDescription: fullBookAppearanceDescription,
       });
 
       // Merge new URLs into the full array

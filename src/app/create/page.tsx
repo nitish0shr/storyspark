@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useWizardStore } from "@/components/create/WizardProvider";
 import { ProgressSteps } from "@/components/shared/ProgressSteps";
 import { StepChildInfo } from "@/components/create/StepChildInfo";
-// StepPhotoUpload is kept but hidden for v1 (photo-from-face disabled)
-// import { StepPhotoUpload } from "@/components/create/StepPhotoUpload";
+import { StepPhotoUpload } from "@/components/create/StepPhotoUpload";
 import { StepThemeSelect } from "@/components/create/StepThemeSelect";
 import { StepQuestions } from "@/components/create/StepQuestions";
 import { StepSummary } from "@/components/create/StepSummary";
@@ -16,10 +15,10 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
-// Maps internal step numbers (1,3,4,5,6) → visible progress steps (1,2,3,4)
-// Internal step 2 (Photo Upload) is hidden for v1.
+// Maps internal step numbers (1–6) → visible progress steps (1–5)
+// Step 5 (Summary) and step 6 (Preview generation) both show progress step 5
 function stepToProgress(step: number): number {
-  const map: Record<number, number> = { 1: 1, 3: 2, 4: 3, 5: 4, 6: 4 };
+  const map: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 5 };
   return map[step] ?? 1;
 }
 
@@ -103,7 +102,7 @@ export default function CreatePage() {
 
       {/* Progress */}
       <div className="mx-auto max-w-3xl px-4 pt-6 pb-2">
-        <ProgressSteps currentStep={progressStep} totalSteps={4} />
+        <ProgressSteps currentStep={progressStep} totalSteps={5} />
       </div>
 
       {/* Content */}
@@ -128,7 +127,7 @@ export default function CreatePage() {
           )}
         >
           {fadeKey === 1 && <StepChildInfo />}
-          {/* fadeKey === 2 is StepPhotoUpload — hidden for v1 (photo-from-face disabled) */}
+          {fadeKey === 2 && <StepPhotoUpload />}
           {fadeKey === 3 && <StepThemeSelect />}
           {fadeKey === 4 && <StepQuestions />}
           {fadeKey === 5 && <StepSummary />}

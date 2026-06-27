@@ -11,6 +11,7 @@ interface WizardState {
   photoFile: File | null;
   photoPreviewUrl: string | null;
   photoUrl: string | null;
+  appearanceDescription: string | null;
   hasSecondChild: boolean;
   secondChildName: string;
   secondChildAge: number;
@@ -36,6 +37,7 @@ interface WizardState {
   setChildGender: (gender: "boy" | "girl" | "neutral") => void;
   setPhoto: (file: File, previewUrl: string) => void;
   setPhotoUrl: (url: string) => void;
+  setAppearanceDescription: (desc: string | null) => void;
   setHasSecondChild: (has: boolean) => void;
   setSecondChildName: (name: string) => void;
   setSecondChildAge: (age: number) => void;
@@ -62,6 +64,7 @@ const initialState = {
   photoFile: null,
   photoPreviewUrl: null,
   photoUrl: null,
+  appearanceDescription: null,
   hasSecondChild: false,
   secondChildName: "",
   secondChildAge: -1,
@@ -87,15 +90,15 @@ export const useWizardStore = create<WizardState>()(
       ...initialState,
 
       setStep: (step) => set({ step }),
-      // Step 2 (Photo Upload) is hidden for v1 — skip it in both directions
-      nextStep: () => set((state) => ({ step: state.step === 1 ? 3 : state.step + 1 })),
-      prevStep: () => set((state) => ({ step: state.step === 3 ? 1 : Math.max(1, state.step - 1) })),
+      nextStep: () => set((state) => ({ step: state.step + 1 })),
+      prevStep: () => set((state) => ({ step: Math.max(1, state.step - 1) })),
       setChildName: (childName) => set({ childName }),
       setChildAge: (childAge) => set({ childAge }),
       setChildGender: (childGender) => set({ childGender }),
       setPhoto: (photoFile, photoPreviewUrl) =>
         set({ photoFile, photoPreviewUrl }),
       setPhotoUrl: (photoUrl) => set({ photoUrl }),
+      setAppearanceDescription: (appearanceDescription) => set({ appearanceDescription }),
       setHasSecondChild: (hasSecondChild) =>
         set(hasSecondChild ? { hasSecondChild } : {
           hasSecondChild: false,
@@ -134,12 +137,12 @@ export const useWizardStore = create<WizardState>()(
     {
       name: "storyspark-wizard",
       partialize: (state) => ({
-        // Persist user inputs only — skip transient/non-serializable fields
         step: state.step,
         childName: state.childName,
         childAge: state.childAge,
         childGender: state.childGender,
         photoUrl: state.photoUrl,
+        appearanceDescription: state.appearanceDescription,
         hasSecondChild: state.hasSecondChild,
         secondChildName: state.secondChildName,
         secondChildAge: state.secondChildAge,
@@ -153,8 +156,8 @@ export const useWizardStore = create<WizardState>()(
         childProfileId: state.childProfileId,
         secondChildProfileId: state.secondChildProfileId,
         bookId: state.bookId,
-        // Exclude: photoFile (File object), photoPreviewUrl (blob URL),
-        // isGenerating, generationStep (transient UI state)
+        // Excluded: photoFile/secondChildPhotoFile (File objects not serializable),
+        // photoPreviewUrl/secondChildPhotoPreviewUrl (blob URLs), isGenerating, generationStep
       }),
     }
   )

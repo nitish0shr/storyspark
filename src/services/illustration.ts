@@ -187,8 +187,28 @@ export interface SecondChildAppearance {
  * @param params.sceneDescriptions - Scene descriptions matching page order
  * @param params.pageNumbers    - If provided, only generate for these page numbers (1-indexed)
  * @param params.secondChild    - Optional second child appearance for dual-hero books
+ * @param params.appearanceDescription - Optional free-text description from photo vision analysis
  * @returns Array of image URLs in the same order as input pages/pageNumbers
  */
+
+/**
+ * Builds the character appearance line for an illustration prompt.
+ * When an AI-generated appearance description is available (from vision analysis),
+ * it is used directly. Otherwise falls back to the structured AppearanceProfile fields.
+ */
+function buildCharacterLine(
+  ageLabel: string,
+  genderLabel: string,
+  outfit: string,
+  appearanceProfile: AppearanceProfile,
+  appearanceDescription?: string
+): string {
+  if (appearanceDescription) {
+    return `A ${ageLabel}-year-old ${genderLabel}. Appearance from parent's photo: ${appearanceDescription}. Wearing ${outfit}.`;
+  }
+  return `A ${ageLabel}-year-old ${genderLabel} with ${appearanceProfile.skinTone} skin, ${appearanceProfile.hairColor} ${appearanceProfile.hairStyle} hair, and ${appearanceProfile.eyeColor} eyes. Wearing ${outfit}.`;
+}
+
 export async function generateIllustrations(params: {
   bookId: string;
   storyPages: BookPage[];
@@ -199,6 +219,7 @@ export async function generateIllustrations(params: {
   sceneDescriptions: string[];
   pageNumbers?: number[];
   secondChild?: SecondChildAppearance;
+  appearanceDescription?: string;
 }): Promise<string[]> {
   const {
     bookId,
@@ -210,6 +231,7 @@ export async function generateIllustrations(params: {
     sceneDescriptions,
     pageNumbers,
     secondChild,
+    appearanceDescription,
   } = params;
 
   const outfit = THEME_OUTFITS[themeId] || "a colorful, age-appropriate outfit";
@@ -226,6 +248,14 @@ export async function generateIllustrations(params: {
       sceneDescriptions[sceneIdx] ||
       `A scene from the story: ${page.text.substring(0, 150)}`;
 
+    const characterLine = buildCharacterLine(
+      ageLabel,
+      genderLabel,
+      outfit,
+      appearanceProfile,
+      appearanceDescription
+    );
+
     let prompt = fillPromptTemplate(ILLUSTRATION_PROMPT_TEMPLATE, {
       scene_description: scene,
       name: secondChild ? "the first child" : "the child",
@@ -237,6 +267,12 @@ export async function generateIllustrations(params: {
       eye_color: appearanceProfile.eyeColor,
       outfit_for_theme: outfit,
     });
+
+    // Replace the generic character line with the appearance-aware one
+    prompt = prompt.replace(
+      /Main character: A .+?\. Wearing .+?\./,
+      `Main character: ${characterLine}`
+    );
 
     if (secondChild) {
       const g2 = secondChild.gender === "neutral" ? "child" : secondChild.gender;

@@ -58,6 +58,7 @@ export function StepSummary() {
         body: JSON.stringify({
           childName, childAge, childGender,
           photoUrl: useWizardStore.getState().photoUrl || undefined,
+          appearanceDescription: useWizardStore.getState().appearanceDescription || undefined,
           themeId: selectedThemeId, contextualAnswers,
           dedication: dedication.trim() || undefined,
           language, email,
