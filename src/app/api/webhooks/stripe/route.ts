@@ -110,7 +110,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const metadata = session.metadata ?? {};
   const bookId = metadata.book_id;
   const userId = metadata.user_id;
-  const tier = metadata.tier;
   const isGift = metadata.is_gift === "true";
   const giftRecipientEmail = metadata.gift_recipient_email || null;
   const giftRecipientName = metadata.gift_recipient_name || null;
