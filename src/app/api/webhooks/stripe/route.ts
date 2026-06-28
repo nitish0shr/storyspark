@@ -7,6 +7,12 @@ import { generateFullBook } from "@/services/book-pipeline";
 import { getAppUrl } from "@/lib/utils";
 import { getNextThemeForSubscriber } from "@/services/theme-rotation";
 import { generatePreview } from "@/services/book-pipeline";
+import {
+  buildAdminApprovalEmail,
+  generateApprovalToken,
+  getAdminEmail,
+  isAdminEmailConfigured,
+} from "@/lib/admin-approval";
 
 export async function POST(request: NextRequest) {
   if (!isStripeConfigured() || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -154,23 +160,67 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const childName = book?.child_name || "your child";
   const appUrl = getAppUrl();
 
-  // 4. Trigger full book generation in background (don't await)
-  generateFullBook(bookId).catch((err) => {
-    console.error(`Background full-book generation failed for ${bookId}:`, err);
-  });
+  // 4. Set book to pending_approval — admin must approve before full generation
+  await supabaseAdmin
+    .from("books")
+    .update({ status: "pending_approval", updated_at: new Date().toISOString() })
+    .eq("id", bookId);
 
-  // 5. Send order confirmation email to buyer
+  // 5. Send admin approval email
+  const adminEmail = getAdminEmail();
+  if (adminEmail && isAdminEmailConfigured() && isResendConfigured()) {
+    try {
+      const token = generateApprovalToken(bookId);
+      const approveUrl = `${appUrl}/api/admin/approve-book?bookId=${bookId}&token=${token}`;
+      const rejectUrl = `${appUrl}/api/admin/reject-book?bookId=${bookId}&token=${token}`;
+
+      const { data: themeData } = await supabaseAdmin
+        .from("books")
+        .select("theme_title")
+        .eq("id", bookId)
+        .single();
+
+      await resend.emails.send({
+        from: RESEND_FROM_EMAIL,
+        to: adminEmail,
+        subject: `📚 Review required: ${childName}'s new book`,
+        html: buildAdminApprovalEmail({
+          bookId,
+          childName,
+          themeName: themeData?.theme_title || "Unknown theme",
+          buyerEmail: buyerEmail || "unknown",
+          buyerName,
+          previewUrl: `${appUrl}/preview/${bookId}`,
+          approveUrl,
+          rejectUrl,
+        }),
+      });
+
+      console.log(`[admin] Approval email sent to ${adminEmail} for book ${bookId}`);
+    } catch (adminEmailErr) {
+      console.error("Failed to send admin approval email:", adminEmailErr);
+    }
+  } else {
+    // Fallback: log approve URL to console so admin can manually trigger
+    const token = generateApprovalToken(bookId);
+    console.log(
+      `[admin] ADMIN_EMAIL not configured. To approve book ${bookId}, visit:\n` +
+      `  ${appUrl}/api/admin/approve-book?bookId=${bookId}&token=${token}\n` +
+      `To reject:\n` +
+      `  ${appUrl}/api/admin/reject-book?bookId=${bookId}&token=${token}`
+    );
+  }
+
+  // 6. Send order confirmation email to buyer (under-review copy)
   if (buyerEmail && isResendConfigured()) {
     try {
       await resend.emails.send({
         from: RESEND_FROM_EMAIL,
         to: buyerEmail,
-        subject: `${childName}'s StorySpark book is on its way!`,
-        html: buildOrderConfirmationEmail({
+        subject: `${childName}'s book order confirmed — we're reviewing it now!`,
+        html: buildOrderUnderReviewEmail({
           buyerName,
           childName,
-          tier: tier || "base",
-          bookUrl: `${appUrl}/checkout/success?session_id=${session.id}`,
           appUrl,
         }),
       });
@@ -233,56 +283,59 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
 // Email templates
 // ---------------------------------------------------------------------------
 
-function buildOrderConfirmationEmail(data: {
+function buildOrderUnderReviewEmail(data: {
   buyerName: string;
   childName: string;
-  tier: string;
-  bookUrl: string;
   appUrl: string;
 }): string {
-  return `
-<!DOCTYPE html>
-<html>
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin:0;padding:0;background-color:#FFFBF5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#7C3AED,#EC4899);border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;">
-      <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">StorySpark</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">A magical story, just for ${data.childName}</p>
-    </div>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFBF5;padding:40px 20px">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.10)">
 
-    <!-- Body -->
-    <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
-      <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.buyerName}!</h2>
-      <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        Thank you for your order! ${data.childName}'s personalized storybook is being created right now. Our AI illustrators are hard at work bringing the story to life.
-      </p>
-      <p style="margin:0 0 24px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        You'll be able to download your book as a PDF and view it in your browser once it's ready (usually about 2 minutes).
-      </p>
+        <tr><td style="background:linear-gradient(135deg,#7C3AED 0%,#EC4899 100%);padding:44px 40px 36px;text-align:center">
+          <p style="margin:0 0 10px;color:rgba(255,255,255,0.80);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif">Starmee Stories</p>
+          <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:bold;line-height:1.25">Order confirmed! ✨</h1>
+        </td></tr>
 
-      <!-- CTA Button -->
-      <div style="text-align:center;margin:24px 0;">
-        <a href="${data.bookUrl}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;">
-          View Your Book
-        </a>
-      </div>
+        <tr><td style="padding:36px 40px 32px">
+          <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">Hi ${data.buyerName}!</p>
+          <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">
+            Thank you for your order — we've received your payment and we're on it!
+          </p>
+          <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">
+            We personally review every book before releasing it to make sure <strong>${data.childName}'s</strong> story is absolutely perfect. You'll receive another email with your completed book as soon as it's ready — usually within a few hours.
+          </p>
 
-      <p style="margin:24px 0 0;color:#9a9aaa;font-size:13px;text-align:center;">
-        Your book is saved to your account and available anytime at
-        <a href="${data.appUrl}/dashboard" style="color:#7C3AED;">your dashboard</a>.
-      </p>
-    </div>
+          <div style="background:#F5F3FF;border-left:4px solid #7C3AED;border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0">
+            <p style="margin:0;font-size:14px;color:#4B5563;line-height:1.6">
+              💜 While you wait, you can preview the first 3 pages of <strong>${data.childName}'s</strong> story in your dashboard.
+            </p>
+          </div>
 
-    <!-- Footer -->
-    <div style="text-align:center;padding:24px 0;color:#9a9aaa;font-size:12px;">
-      <p style="margin:0;">Made with love by StorySpark</p>
-    </div>
-  </div>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="${data.appUrl}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;font-family:Arial,sans-serif">
+              Go to My Dashboard →
+            </a>
+          </div>
+        </td></tr>
+
+        <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
+          <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
+            Starmee Stories · Personalized storybooks for every child<br>
+            Questions? Reply to this email or contact us at hello@starmeestories.com
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
