@@ -130,7 +130,13 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
   const isReady =
     book.status === "preview_ready" ||
     book.status === "completed" ||
-    book.status === "purchased";
+    book.status === "purchased" ||
+    book.status === "pending_approval" ||
+    book.status === "approved";
+
+  const isPendingReview =
+    book.is_purchased &&
+    (book.status === "pending_approval" || book.status === "approved");
 
   if (!isReady) {
     return (
@@ -198,6 +204,27 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
           )}
         </div>
 
+        {/* Under-review banner for purchased books awaiting admin approval */}
+        {isPendingReview && (
+          <div className="max-w-lg mx-auto px-4 mb-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex gap-3 items-start">
+              <span className="text-amber-500 text-xl mt-0.5">⏳</span>
+              <div>
+                <p className="font-semibold text-amber-800 text-sm mb-0.5">
+                  Your book is being reviewed
+                </p>
+                <p className="text-amber-700 text-sm leading-relaxed">
+                  We personally check every book before releasing it. You&apos;ll
+                  receive an email as soon as{" "}
+                  <strong>{book.child_name}&apos;s</strong> full story is ready —
+                  usually within a few hours. In the meantime, enjoy the preview
+                  below!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Book Viewer */}
         <BookViewer
           pages={sortedPages.map((p) => ({
@@ -207,7 +234,9 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
             audioUrl: p.audio_url || null,
           }))}
           previewPageCount={
-            book.is_purchased ? sortedPages.length : PREVIEW_PAGE_COUNT
+            book.is_purchased && !isPendingReview
+              ? sortedPages.length
+              : PREVIEW_PAGE_COUNT
           }
           childName={book.child_name}
           themeId={book.theme_id}
