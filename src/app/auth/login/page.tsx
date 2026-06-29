@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, Loader2, Star } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -17,27 +17,38 @@ export default function LoginPage() {
 }
 
 function LoginPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
-  const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(
-    errorParam === "auth"
-      ? "Authentication failed. Please try again."
-      : errorParam === "confirm"
-        ? "Email confirmation failed. Please request a new link."
-        : null
-  );
+  const [error, setError] = useState<string | null>(null);
 
   const NOT_CONFIGURED_MSG =
     "Sign-in is temporarily unavailable. Please try again later — our team has been notified.";
 
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const mapError = (message: string): string => {
+    const m = message.toLowerCase();
+    if (m.includes("invalid login credentials")) {
+      return "Invalid email or password. Please try again.";
+    }
+    if (m.includes("already registered") || m.includes("already been registered")) {
+      return "An account with this email already exists. Please log in instead.";
+    }
+    if (m.includes("password") && m.includes("6")) {
+      return "Password must be at least 6 characters.";
+    }
+    if (m.includes("at least 6")) {
+      return "Password must be at least 6 characters.";
+    }
+    return message;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
     setLoading(true);
     setError(null);
 
@@ -50,18 +61,62 @@ function LoginPageContent() {
     }
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithOtp({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectTo)}`,
-        },
+        password,
       });
 
-      if (signInError) setError(signInError.message);
-      else setSent(true);
+      if (signInError) {
+        setError(mapError(signInError.message));
+      } else {
+        router.push(redirectTo);
+      }
     } catch (err) {
-      console.error("Magic link sign-in failed:", err);
-      setError("We couldn't send your magic link. Please try again in a moment.");
+      console.error("Login failed:", err);
+      setError("We couldn't log you in. Please try again in a moment.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (!email.trim() || !password) {
+      setError("Please enter an email and password to create an account.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    if (!supabase) {
+      console.error("Supabase client unavailable: auth env vars are missing.");
+      setLoading(false);
+      setError(NOT_CONFIGURED_MSG);
+      return;
+    }
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      if (signUpError) {
+        setError(mapError(signUpError.message));
+      } else if (data.session) {
+        router.push(redirectTo);
+      } else {
+        setError(
+          "Your account was created. Please log in with your email and password."
+        );
+      }
+    } catch (err) {
+      console.error("Sign-up failed:", err);
+      setError("We couldn't create your account. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -107,66 +162,68 @@ function LoginPageContent() {
               </div>
             )}
 
-            {sent ? (
-              <div className="text-center py-4">
-                <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-[#FFDE59]/30 border-2 border-[#FFDE59] flex items-center justify-center">
-                  <Mail className="h-6 w-6 text-[#262625]" />
-                </div>
-                <h2 className="font-heading text-lg font-bold text-[#262625] mb-2">
-                  Check your email
-                </h2>
-                <p className="font-body text-[#262625]/60 text-sm mb-6">
-                  We sent a magic link to{" "}
-                  <span className="font-bold text-[#262625]">{email}</span>.
-                  <br />
-                  Click the link in the email to sign in.
-                </p>
-                <button
-                  onClick={() => { setSent(false); setEmail(""); }}
-                  className="font-body text-sm font-bold text-[#5E17EB] hover:text-[#CB6CE6] transition-colors"
-                >
-                  Use a different email
-                </button>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block font-body text-sm font-bold text-[#262625] mb-1.5">
+                  Email address
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="h-11 rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 font-body text-base placeholder:text-[#262625]/30 focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
+                />
               </div>
-            ) : (
-              <>
-                <form onSubmit={handleMagicLink} className="space-y-4">
-                  <div>
-                    <label htmlFor="email" className="block font-body text-sm font-bold text-[#262625] mb-1.5">
-                      Email address
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="email"
-                      className="h-11 rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 font-body text-base placeholder:text-[#262625]/30 focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={loading || !email.trim()}
-                    className="btn-chunky w-full h-11 bg-[#FFDE59] text-[#262625] font-heading font-bold text-base border-0 hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Sending link...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Magic Link
-                      </>
-                    )}
-                  </Button>
-                </form>
+              <div>
+                <label htmlFor="password" className="block font-body text-sm font-bold text-[#262625] mb-1.5">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="h-11 rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 font-body text-base placeholder:text-[#262625]/30 focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loading || !email.trim() || !password}
+                className="btn-chunky w-full h-11 bg-[#FFDE59] text-[#262625] font-heading font-bold text-base border-0 hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Log in"
+                )}
+              </Button>
+            </form>
 
-              </>
-            )}
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="h-px flex-1 bg-[#262625]/10" />
+              <span className="font-body text-xs text-[#262625]/40">or</span>
+              <div className="h-px flex-1 bg-[#262625]/10" />
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleSignUp}
+              disabled={loading || !email.trim() || !password}
+              className="btn-chunky w-full h-11 bg-white text-[#262625] font-heading font-bold text-base border-2 border-[#262625] hover:bg-[#FDF5E7] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Create account
+            </Button>
           </div>
 
           <p className="text-center font-body text-xs text-[#262625]/40 mt-6">
