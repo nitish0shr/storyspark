@@ -1,3 +1,4 @@
+// redeploy note: bump to pick up updated environment secrets
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
