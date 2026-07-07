@@ -86,7 +86,7 @@ export async function generateMetadata({
 
   const appUrl = getAppUrl();
   const title = `${book.child_name}'s Story - StorySpark`;
-  const description = `Preview ${book.child_name}'s personalized storybook — a magical tale crafted just for them.`;
+  const description = `Preview ${book.child_name}'s personalised storybook — a magical tale crafted just for them.`;
 
   return {
     title,

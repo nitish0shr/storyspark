@@ -34,7 +34,7 @@ export function StepQuestions() {
         </p>
         {theme && (
           <p className="mt-1 font-body text-xs text-[#5E17EB] font-bold">
-            Personalizing: {childName}&apos;s {theme.name} ✦
+            Personalising: {childName}&apos;s {theme.name} ✦
           </p>
         )}
       </div>

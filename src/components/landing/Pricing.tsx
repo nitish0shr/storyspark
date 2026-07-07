@@ -17,7 +17,7 @@ import { PRICING } from "@/lib/stripe";
 import SubscribeButton from "./SubscribeButton";
 
 const oneTimeFeatures = [
-  { icon: BookOpen, text: "Personalized 12-page storybook" },
+  { icon: BookOpen, text: "Personalised 12-page storybook" },
   { icon: Paintbrush, text: "AI illustrations featuring your child" },
   { icon: Download, text: "Instant PDF download" },
   { icon: FolderHeart, text: "Saved to your account" },
@@ -25,7 +25,7 @@ const oneTimeFeatures = [
 ];
 
 const subscriptionFeatures = [
-  { icon: BookOpen, text: "1 new personalized book every month" },
+  { icon: BookOpen, text: "1 new personalised book every month" },
   { icon: RefreshCw, text: "Theme picked for you automatically" },
   { icon: Percent, text: "15% off any extra books" },
   { icon: Lock, text: "Exclusive subscriber-only themes" },

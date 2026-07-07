@@ -79,7 +79,7 @@ export default function DemoPage() {
             Sample Story Preview
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            See how a personalized StorySpark book looks
+            See how a personalised StorySpark book looks
           </p>
         </div>
 

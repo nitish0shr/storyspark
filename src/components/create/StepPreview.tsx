@@ -116,7 +116,7 @@ export function StepPreview() {
           {childName}&apos;s story is ready!
         </h2>
         <p className="mt-3 font-body text-[#262625]/60 leading-relaxed">
-          We&apos;ve created a personalized storybook with custom illustrations just for {childName}.
+          We&apos;ve created a personalised storybook with custom illustrations just for {childName}.
         </p>
       </div>
 

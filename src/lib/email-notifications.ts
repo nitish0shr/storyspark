@@ -90,7 +90,7 @@ function previewEmailHtml({
         <tr><td style="padding:36px 40px 32px">
           <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">Hi there!</p>
           <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">
-            We've finished creating <strong>${childName}'s</strong> personalized storybook preview — a unique story written just for them, with custom illustrations where they're the star.
+            We've finished creating <strong>${childName}'s</strong> personalised storybook preview — a unique story written just for them, with custom illustrations where they're the star.
           </p>
           <p style="margin:0 0 28px;font-size:16px;color:#374151;line-height:1.65">
             Click below to read the first 3 illustrated pages for free:
@@ -112,7 +112,7 @@ function previewEmailHtml({
 
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
-            StorySpark &middot; Personalized storybooks for every child<br>
+            StorySpark &middot; Personalised storybooks for every child<br>
             You received this because you created a story at starmeestories.com
           </p>
         </td></tr>
@@ -161,7 +161,7 @@ function bookReadyEmailHtml({
         <tr><td style="padding:36px 40px 32px">
           <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">Hi there!</p>
           <p style="margin:0 0 18px;font-size:16px;color:#374151;line-height:1.65">
-            Great news — <strong>${childName}'s</strong> personalized storybook is fully illustrated and ready to enjoy! All 12 pages have been brought to life with beautiful artwork.
+            Great news — <strong>${childName}'s</strong> personalised storybook is fully illustrated and ready to enjoy! All 12 pages have been brought to life with beautiful artwork.
           </p>
           <p style="margin:0 0 28px;font-size:16px;color:#374151;line-height:1.65">
             Read it online or download the PDF to print and keep forever:
@@ -180,7 +180,7 @@ function bookReadyEmailHtml({
 
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
-            StorySpark &middot; Personalized storybooks for every child<br>
+            StorySpark &middot; Personalised storybooks for every child<br>
             You received this because you purchased a story at starmeestories.com
           </p>
         </td></tr>

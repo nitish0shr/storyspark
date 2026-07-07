@@ -6,7 +6,7 @@ const steps = [
     emoji: "📸",
     title: "Upload a Photo",
     description:
-      "Provide just one clear photo of your child's face. Our AI studies their features — hair color, eye color, and skin tone — to make them the star of their own book.",
+      "Provide just one clear photo of your child's face. Our AI studies their features — hair colour, eye colour, and skin tone — to make them the star of their own book.",
     bg: "bg-[#FFDE59]",
     numBg: "bg-[#CB6CE6]",
   },
@@ -44,7 +44,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="font-body text-lg text-[#262625]/60 max-w-md mx-auto">
-            From photo to personalized preview in about 2 minutes!
+            From photo to personalised preview in about 2 minutes!
           </p>
         </div>
 

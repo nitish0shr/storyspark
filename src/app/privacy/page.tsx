@@ -48,8 +48,8 @@ export default function PrivacyPage() {
               <li>
                 <strong>The photo is used only to create that child&apos;s storybook.</strong>{" "}
                 It is sent to our AI system, which reads it to write a brief description
-                of your child&apos;s appearance (for example, hair color, skin tone, and
-                eye color). That description is then used to make the storybook
+                of your child&apos;s appearance (for example, hair colour, skin tone, and
+                eye colour). That description is then used to make the storybook
                 illustrations look like your child.
               </li>
               <li>

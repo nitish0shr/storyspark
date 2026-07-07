@@ -207,7 +207,7 @@ export default function BookLibrary({ books, childProfiles, themes }: BookLibrar
           No books yet
         </h3>
         <p className="text-gray-500 mb-6 max-w-md mx-auto">
-          Create your first personalized storybook and watch your child become the
+          Create your first personalised storybook and watch your child become the
           hero of their own adventure.
         </p>
         <Link href="/create">

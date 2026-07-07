@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
             currency: "usd",
             product_data: {
               name: `StorySpark Book - ${tierConfig.name}${isSubscriber ? " (Subscriber Discount)" : ""}`,
-              description: `${book.child_name}'s personalized storybook${isSubscriber ? " — 15% subscriber discount applied" : ""}`,
+              description: `${book.child_name}'s personalised storybook${isSubscriber ? " — 15% subscriber discount applied" : ""}`,
             },
             unit_amount: finalPrice,
           },

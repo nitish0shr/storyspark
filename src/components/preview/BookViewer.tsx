@@ -149,7 +149,7 @@ export default function BookViewer({
     const url = `${window.location.origin}/preview/${bookId}`;
     const shareData = {
       title: `${childName}'s Story - StorySpark`,
-      text: `Check out ${childName}'s personalized storybook!`,
+      text: `Check out ${childName}'s personalised storybook!`,
       url,
     };
 

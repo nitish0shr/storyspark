@@ -10,7 +10,7 @@ import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Order Complete - StorySpark",
-  description: "Your personalized storybook is being created!",
+  description: "Your personalised storybook is being created!",
 };
 
 export const dynamic = "force-dynamic";

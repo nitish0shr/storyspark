@@ -23,7 +23,7 @@ function sniffImageType(buf: Buffer): string | null {
 }
 
 const VISION_PROMPT =
-  "Describe this child's physical appearance briefly for a children's book illustrator. Include ONLY: hair color and style, skin tone, eye color, approximate age appearance, and any notable features like glasses or freckles. Do NOT include the child's name or any identifying information. Keep it to 1–2 sentences. Example: \"A child with curly auburn hair, fair freckled skin, and bright green eyes, appearing about 5–6 years old.\"";
+  "Describe this child's physical appearance briefly for a children's book illustrator. Include ONLY: hair colour and style, skin tone, eye colour, approximate age appearance, and any notable features like glasses or freckles. Do NOT include the child's name or any identifying information. Keep it to 1–2 sentences. Example: \"A child with curly auburn hair, fair freckled skin, and bright green eyes, appearing about 5–6 years old.\"";
 
 async function ensurePrivateBucket(): Promise<void> {
   const { error } = await supabaseAdmin.storage.getBucket(PHOTOS_BUCKET);

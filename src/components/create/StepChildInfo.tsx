@@ -154,7 +154,7 @@ export function StepChildInfo() {
           Tell us about your little one{hasSecondChild ? "s" : ""}
         </h2>
         <p className="mt-2 font-body text-[#262625]/60">
-          We&apos;ll use this to personalize every page of the story.
+          We&apos;ll use this to personalise every page of the story.
         </p>
       </div>
 

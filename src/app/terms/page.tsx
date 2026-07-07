@@ -23,7 +23,7 @@ export default function TermsPage() {
               1. Service Description
             </h2>
             <p>
-              StorySpark is an AI-powered platform that creates personalized,
+              StorySpark is an AI-powered platform that creates personalised,
               illustrated children&apos;s storybooks. By using our service, you agree
               to these terms.
             </p>
@@ -67,10 +67,10 @@ export default function TermsPage() {
               </li>
               <li>
                 You have the right to use the photo for the purpose of generating a
-                personalized storybook through StorySpark.
+                personalised storybook through StorySpark.
               </li>
               <li>
-                You understand that the photo will be analyzed by AI to extract a
+                You understand that the photo will be analysed by AI to extract a
                 written description of the child&apos;s appearance, and will then be
                 deleted immediately — it is not stored long-term on our servers.
               </li>
@@ -88,7 +88,7 @@ export default function TermsPage() {
             </h2>
             <p>
               All purchases are processed securely through Stripe. Digital products are
-              delivered instantly upon payment. You can preview your personalized storybook
+              delivered instantly upon payment. You can preview your personalised storybook
               for free before purchasing.
             </p>
           </section>
