@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
             currency: "usd",
             product_data: {
               name: PRICING.subscription.name,
-              description: `Monthly personalized storybook for ${child.name} (${minMonths}-month minimum)`,
+              description: `Monthly personalised storybook for ${child.name} (${minMonths}-month minimum)`,
             },
             unit_amount: PRICING.subscription.cents,
             recurring: {

@@ -83,7 +83,7 @@ export default function Hero() {
             </h1>
 
             <p className="font-body text-lg sm:text-xl text-[#262625]/70 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
-              Create a magical, personalized storybook your child will treasure
+              Create a magical, personalised storybook your child will treasure
               forever. <strong>See a free sample of your child as the hero — no credit card needed.</strong>
             </p>
 
@@ -138,7 +138,7 @@ export default function Hero() {
               </div>
               <div className="absolute bottom-8 -right-8 animate-float z-20" style={{ animationDelay: "1.8s" }}>
                 <div className="bg-[#5E17EB] border-2 border-[#262625] rounded-xl px-2.5 py-1 shadow-[3px_3px_0px_#262625] font-body font-bold text-xs text-white">
-                  🎉 Personalized!
+                  🎉 Personalised!
                 </div>
               </div>
               <div className="absolute -bottom-6 left-4 animate-spin-slow opacity-70">
@@ -160,7 +160,7 @@ export default function Hero() {
                 >
                   <Image
                     src="/images/demo/book-cover.png"
-                    alt="Sample personalized storybook cover featuring a child as the hero"
+                    alt="Sample personalised storybook cover featuring a child as the hero"
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 256px, 288px"

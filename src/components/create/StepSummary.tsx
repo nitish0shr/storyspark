@@ -149,7 +149,7 @@ export function StepSummary() {
           <div className="p-4 space-y-2">
             <div className="flex items-center gap-2 font-body text-sm font-bold text-[#262625]">
               <MessageCircle className="h-4 w-4 text-[#CB6CE6]" />
-              Personalization
+              Personalisation
             </div>
             {questions.map((q) => {
               const answer = contextualAnswers[q.id];

@@ -8,7 +8,7 @@ const steps = [
     icon: Camera,
     title: "Upload a Photo",
     description:
-      "Just one clear photo of your child's face. Our AI analyzes their features — hair color, skin tone, eye color — to create illustrations that actually look like them.",
+      "Just one clear photo of your child's face. Our AI analyzes their features — hair colour, skin tone, eye colour — to create illustrations that actually look like them.",
     accent: "from-violet-500 to-violet-700",
     glow: "shadow-violet-200",
     iconBg: "bg-violet-100",
@@ -69,7 +69,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="text-lg text-gray-500 max-w-lg mx-auto">
-            From photo to personalized preview in about 2 minutes.
+            From photo to personalised preview in about 2 minutes.
           </p>
         </div>
 

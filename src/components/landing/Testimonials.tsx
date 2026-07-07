@@ -6,7 +6,7 @@ const trustPoints = [
   {
     icon: Clock,
     title: "Preview in about 2 minutes",
-    description: "See your child's personalized preview before you commit to anything.",
+    description: "See your child's personalised preview before you commit to anything.",
     bg: "bg-[#FFDE59]",
   },
   {

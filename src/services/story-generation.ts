@@ -30,7 +30,7 @@ function getPronouns(gender: string): {
  */
 function formatContextualAnswers(answers: Record<string, string>): string {
   if (!answers || Object.keys(answers).length === 0) {
-    return "No additional personalization details provided.";
+    return "No additional personalisation details provided.";
   }
 
   return Object.entries(answers)

@@ -141,7 +141,7 @@ export default async function DashboardPage() {
                 Add your first child profile
               </h3>
               <p className="font-body text-sm text-[#262625]/50 mb-5 max-w-sm mx-auto">
-                Start by adding your child&apos;s details to create personalized storybooks.
+                Start by adding your child&apos;s details to create personalised storybooks.
               </p>
               <Link href="/create" className="btn-chunky inline-flex items-center gap-2 bg-[#FFDE59] px-5 py-2.5 font-heading font-bold text-[#262625] text-sm">
                 <Plus className="h-4 w-4" />

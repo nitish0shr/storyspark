@@ -61,7 +61,7 @@ export default function Footer() {
           </h2>
 
           <p className="font-body text-lg text-white/80 mb-10 max-w-lg mx-auto">
-            Create a magical, personalized storybook your child will treasure
+            Create a magical, personalised storybook your child will treasure
             forever. See a free sample of your child as the hero — no credit card needed.
           </p>
 

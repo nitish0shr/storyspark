@@ -124,7 +124,7 @@ export function StepPhotoUpload() {
           <span className="text-[#262625]/40 text-xl font-medium">(optional)</span>
         </h2>
         <p className="font-body text-[#262625]/60 text-sm">
-          We&apos;ll match {name}&apos;s look in every illustration — hair color, skin tone, and more.
+          We&apos;ll match {name}&apos;s look in every illustration — hair colour, skin tone, and more.
         </p>
       </div>
 

@@ -26,12 +26,12 @@ const faqs = [
   {
     question: "Can I gift this?",
     answer:
-      "Yes! During checkout, you can mark your order as a gift, add a personalized message, and enter the recipient's email. We'll deliver the storybook directly to them with your heartfelt note.",
+      "Yes! During checkout, you can mark your order as a gift, add a personalised message, and enter the recipient's email. We'll deliver the storybook directly to them with your heartfelt note.",
   },
   {
     question: "Will the illustrations look like my child?",
     answer:
-      "The illustrations are stylized watercolor art inspired by your child\u2019s photo features \u2014 hair color, skin tone, facial structure, and more. They won\u2019t be photorealistic, but parents consistently recognize their child in the art. The style is warm, whimsical, and designed to feel like a hand-illustrated children\u2019s book.",
+      "The illustrations are stylised watercolour art inspired by your child\u2019s photo features \u2014 hair colour, skin tone, facial structure, and more. They won\u2019t be photorealistic, but parents consistently recognise their child in the art. The style is warm, whimsical, and designed to feel like a hand-illustrated children\u2019s book.",
   },
   {
     question: "How does the preview work?",

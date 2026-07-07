@@ -30,7 +30,7 @@ export async function generateMetadata({
 
   return {
     title: `A StorySpark Gift for ${childName}!`,
-    description: `Someone special created a personalized storybook for ${childName}. Open it now!`,
+    description: `Someone special created a personalised storybook for ${childName}. Open it now!`,
   };
 }
 
@@ -101,7 +101,7 @@ export default async function GiftPage({ params }: GiftPageProps) {
               A Gift for {childName}!
             </h1>
             <p className="text-white/80 text-lg">
-              Someone special created a personalized storybook
+              Someone special created a personalised storybook
             </p>
           </div>
 

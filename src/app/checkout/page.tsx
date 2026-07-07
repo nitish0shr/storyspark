@@ -9,7 +9,7 @@ import CheckoutForm from "./CheckoutForm";
 
 export const metadata: Metadata = {
   title: "Checkout - StorySpark",
-  description: "Complete your personalized storybook order.",
+  description: "Complete your personalised storybook order.",
 };
 
 export const dynamic = "force-dynamic";
@@ -129,7 +129,7 @@ export default async function CheckoutPage({
             Complete Your Order
           </h1>
           <p className="text-gray-500 text-lg">
-            {book.child_name}&apos;s personalized storybook
+            {book.child_name}&apos;s personalised storybook
             {book.theme_title ? ` — ${book.theme_title}` : ""}
           </p>
         </div>

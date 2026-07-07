@@ -327,7 +327,7 @@ function buildOrderUnderReviewEmail(data: {
 
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
-            Starmee Stories · Personalized storybooks for every child<br>
+            Starmee Stories · Personalised storybooks for every child<br>
             Questions? Reply to this email or contact us at hello@starmeestories.com
           </p>
         </td></tr>
@@ -374,7 +374,7 @@ function buildGiftNotificationEmail(data: {
     <div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;border:1px solid #f0e6d6;border-top:none;">
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.recipientName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        ${data.senderName} has gifted ${data.childName} a personalized storybook from StorySpark!
+        ${data.senderName} has gifted ${data.childName} a personalised storybook from StorySpark!
         It's a beautifully illustrated story where ${data.childName} is the hero.
       </p>
 

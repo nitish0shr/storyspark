@@ -296,8 +296,8 @@ function BookPdfDocument({
           Text,
           { style: [styles.coverSubtitle, { color: colors.text }] },
           secondChildName
-            ? `A personalized story created just for ${childName} and ${secondChildName}`
-            : `A personalized story created just for ${childName}`
+            ? `A personalised story created just for ${childName} and ${secondChildName}`
+            : `A personalised story created just for ${childName}`
         )
       )
     ),
@@ -378,7 +378,7 @@ function BookPdfDocument({
         h(
           Text,
           { style: styles.backBrand },
-          "Personalized stories that spark imagination"
+          "Personalised stories that spark imagination"
         ),
         h(
           Text,

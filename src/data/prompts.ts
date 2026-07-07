@@ -55,7 +55,7 @@ Write with the warmth of a bedtime story and the wonder of a child's imagination
  *   {eye_color}          - e.g. "brown", "blue", "green", "hazel"
  *   {outfit_for_theme}   - theme-appropriate outfit description
  */
-export const ILLUSTRATION_PROMPT_TEMPLATE = `Children's picture book illustration, whimsical watercolor and digital art style, soft lighting, warm and inviting.
+export const ILLUSTRATION_PROMPT_TEMPLATE = `Children's picture book illustration, whimsical watercolour and digital art style, soft lighting, warm and inviting.
 
 Scene: {scene_description}
 
@@ -63,7 +63,7 @@ Main character: A {age}-year-old {gender} named {name} with {skin_tone} skin, {h
 
 Style requirements:
 - Warm, soft color palette with gentle gradients
-- Whimsical, slightly stylized proportions (large expressive eyes, round features)
+- Whimsical, slightly stylised proportions (large expressive eyes, round features)
 - Rich background details that reward close looking
 - No text or words in the image
 - Safe, joyful, age-appropriate imagery

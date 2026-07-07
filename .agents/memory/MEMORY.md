@@ -1,0 +1,1 @@
+- [UK English convention](uk-english-convention.md) — Starmee Stories user-facing copy uses UK English; currency (USD vs GBP) is an open Stripe-tied decision; landing/classic is dead code.

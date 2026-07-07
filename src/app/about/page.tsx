@@ -26,11 +26,11 @@ export default function AboutPage() {
       icon: Palette,
       title: "Quality Over Speed",
       description:
-        "We use stylized, watercolor-inspired illustrations — never photorealistic images of children. Every book is crafted to feel like a real children's book.",
+        "We use stylised, watercolour-inspired illustrations — never photorealistic images of children. Every book is crafted to feel like a real children's book.",
     },
     {
       icon: Sparkles,
-      title: "Personalization That Matters",
+      title: "Personalisation That Matters",
       description:
         "We don't just swap names into a template. Our AI weaves your child's details into a unique story that feels written just for them.",
     },
@@ -46,7 +46,7 @@ export default function AboutPage() {
         <p className="text-lg text-gray-500 mb-12 leading-relaxed">
           StorySpark is an AI-powered platform that turns your child into the hero of
           their own beautifully illustrated storybook. Upload a photo, choose an
-          adventure, and in minutes you&apos;ll have a personalized book your family
+          adventure, and in minutes you&apos;ll have a personalised book your family
           will treasure.
         </p>
 
@@ -79,7 +79,7 @@ export default function AboutPage() {
           StorySpark was born from a simple idea: every child deserves to see
           themselves as the hero. We combine the latest in AI technology with the
           warmth and care of traditional children&apos;s book illustration to create
-          something truly special — personalized stories that families read together
+          something truly special — personalised stories that families read together
           again and again.
         </p>
       </main>

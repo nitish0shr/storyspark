@@ -213,7 +213,7 @@ function buildOrderConfirmation(data: {
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.buyerName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        Great news! ${data.childName}'s personalized storybook has been created. You can view it in your browser or download the PDF to print at home.
+        Great news! ${data.childName}'s personalised storybook has been created. You can view it in your browser or download the PDF to print at home.
       </p>
       ${ctaButton(data.bookUrl, "View Your Book")}
       ${pdfBlock}
@@ -246,7 +246,7 @@ function buildGiftNotification(data: {
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Hi ${data.recipientName}!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        ${data.senderName} has gifted ${data.childName} a personalized storybook from StorySpark!
+        ${data.senderName} has gifted ${data.childName} a personalised storybook from StorySpark!
         It's a beautifully illustrated story where ${data.childName} is the hero of their very own adventure.
       </p>
       ${giftBlock}
@@ -269,7 +269,7 @@ function buildPreviewReminder(data: {
     `
       <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:20px;">Don't forget about ${data.childName}'s story!</h2>
       <p style="margin:0 0 16px;color:#4a4a5a;font-size:15px;line-height:1.6;">
-        We created a free preview of ${data.childName}'s personalized storybook and it's waiting for you.
+        We created a free preview of ${data.childName}'s personalised storybook and it's waiting for you.
         Come see ${data.childName} as the hero of an incredible adventure!
       </p>
       <p style="margin:0 0 24px;color:#4a4a5a;font-size:15px;line-height:1.6;">

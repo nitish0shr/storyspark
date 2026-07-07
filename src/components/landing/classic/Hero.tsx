@@ -133,7 +133,7 @@ export default function Hero() {
 
             <p className="text-lg sm:text-xl text-white/60 leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
               Upload one photo. Pick a magical theme. AI creates a stunning,
-              personalized storybook with your child as the hero — ready in minutes.
+              personalised storybook with your child as the hero — ready in minutes.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
