@@ -6,7 +6,7 @@ const steps = [
     emoji: "📸",
     title: "Upload a Photo",
     description:
-      "Provide just one clear photo of your child's face. Our AI studies their features — hair colour, eye colour, and skin tone — to make them the star of their own book.",
+      "Provide one clear photo of your child's face. Our AI studies their features — hair colour, eye colour, and skin tone — to make them the star of their own book.",
     bg: "bg-[#FFDE59]",
     numBg: "bg-[#CB6CE6]",
   },

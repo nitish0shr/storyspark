@@ -19,6 +19,7 @@ export function StepPhotoUpload() {
   const childName = useWizardStore((s) => s.childName);
   const nextStep = useWizardStore((s) => s.nextStep);
   const setAppearanceDescription = useWizardStore((s) => s.setAppearanceDescription);
+  const setAppearanceProfile = useWizardStore((s) => s.setAppearanceProfile);
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export function StepPhotoUpload() {
 
   function handleSkip() {
     setAppearanceDescription(null);
+    setAppearanceProfile(null);
     nextStep();
   }
 
@@ -106,6 +108,7 @@ export function StepPhotoUpload() {
       }
 
       setAppearanceDescription(data.description ?? null);
+      setAppearanceProfile(data.profile ?? null);
       nextStep();
     } catch {
       setError("Something went wrong. Please try again or skip this step.");

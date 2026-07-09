@@ -116,9 +116,8 @@ export default function PrivacyPage() {
             <p>
               We do not sell your personal information. We share data only with service
               providers necessary to operate StorySpark: Supabase (database), Stripe
-              (payments), Resend (email), OpenAI (story and appearance analysis), and
-              Replicate (illustration generation). Each provider has their own privacy
-              policy.
+              (payments), Resend (email), and OpenAI (story, appearance analysis, and
+              illustration generation). Each provider has their own privacy policy.
             </p>
           </section>
 

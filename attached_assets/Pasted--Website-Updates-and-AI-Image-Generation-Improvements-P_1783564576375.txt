@@ -1,0 +1,215 @@
+# Website Updates and AI Image Generation Improvements
+
+Please make the following updates to my website. Make only the changes described below and preserve all existing functionality unless specifically noted.
+
+---
+
+# 1. Update the photo upload instruction
+
+Locate the text:
+
+	⁠"Provide just one clear photo of your child's face."
+
+Replace it with:
+
+	⁠*"Provide one clear photo of your child's face."*
+
+Apply this change anywhere this instruction appears in the application.
+
+---
+
+# 2. Improve AI image generation fidelity (OpenAI Images - gpt-image-1)
+
+The website uses *OpenAI Images (gpt-image-1)* to generate storybook illustrations.
+
+Review the entire image-generation workflow and update the prompt construction (including prompt templates, system prompts, helper functions, and server-side logic) so the generated child closely resembles the uploaded photo.
+
+The prompts sent to OpenAI Images should explicitly instruct the model to preserve the child's identifying visual characteristics while maintaining the existing storybook illustration style.
+
+Whenever visible, preserve:
+
+•⁠  ⁠Hair color
+•⁠  ⁠Hair style
+•⁠  ⁠Hair length
+•⁠  ⁠Hair texture (straight, wavy, curly, etc.)
+•⁠  ⁠Skin tone
+•⁠  ⁠Facial features
+•⁠  ⁠Face shape
+•⁠  ⁠Eye shape
+•⁠  ⁠Eye color
+•⁠  ⁠Freckles
+•⁠  ⁠Glasses (if present)
+
+The objective is for the illustrated child to be immediately recognizable as the uploaded child while still appearing as a stylized storybook character.
+
+Do not significantly alter these characteristics between illustrations unless the story specifically requires a temporary change (such as wearing a costume).
+
+---
+
+# 3. Create a reusable Character Profile
+
+Refactor the image generation workflow so that each uploaded child is analyzed *once* at the beginning of the book creation process.
+
+From the uploaded photo, generate a structured *Character Profile* that captures the child's identifying appearance.
+
+The Character Profile should include, at a minimum:
+
+•⁠  ⁠Hair color
+•⁠  ⁠Hair style
+•⁠  ⁠Hair length
+•⁠  ⁠Hair texture
+•⁠  ⁠Skin tone
+•⁠  ⁠Face shape
+•⁠  ⁠Facial features
+•⁠  ⁠Eye color
+•⁠  ⁠Eye shape
+•⁠  ⁠Approximate age
+•⁠  ⁠Freckles
+•⁠  ⁠Glasses (if present)
+•⁠  ⁠Any other distinctive visual characteristics that help the AI consistently identify the child
+
+The Character Profile should become the authoritative source of appearance information for that child.
+
+For every illustration generated throughout the story, include this Character Profile in the image-generation prompt so the AI is consistently reminded how the child should look.
+
+The uploaded photo should be used to build the Character Profile only once, and the Character Profile should then be reused for every subsequent illustration.
+
+---
+
+# 4. Generate a Character Reference Sheet
+
+Immediately after creating the Character Profile, generate a *Character Reference Sheet* for each uploaded child.
+
+The Character Reference Sheet should serve as the canonical visual representation of the child for the remainder of the story.
+
+It should:
+
+•⁠  ⁠Use the Character Profile as its source.
+•⁠  ⁠Clearly depict the child's face and appearance.
+•⁠  ⁠Match the exact illustration style used throughout the storybook.
+•⁠  ⁠Show the child's natural hairstyle, hair color, facial features, skin tone, eye color, freckles, glasses (if applicable), and other defining characteristics.
+•⁠  ⁠Avoid costumes, exaggerated expressions, unusual poses, or scene-specific styling.
+•⁠  ⁠Focus on accurately representing the child's normal appearance.
+
+This Character Reference Sheet should be retained and reused internally throughout the story generation process.
+
+Every subsequent illustration should be generated using:
+
+1.⁠ ⁠The current page's scene description.
+2.⁠ ⁠The child's Character Profile.
+3.⁠ ⁠The child's Character Reference Sheet.
+
+The Character Reference Sheet should act as the canonical visual reference for maintaining facial consistency, reducing appearance drift, and ensuring the child remains recognizable across every page.
+
+If the image generation workflow supports image references, use the Character Reference Sheet as a reference image when generating subsequent illustrations.
+
+---
+
+# 5. Apply the Character Profile and Character Reference Sheet workflow to the second child
+
+If a second child (friend or sibling) is uploaded, generate both:
+
+•⁠  ⁠A separate Character Profile
+•⁠  ⁠A separate Character Reference Sheet
+
+Each child should always maintain their own independent identity.
+
+The two children should never inherit or blend one another's features.
+
+Throughout the story, preserve each child's:
+
+•⁠  ⁠Hair color
+•⁠  ⁠Hair style
+•⁠  ⁠Hair length
+•⁠  ⁠Hair texture
+•⁠  ⁠Skin tone
+•⁠  ⁠Facial features
+•⁠  ⁠Face shape
+•⁠  ⁠Eye shape
+•⁠  ⁠Eye color
+•⁠  ⁠Approximate age
+•⁠  ⁠Freckles
+•⁠  ⁠Glasses (if present)
+
+Whenever both children appear together, ensure they remain visually distinct while consistently resembling their respective uploaded photos.
+
+---
+
+# 6. Maintain visual consistency throughout the entire book
+
+This is a high-priority requirement.
+
+Once a Character Profile and Character Reference Sheet have been created, every illustration throughout the book should use them as the primary source of truth for the child's appearance.
+
+The AI should not unintentionally change between pages:
+
+•⁠  ⁠Hair color
+•⁠  ⁠Hair style
+•⁠  ⁠Hair length
+•⁠  ⁠Hair texture
+•⁠  ⁠Skin tone
+•⁠  ⁠Face shape
+•⁠  ⁠Facial features
+•⁠  ⁠Eye color
+•⁠  ⁠Eye shape
+•⁠  ⁠Freckles
+•⁠  ⁠Glasses
+
+Story-specific changes such as clothing, costumes, accessories, expressions, lighting, environments, and poses are expected.
+
+However, the child's core physical appearance should remain stable and recognizable from the first illustration through the final page.
+
+The same consistency requirements apply to any uploaded second child.
+
+---
+
+# 7. Improve image prompt quality
+
+Review all prompts sent to OpenAI Images (gpt-image-1) and ensure they consistently communicate that:
+
+•⁠  ⁠Character identity takes priority over unnecessary visual variation.
+•⁠  ⁠The child should remain recognizable throughout the story.
+•⁠  ⁠Clothing, scenery, poses, emotions, and lighting may change.
+•⁠  ⁠Core facial appearance should remain consistent.
+•⁠  ⁠Multiple children should each maintain their own Character Profile and Character Reference Sheet.
+•⁠  ⁠The generated illustrations should resemble the uploaded child as closely as possible while preserving the existing artistic style.
+
+If prompt generation exists in multiple places, centralize it where practical so all story templates use the same appearance-preservation workflow.
+
+---
+
+# Implementation Notes
+
+Please inspect the project to determine where image prompts are assembled. They may exist in:
+
+•⁠  ⁠Prompt templates
+•⁠  ⁠System prompts
+•⁠  ⁠Server-side image generation logic
+•⁠  ⁠AI service wrapper functions
+•⁠  ⁠Helper utilities
+•⁠  ⁠Configuration files
+
+Update whichever components construct requests to OpenAI Images (gpt-image-1) so these appearance-preservation requirements are consistently applied to every generated illustration.
+
+Where practical, refactor the code so there is a single reusable prompt-building workflow instead of duplicated prompt logic.
+
+If the current architecture does not support image references between generations, implement the best available mechanism to persist and reuse the Character Profile and Character Reference Sheet so appearance remains as consistent as possible across the entire story.
+
+---
+
+# Acceptance Criteria
+
+The work is complete when:
+
+•⁠  ⁠The upload instruction has been updated.
+•⁠  ⁠A Character Profile is created once for each uploaded child.
+•⁠  ⁠A Character Reference Sheet is generated once for each uploaded child.
+•⁠  ⁠Every illustration reuses the Character Profile and Character Reference Sheet.
+•⁠  ⁠Child illustrations closely resemble the uploaded photos.
+•⁠  ⁠The second child's appearance is preserved just as accurately.
+•⁠  ⁠Appearance remains consistent across every page of the story.
+•⁠  ⁠Multiple children remain visually distinct from one another.
+•⁠  ⁠Belle's story consistently generates a turtle in its illustrations.
+•⁠  ⁠The "How does the preview work?" FAQ item has been completely removed.
+•⁠  ⁠No existing functionality or styling has been unintentionally changed.
+•⁠  ⁠The website continues to function normally after these updates.

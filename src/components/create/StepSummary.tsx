@@ -59,12 +59,15 @@ export function StepSummary() {
           childName, childAge, childGender,
           photoUrl: useWizardStore.getState().photoUrl || undefined,
           appearanceDescription: useWizardStore.getState().appearanceDescription || undefined,
+          appearanceProfile: useWizardStore.getState().appearanceProfile || undefined,
           themeId: selectedThemeId, contextualAnswers,
           dedication: dedication.trim() || undefined,
           language, email,
           ...(hasSecondChild ? {
             secondChildName, secondChildAge, secondChildGender,
             secondChildPhotoUrl: useWizardStore.getState().secondChildPhotoUrl || undefined,
+            secondAppearanceDescription: useWizardStore.getState().secondAppearanceDescription || undefined,
+            secondAppearanceProfile: useWizardStore.getState().secondAppearanceProfile || undefined,
           } : {}),
         }),
       });

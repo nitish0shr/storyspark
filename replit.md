@@ -9,7 +9,7 @@ AI-powered personalized children's storybook generator. Parents upload a photo o
 - **Auth & DB**: Supabase (PostgreSQL + Auth + Storage)
 - **AI Story**: OpenAI (GPT-4o-mini)
 - **AI Audio**: OpenAI TTS (tts-1, "shimmer" voice)
-- **AI Images**: Replicate (Flux Schnell)
+- **AI Images**: OpenAI gpt-image-1 (dall-e-3 fallback)
 - **Payments**: Stripe
 - **Email**: Resend
 - **Analytics**: PostHog
@@ -27,7 +27,6 @@ npm run start # production on port 5000
 See `.env.local.example` for all required secrets:
 - `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
-- `REPLICATE_API_TOKEN`
 - `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `RESEND_API_KEY` + `RESEND_FROM_EMAIL`
 - `NEXT_PUBLIC_POSTHOG_KEY`
@@ -70,7 +69,7 @@ src/
     tts-narration.ts      # OpenAI TTS audio narration for book pages
     book-pipeline.ts      # Book generation pipeline (preview + full + audio, supports dual-child)
     story-generation.ts   # GPT-4o-mini story generation (multi-language, dual-character)
-    illustration.ts       # Replicate Flux illustration generation (supports second child)
+    illustration.ts       # gpt-image-1 illustrations w/ Character Reference Sheets (dall-e-3 fallback)
     pdf-assembly.tsx      # PDF rendering with @react-pdf/renderer (Noto Sans fonts for CJK/Devanagari)
     theme-rotation.ts     # Rotating theme selection for monthly subscribers
   data/                   # Theme definitions, languages config
@@ -125,7 +124,7 @@ The marketing site at **https://starmeestories.com** (WordPress + Elementor) sta
 
 1. Deploy this Next.js app on Replit (Autoscale).
 2. Add custom domain `app.starmeestories.com` in the deployment (CNAME provided by Replit).
-3. Set production env vars: `NEXT_PUBLIC_APP_URL=https://app.starmeestories.com`, `NEXT_PUBLIC_MARKETING_URL=https://starmeestories.com`, plus all Supabase/Stripe/OpenAI/Replicate/Resend secrets.
+3. Set production env vars: `NEXT_PUBLIC_APP_URL=https://app.starmeestories.com`, `NEXT_PUBLIC_MARKETING_URL=https://starmeestories.com`, plus all Supabase/Stripe/OpenAI/Resend secrets.
 4. In WordPress/Elementor, edit each CTA button's URL to point to the app routes above.
 5. In Stripe dashboard, set the webhook endpoint to `https://app.starmeestories.com/api/webhooks/stripe`.
 

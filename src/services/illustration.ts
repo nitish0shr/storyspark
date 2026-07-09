@@ -1,8 +1,14 @@
+import { toFile } from "openai";
 import { getOpenAI } from "@/lib/openai";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
-import { ILLUSTRATION_PROMPT_TEMPLATE, fillPromptTemplate } from "@/data/prompts";
+import {
+  buildIllustrationPrompt,
+  buildReferenceSheetPrompt,
+  buildPersonLabel,
+  IllustrationCharacter,
+} from "@/data/prompts";
 
 const STORAGE_BUCKET = "book-illustrations";
 
@@ -110,14 +116,28 @@ async function uploadImageToStorage(
   return data.publicUrl;
 }
 
+/** A reference image (Character Reference Sheet) attached to a generation call. */
+interface ReferenceImage {
+  /** Child's name, used to explain image order in the prompt. */
+  name: string;
+  buffer: Buffer;
+}
+
 /**
- * Generates a single illustration using OpenAI image generation.
- * Tries gpt-image-1 first; falls back to dall-e-3.
- * Returns a placeholder URL if both models fail after one retry.
+ * Generates a single illustration.
+ *
+ * Attempt order per retry:
+ *   1. gpt-image-1 via images.edit with the Character Reference Sheet(s) as
+ *      input images and input_fidelity "high" (best identity preservation)
+ *   2. gpt-image-1 via images.generate (text-only, full Character Profile in prompt)
+ *   3. dall-e-3 via images.generate (text-only fallback)
+ *
+ * Returns a placeholder URL if everything fails after one retry.
  */
 async function generateSingleIllustration(
   prompt: string,
-  storagePath: string
+  storagePath: string,
+  referenceImages: ReferenceImage[] = []
 ): Promise<string> {
   const openai = getOpenAI();
 
@@ -125,29 +145,66 @@ async function generateSingleIllustration(
     try {
       let b64: string | undefined;
 
-      // Attempt 1: gpt-image-1 (returns b64_json by default)
-      try {
-        const res = await openai.images.generate({
-          model: "gpt-image-1",
-          prompt: prompt.slice(0, 32000),
-          n: 1,
-          size: "1024x1024",
-        });
-        b64 = res.data?.[0]?.b64_json ?? undefined;
-        if (!b64) throw new Error("No b64_json from gpt-image-1");
-      } catch (e1) {
-        console.warn(`gpt-image-1 failed (attempt ${attempt + 1}): ${e1 instanceof Error ? e1.message : e1}`);
-        // Fall back to dall-e-3
-        const res = await openai.images.generate({
-          model: "dall-e-3",
-          prompt: prompt.slice(0, 4000),
-          n: 1,
-          size: "1024x1024",
-          response_format: "b64_json",
-          quality: "standard",
-        });
-        b64 = res.data?.[0]?.b64_json ?? undefined;
-        if (!b64) throw new Error("No b64_json from dall-e-3");
+      // Attempt 1: gpt-image-1 edit with reference sheet(s)
+      if (referenceImages.length > 0) {
+        try {
+          // File streams are not reusable across calls — create fresh ones each time
+          const imageFiles = await Promise.all(
+            referenceImages.map((ref, i) =>
+              toFile(ref.buffer, `reference-${i + 1}.png`, {
+                type: "image/png",
+              })
+            )
+          );
+          const res = await openai.images.edit({
+            model: "gpt-image-1",
+            image: imageFiles,
+            prompt: prompt.slice(0, 32000),
+            n: 1,
+            size: "1024x1024",
+            input_fidelity: "high",
+          });
+          b64 = res.data?.[0]?.b64_json ?? undefined;
+          if (!b64) throw new Error("No b64_json from gpt-image-1 edit");
+        } catch (editErr) {
+          console.error(
+            `IDENTITY WARNING: gpt-image-1 edit with reference sheet failed for ${storagePath} — falling back to text-only generation (character likeness may drift): ${
+              editErr instanceof Error ? editErr.message : editErr
+            }`
+          );
+        }
+      }
+
+      // Attempt 2: gpt-image-1 text-only
+      if (!b64) {
+        try {
+          const res = await openai.images.generate({
+            model: "gpt-image-1",
+            prompt: prompt.slice(0, 32000),
+            n: 1,
+            size: "1024x1024",
+          });
+          b64 = res.data?.[0]?.b64_json ?? undefined;
+          if (!b64) throw new Error("No b64_json from gpt-image-1");
+        } catch (e1) {
+          console.warn(
+            `gpt-image-1 failed (attempt ${attempt + 1}): ${
+              e1 instanceof Error ? e1.message : e1
+            }`
+          );
+          // Attempt 3: dall-e-3 (no image reference support — prompt still
+          // carries the full Character Profile so identity text survives)
+          const res = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: prompt.slice(0, 4000),
+            n: 1,
+            size: "1024x1024",
+            response_format: "b64_json",
+            quality: "standard",
+          });
+          b64 = res.data?.[0]?.b64_json ?? undefined;
+          if (!b64) throw new Error("No b64_json from dall-e-3");
+        }
       }
 
       const buffer = Buffer.from(b64, "base64");
@@ -164,126 +221,155 @@ async function generateSingleIllustration(
     }
   }
 
-  console.error(`All illustration attempts exhausted for ${storagePath}, using placeholder`);
+  console.error(
+    `All illustration attempts exhausted for ${storagePath}, using placeholder`
+  );
   return PLACEHOLDER_URL;
 }
 
-export interface SecondChildAppearance {
+/** A child to depict in the book's illustrations. */
+export interface IllustrationChild {
   name: string;
   age: number;
   gender: string;
-  appearanceProfile: AppearanceProfile;
+  profile: AppearanceProfile;
+}
+
+/**
+ * Generates a child's canonical Character Reference Sheet image once and
+ * uploads it to storage. Returns the public URL, or null on failure (the
+ * pipeline then continues with text-only identity preservation).
+ */
+export async function generateCharacterReferenceSheet(params: {
+  child: IllustrationChild;
+  storagePath: string;
+}): Promise<string | null> {
+  const { child, storagePath } = params;
+  const openai = getOpenAI();
+
+  const prompt = buildReferenceSheetPrompt({
+    name: child.name,
+    personLabel: buildPersonLabel(child.age, child.gender),
+    profile: child.profile,
+  });
+
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    try {
+      const res = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt: prompt.slice(0, 32000),
+        n: 1,
+        size: "1024x1024",
+      });
+      const b64 = res.data?.[0]?.b64_json ?? undefined;
+      if (!b64) throw new Error("No b64_json from gpt-image-1");
+      const buffer = Buffer.from(b64, "base64");
+      return await uploadImageToStorage(buffer, storagePath);
+    } catch (err) {
+      console.warn(
+        `Reference sheet attempt ${attempt + 1} failed for ${storagePath}: ${
+          err instanceof Error ? err.message : err
+        }`
+      );
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+  }
+
+  console.error(
+    `IDENTITY WARNING: could not generate Character Reference Sheet at ${storagePath}; illustrations will rely on the text Character Profile only`
+  );
+  return null;
+}
+
+/**
+ * Downloads each child's Character Reference Sheet once so the buffers can be
+ * reused across every page generation call.
+ */
+async function downloadReferenceSheets(
+  children: IllustrationChild[]
+): Promise<ReferenceImage[]> {
+  const refs: ReferenceImage[] = [];
+  for (const child of children) {
+    const url = child.profile.referenceSheetUrl;
+    if (!url) continue;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      refs.push({ name: child.name, buffer });
+    } catch (err) {
+      console.error(
+        `IDENTITY WARNING: failed to download reference sheet for ${child.name} (${url}): ${
+          err instanceof Error ? err.message : err
+        }`
+      );
+    }
+  }
+  return refs;
 }
 
 /**
  * Generates illustrations for story pages in parallel (max 2 concurrent).
  *
- * @param params.bookId         - Used for constructing Supabase Storage paths
- * @param params.storyPages     - All story text pages
- * @param params.appearanceProfile - Child's physical appearance
- * @param params.themeId        - Theme identifier
- * @param params.childAge       - Child's age
- * @param params.childGender    - Child's gender
+ * Every page prompt is built centrally from each child's Character Profile,
+ * and each child's Character Reference Sheet (when available) is attached as
+ * a reference image so appearance stays consistent across all pages.
+ *
+ * @param params.bookId            - Used for constructing Supabase Storage paths
+ * @param params.storyPages        - All story text pages
+ * @param params.themeId           - Theme identifier
  * @param params.sceneDescriptions - Scene descriptions matching page order
- * @param params.pageNumbers    - If provided, only generate for these page numbers (1-indexed)
- * @param params.secondChild    - Optional second child appearance for dual-hero books
- * @param params.appearanceDescription - Optional free-text description from photo vision analysis
+ * @param params.pageNumbers       - If provided, only generate for these page numbers (1-indexed)
+ * @param params.children          - One or two children with their Character Profiles
  * @returns Array of image URLs in the same order as input pages/pageNumbers
  */
-
-/**
- * Builds the character appearance line for an illustration prompt.
- * When an AI-generated appearance description is available (from vision analysis),
- * it is used directly. Otherwise falls back to the structured AppearanceProfile fields.
- */
-function buildCharacterLine(
-  ageLabel: string,
-  genderLabel: string,
-  outfit: string,
-  appearanceProfile: AppearanceProfile,
-  appearanceDescription?: string
-): string {
-  if (appearanceDescription) {
-    return `A ${ageLabel}-year-old ${genderLabel}. Appearance from parent's photo: ${appearanceDescription}. Wearing ${outfit}.`;
-  }
-  return `A ${ageLabel}-year-old ${genderLabel} with ${appearanceProfile.skinTone} skin, ${appearanceProfile.hairColor} ${appearanceProfile.hairStyle} hair, and ${appearanceProfile.eyeColor} eyes. Wearing ${outfit}.`;
-}
-
 export async function generateIllustrations(params: {
   bookId: string;
   storyPages: BookPage[];
-  appearanceProfile: AppearanceProfile;
   themeId: string;
-  childAge: number;
-  childGender: string;
   sceneDescriptions: string[];
   pageNumbers?: number[];
-  secondChild?: SecondChildAppearance;
-  appearanceDescription?: string;
+  children: IllustrationChild[];
 }): Promise<string[]> {
-  const {
-    bookId,
-    storyPages,
-    appearanceProfile,
-    themeId,
-    childAge,
-    childGender,
-    sceneDescriptions,
-    pageNumbers,
-    secondChild,
-    appearanceDescription,
-  } = params;
+  const { bookId, storyPages, themeId, sceneDescriptions, pageNumbers, children } =
+    params;
 
   const outfit = THEME_OUTFITS[themeId] || "a colorful, age-appropriate outfit";
-  const genderLabel = childGender === "neutral" ? "child" : childGender;
-  const ageLabel = childAge < 0 ? "baby" : String(childAge);
+
+  const characters: IllustrationCharacter[] = children.map((child) => ({
+    name: child.name,
+    personLabel: buildPersonLabel(child.age, child.gender),
+    outfit,
+    profile: child.profile,
+  }));
+
+  // Download each reference sheet once; reuse the buffers for every page.
+  const referenceImages = await downloadReferenceSheets(children);
+  const referenceNames = referenceImages.map((r) => r.name);
 
   const targetPages = pageNumbers
     ? storyPages.filter((p) => pageNumbers.includes(p.pageNumber))
     : storyPages;
 
-  const jobs: Array<{ prompt: string; storagePath: string }> = targetPages.map((page) => {
-    const sceneIdx = page.pageNumber - 1;
-    const scene =
-      sceneDescriptions[sceneIdx] ||
-      `A scene from the story: ${page.text.substring(0, 150)}`;
+  const jobs: Array<{ prompt: string; storagePath: string }> = targetPages.map(
+    (page) => {
+      const sceneIdx = page.pageNumber - 1;
+      const scene =
+        sceneDescriptions[sceneIdx] ||
+        `A scene from the story: ${page.text.substring(0, 150)}`;
 
-    const characterLine = buildCharacterLine(
-      ageLabel,
-      genderLabel,
-      outfit,
-      appearanceProfile,
-      appearanceDescription
-    );
+      const prompt = buildIllustrationPrompt({
+        sceneDescription: scene,
+        characters,
+        referenceNames,
+      });
 
-    let prompt = fillPromptTemplate(ILLUSTRATION_PROMPT_TEMPLATE, {
-      scene_description: scene,
-      name: secondChild ? "the first child" : "the child",
-      age: ageLabel,
-      gender: genderLabel,
-      skin_tone: appearanceProfile.skinTone,
-      hair_color: appearanceProfile.hairColor,
-      hair_style: appearanceProfile.hairStyle,
-      eye_color: appearanceProfile.eyeColor,
-      outfit_for_theme: outfit,
-    });
-
-    // Replace the generic character line with the appearance-aware one
-    prompt = prompt.replace(
-      /Main character: A .+?\. Wearing .+?\./,
-      `Main character: ${characterLine}`
-    );
-
-    if (secondChild) {
-      const g2 = secondChild.gender === "neutral" ? "child" : secondChild.gender;
-      const a2 = secondChild.age < 0 ? "baby" : String(secondChild.age);
-      const ap = secondChild.appearanceProfile;
-      prompt += `\n\nSecond main character: A ${a2}-year-old ${g2} with ${ap.skinTone} skin, ${ap.hairColor} ${ap.hairStyle} hair, and ${ap.eyeColor} eyes. Also wearing ${outfit}. Both children should appear together in every scene, interacting and adventuring side by side.`;
+      const storagePath = `${bookId}/page-${page.pageNumber}.png`;
+      return { prompt, storagePath };
     }
-
-    const storagePath = `${bookId}/page-${page.pageNumber}.png`;
-    return { prompt, storagePath };
-  });
+  );
 
   // Generate with concurrency limit of 2 (OpenAI rate-limit friendly)
   const semaphore = new Semaphore(2);
@@ -291,7 +377,11 @@ export async function generateIllustrations(params: {
     jobs.map(async ({ prompt, storagePath }) => {
       await semaphore.acquire();
       try {
-        return await generateSingleIllustration(prompt, storagePath);
+        return await generateSingleIllustration(
+          prompt,
+          storagePath,
+          referenceImages
+        );
       } finally {
         semaphore.release();
       }

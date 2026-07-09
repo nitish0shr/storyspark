@@ -2,13 +2,23 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
 import { storySkeletons, getSceneDescription } from "@/data/story-skeletons";
-import { analyzeFace } from "@/services/face-analysis";
 import { generateStory } from "@/services/story-generation";
-import { generateIllustrations } from "@/services/illustration";
+import {
+  generateIllustrations,
+  generateCharacterReferenceSheet,
+  IllustrationChild,
+} from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
 import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
 import { sendPreviewReadyEmail, sendBookReadyEmail } from "@/lib/email-notifications";
+
+const DEFAULT_APPEARANCE: AppearanceProfile = {
+  skinTone: "warm medium",
+  hairColor: "brown",
+  hairStyle: "short straight",
+  eyeColor: "brown",
+};
 
 async function fetchBookWithChildren(bookId: string) {
   const { data: book, error: bookError } = await supabaseAdmin
@@ -127,8 +137,139 @@ async function upsertBookPages(
 }
 
 /**
+ * Resolves a child's authoritative Character Profile:
+ * the structured profile stored on the child row, falling back to defaults.
+ * A legacy free-text appearance description (from older books) is merged in
+ * as the prose description when the profile has none.
+ */
+function resolveCharacterProfile(
+  childRow: { appearance_profile?: AppearanceProfile | null },
+  fallbackDescription?: string
+): AppearanceProfile {
+  const stored = childRow.appearance_profile;
+  const profile: AppearanceProfile = stored
+    ? { ...DEFAULT_APPEARANCE, ...stored }
+    : { ...DEFAULT_APPEARANCE };
+
+  if (fallbackDescription && !profile.description) {
+    profile.description = fallbackDescription;
+  }
+
+  return profile;
+}
+
+/**
+ * Ensures a child has a Character Reference Sheet, generating it once and
+ * persisting its URL inside the child's appearance_profile so every
+ * subsequent illustration (and future book) reuses the same canonical image.
+ * Returns the profile (with referenceSheetUrl when available).
+ */
+async function ensureReferenceSheet(
+  childId: string,
+  child: IllustrationChild
+): Promise<AppearanceProfile> {
+  if (child.profile.referenceSheetUrl) {
+    return child.profile;
+  }
+  if (!isOpenAIConfigured()) {
+    return child.profile;
+  }
+
+  const url = await generateCharacterReferenceSheet({
+    child,
+    storagePath: `references/${childId}.png`,
+  });
+
+  if (!url) {
+    return child.profile;
+  }
+
+  const updatedProfile: AppearanceProfile = {
+    ...child.profile,
+    referenceSheetUrl: url,
+  };
+
+  const { error } = await supabaseAdmin
+    .from("child_profiles")
+    .update({
+      appearance_profile: updatedProfile,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", childId);
+
+  if (error) {
+    console.warn(
+      `Failed to persist reference sheet URL for child ${childId}: ${error.message}`
+    );
+  }
+
+  return updatedProfile;
+}
+
+/** Extracts the legacy appearance descriptions stored on the book row. */
+function extractAppearanceDescriptions(
+  contextualAnswers: Record<string, unknown> | null | undefined
+): { first?: string; second?: string } {
+  const answers = contextualAnswers || {};
+  const first =
+    typeof answers.__appearance_desc === "string" && answers.__appearance_desc
+      ? answers.__appearance_desc
+      : undefined;
+  const second =
+    typeof answers.__appearance_desc2 === "string" && answers.__appearance_desc2
+      ? answers.__appearance_desc2
+      : undefined;
+  return { first, second };
+}
+
+/**
+ * Builds the IllustrationChild list for a book (one or two children), with
+ * resolved Character Profiles and freshly-ensured Character Reference Sheets.
+ */
+async function prepareIllustrationChildren(
+  child: Record<string, unknown> & { id: string },
+  secondChild: (Record<string, unknown> & { id: string }) | null,
+  descriptions: { first?: string; second?: string }
+): Promise<IllustrationChild[]> {
+  const firstChild: IllustrationChild = {
+    name: (child.name as string) || "the child",
+    age: (child.age as number) ?? 5,
+    gender: (child.gender as string) || "neutral",
+    profile: resolveCharacterProfile(
+      child as { appearance_profile?: AppearanceProfile | null },
+      descriptions.first
+    ),
+  };
+
+  const children: IllustrationChild[] = [firstChild];
+
+  if (secondChild) {
+    children.push({
+      name: (secondChild.name as string) || "the second child",
+      age: (secondChild.age as number) ?? 5,
+      gender: (secondChild.gender as string) || "neutral",
+      profile: resolveCharacterProfile(
+        secondChild as { appearance_profile?: AppearanceProfile | null },
+        descriptions.second
+      ),
+    });
+  }
+
+  // Generate any missing reference sheets in parallel (one per child, once ever)
+  const childIds = [child.id, ...(secondChild ? [secondChild.id] : [])];
+  const ensured = await Promise.all(
+    children.map((c, i) => ensureReferenceSheet(childIds[i], c))
+  );
+  ensured.forEach((profile, i) => {
+    children[i].profile = profile;
+  });
+
+  return children;
+}
+
+/**
  * Generates a preview for the book:
- * 1. Runs face analysis if needed
+ * 1. Resolves each child's Character Profile and Reference Sheet
  * 2. Generates the full story text
  * 3. Generates 3 preview illustrations (cover + first 2 pages)
  * 4. Saves everything and marks status as preview_ready
@@ -141,85 +282,43 @@ export async function generatePreview(bookId: string): Promise<void> {
 
     const { book, child, secondChild } = await fetchBookWithChildren(bookId);
 
-    const defaultAppearance: AppearanceProfile = {
-      skinTone: "warm medium",
-      hairColor: "brown",
-      hairStyle: "short straight",
-      eyeColor: "brown",
-    };
+    const contextualAnswers: Record<string, string> =
+      book.contextual_answers || {};
 
-    let appearanceProfile: AppearanceProfile = child.appearance_profile;
+    const descriptions = extractAppearanceDescriptions(contextualAnswers);
 
-    if (!appearanceProfile && child.photo_url) {
-      appearanceProfile = await analyzeFace(child.photo_url);
-      await supabaseAdmin
-        .from("child_profiles")
-        .update({
-          appearance_profile: appearanceProfile,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", child.id);
-    }
-
-    if (!appearanceProfile) {
-      appearanceProfile = defaultAppearance;
-    }
+    // Strip internal appearance keys so they don't appear in the story prompt Q&A
+    const storyContextualAnswers = Object.fromEntries(
+      Object.entries(contextualAnswers).filter(
+        ([k]) => k !== "__appearance_desc" && k !== "__appearance_desc2"
+      )
+    );
 
     let secondChildData = undefined;
-    let secondChildAppearance = undefined;
     if (secondChild) {
-      let scAppearance: AppearanceProfile = secondChild.appearance_profile;
-      if (!scAppearance && secondChild.photo_url) {
-        scAppearance = await analyzeFace(secondChild.photo_url);
-        await supabaseAdmin
-          .from("child_profiles")
-          .update({
-            appearance_profile: scAppearance,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", secondChild.id);
-      }
-      if (!scAppearance) {
-        scAppearance = defaultAppearance;
-      }
-
       secondChildData = {
         name: secondChild.name,
         age: secondChild.age,
         gender: secondChild.gender,
-        appearanceProfile: scAppearance,
-      };
-      secondChildAppearance = {
-        name: secondChild.name,
-        age: secondChild.age,
-        gender: secondChild.gender,
-        appearanceProfile: scAppearance,
+        appearanceProfile: resolveCharacterProfile(secondChild, descriptions.second),
       };
     }
 
-    const contextualAnswers: Record<string, string> =
-      book.contextual_answers || {};
-
-    // Extract the AI-generated appearance description (stored by create-book route).
-    // Strip it from contextualAnswers so it doesn't appear in the story prompt Q&A.
-    const appearanceDescription: string | undefined =
-      typeof contextualAnswers.__appearance_desc === "string" && contextualAnswers.__appearance_desc
-        ? contextualAnswers.__appearance_desc
-        : undefined;
-    const storyContextualAnswers = Object.fromEntries(
-      Object.entries(contextualAnswers).filter(([k]) => k !== "__appearance_desc")
-    );
-
-    const storyPages: BookPage[] = await generateStory({
-      childName: child.name,
-      childAge: child.age,
-      childGender: child.gender,
-      appearanceProfile,
-      themeId: book.theme_id,
-      contextualAnswers: storyContextualAnswers,
-      language: book.language || "en",
-      secondChild: secondChildData,
-    });
+    // Story generation and character preparation (reference sheets) are
+    // independent — run them in parallel. Both are needed before illustrating.
+    const [storyPages, illustrationChildren] = await Promise.all([
+      generateStory({
+        childName: child.name,
+        childAge: child.age,
+        childGender: child.gender,
+        appearanceProfile: resolveCharacterProfile(child, descriptions.first),
+        themeId: book.theme_id,
+        contextualAnswers: storyContextualAnswers,
+        language: book.language || "en",
+        secondChild: secondChildData,
+      }),
+      prepareIllustrationChildren(child, secondChild, descriptions),
+    ]);
 
     const skeleton = storySkeletons[book.theme_id];
     const hasTwoChildren = !!secondChild;
@@ -232,14 +331,10 @@ export async function generatePreview(bookId: string): Promise<void> {
     const previewIllustrationUrls = await generateIllustrations({
       bookId,
       storyPages,
-      appearanceProfile,
       themeId: book.theme_id,
-      childAge: child.age,
-      childGender: child.gender,
       sceneDescriptions,
       pageNumbers: previewPageNumbers,
-      secondChild: secondChildAppearance,
-      appearanceDescription,
+      children: illustrationChildren,
     });
 
     // Build the full illustration_urls array with nulls for non-preview pages
@@ -287,7 +382,8 @@ export async function generatePreview(bookId: string): Promise<void> {
 
 /**
  * Generates the full book after preview approval:
- * 1. Generates remaining illustrations (pages 4+)
+ * 1. Generates remaining illustrations (pages 4+) reusing each child's
+ *    Character Profile and Reference Sheet from the preview stage
  * 2. Generates TTS audio narration (optional)
  * 3. Assembles PDF
  * 4. Populates all book_pages rows
@@ -306,27 +402,8 @@ export async function generateFullBook(bookId: string): Promise<void> {
       );
     }
 
-    const defaultAppearance: AppearanceProfile = {
-      skinTone: "warm medium",
-      hairColor: "brown",
-      hairStyle: "short straight",
-      eyeColor: "brown",
-    };
-
     const storyPages: BookPage[] = book.story_text;
     const existingUrls: (string | null)[] = book.illustration_urls || [];
-
-    const appearanceProfile: AppearanceProfile = child.appearance_profile || defaultAppearance;
-
-    let secondChildAppearance = undefined;
-    if (secondChild) {
-      secondChildAppearance = {
-        name: secondChild.name,
-        age: secondChild.age,
-        gender: secondChild.gender,
-        appearanceProfile: (secondChild.appearance_profile || defaultAppearance) as AppearanceProfile,
-      };
-    }
 
     const remainingPageNumbers: number[] = [];
     storyPages.forEach((page, idx) => {
@@ -344,23 +421,23 @@ export async function generateFullBook(bookId: string): Promise<void> {
         ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
         : [];
 
-      const fullBookAppearanceDescription: string | undefined =
-        typeof book.contextual_answers?.__appearance_desc === "string" &&
-        book.contextual_answers.__appearance_desc
-          ? book.contextual_answers.__appearance_desc
-          : undefined;
+      const descriptions = extractAppearanceDescriptions(book.contextual_answers);
+
+      // Reuses the reference sheets generated at preview time (generates them
+      // only if missing, e.g. for legacy books)
+      const illustrationChildren = await prepareIllustrationChildren(
+        child,
+        secondChild,
+        descriptions
+      );
 
       const newUrls = await generateIllustrations({
         bookId,
         storyPages,
-        appearanceProfile,
         themeId: book.theme_id,
-        childAge: child.age,
-        childGender: child.gender,
         sceneDescriptions,
         pageNumbers: remainingPageNumbers,
-        secondChild: secondChildAppearance,
-        appearanceDescription: fullBookAppearanceDescription,
+        children: illustrationChildren,
       });
 
       // Merge new URLs into the full array
