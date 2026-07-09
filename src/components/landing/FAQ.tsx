@@ -34,11 +34,6 @@ const faqs = [
       "The illustrations are stylised watercolour art inspired by your child\u2019s photo features \u2014 hair colour, skin tone, facial structure, and more. They won\u2019t be photorealistic, but parents consistently recognise their child in the art. The style is warm, whimsical, and designed to feel like a hand-illustrated children\u2019s book.",
   },
   {
-    question: "How does the preview work?",
-    answer:
-      "After uploading a photo and choosing a theme, you'll see a free sample illustration of your child as the hero \u2014 no credit card needed. If you love how it looks, you can order the full 12-page storybook.",
-  },
-  {
     question: "How do I access my book after purchasing?",
     answer:
       "After purchase, your book is available as an instant PDF download. It\u2019s also permanently saved to your account, so you can re-download it anytime from your dashboard. We\u2019ll also email you a direct download link.",

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { AppearanceProfile } from "@/types/child";
 
 interface WizardState {
   step: number;
@@ -12,6 +13,7 @@ interface WizardState {
   photoPreviewUrl: string | null;
   photoUrl: string | null;
   appearanceDescription: string | null;
+  appearanceProfile: AppearanceProfile | null;
   hasSecondChild: boolean;
   secondChildName: string;
   secondChildAge: number;
@@ -19,6 +21,8 @@ interface WizardState {
   secondChildPhotoFile: File | null;
   secondChildPhotoPreviewUrl: string | null;
   secondChildPhotoUrl: string | null;
+  secondAppearanceDescription: string | null;
+  secondAppearanceProfile: AppearanceProfile | null;
   selectedThemeId: string | null;
   contextualAnswers: Record<string, string>;
   dedication: string;
@@ -38,12 +42,16 @@ interface WizardState {
   setPhoto: (file: File, previewUrl: string) => void;
   setPhotoUrl: (url: string) => void;
   setAppearanceDescription: (desc: string | null) => void;
+  setAppearanceProfile: (profile: AppearanceProfile | null) => void;
   setHasSecondChild: (has: boolean) => void;
   setSecondChildName: (name: string) => void;
   setSecondChildAge: (age: number) => void;
   setSecondChildGender: (gender: "boy" | "girl" | "neutral") => void;
   setSecondChildPhoto: (file: File, previewUrl: string) => void;
   setSecondChildPhotoUrl: (url: string) => void;
+  clearSecondChildPhoto: () => void;
+  setSecondAppearanceDescription: (desc: string | null) => void;
+  setSecondAppearanceProfile: (profile: AppearanceProfile | null) => void;
   setSelectedTheme: (themeId: string) => void;
   setContextualAnswer: (questionId: string, answer: string) => void;
   setDedication: (dedication: string) => void;
@@ -65,6 +73,7 @@ const initialState = {
   photoPreviewUrl: null,
   photoUrl: null,
   appearanceDescription: null,
+  appearanceProfile: null,
   hasSecondChild: false,
   secondChildName: "",
   secondChildAge: -1,
@@ -72,6 +81,8 @@ const initialState = {
   secondChildPhotoFile: null,
   secondChildPhotoPreviewUrl: null,
   secondChildPhotoUrl: null,
+  secondAppearanceDescription: null,
+  secondAppearanceProfile: null,
   selectedThemeId: null,
   contextualAnswers: {},
   dedication: "",
@@ -99,6 +110,7 @@ export const useWizardStore = create<WizardState>()(
         set({ photoFile, photoPreviewUrl }),
       setPhotoUrl: (photoUrl) => set({ photoUrl }),
       setAppearanceDescription: (appearanceDescription) => set({ appearanceDescription }),
+      setAppearanceProfile: (appearanceProfile) => set({ appearanceProfile }),
       setHasSecondChild: (hasSecondChild) =>
         set(hasSecondChild ? { hasSecondChild } : {
           hasSecondChild: false,
@@ -108,6 +120,8 @@ export const useWizardStore = create<WizardState>()(
           secondChildPhotoFile: null,
           secondChildPhotoPreviewUrl: null,
           secondChildPhotoUrl: null,
+          secondAppearanceDescription: null,
+          secondAppearanceProfile: null,
         }),
       setSecondChildName: (secondChildName) => set({ secondChildName }),
       setSecondChildAge: (secondChildAge) => set({ secondChildAge }),
@@ -115,6 +129,18 @@ export const useWizardStore = create<WizardState>()(
       setSecondChildPhoto: (secondChildPhotoFile, secondChildPhotoPreviewUrl) =>
         set({ secondChildPhotoFile, secondChildPhotoPreviewUrl }),
       setSecondChildPhotoUrl: (secondChildPhotoUrl) => set({ secondChildPhotoUrl }),
+      clearSecondChildPhoto: () =>
+        set({
+          secondChildPhotoFile: null,
+          secondChildPhotoPreviewUrl: null,
+          secondChildPhotoUrl: null,
+          secondAppearanceDescription: null,
+          secondAppearanceProfile: null,
+        }),
+      setSecondAppearanceDescription: (secondAppearanceDescription) =>
+        set({ secondAppearanceDescription }),
+      setSecondAppearanceProfile: (secondAppearanceProfile) =>
+        set({ secondAppearanceProfile }),
       setSelectedTheme: (selectedThemeId) =>
         set({ selectedThemeId, contextualAnswers: {} }),
       setContextualAnswer: (questionId, answer) =>
@@ -143,11 +169,14 @@ export const useWizardStore = create<WizardState>()(
         childGender: state.childGender,
         photoUrl: state.photoUrl,
         appearanceDescription: state.appearanceDescription,
+        appearanceProfile: state.appearanceProfile,
         hasSecondChild: state.hasSecondChild,
         secondChildName: state.secondChildName,
         secondChildAge: state.secondChildAge,
         secondChildGender: state.secondChildGender,
         secondChildPhotoUrl: state.secondChildPhotoUrl,
+        secondAppearanceDescription: state.secondAppearanceDescription,
+        secondAppearanceProfile: state.secondAppearanceProfile,
         selectedThemeId: state.selectedThemeId,
         contextualAnswers: state.contextualAnswers,
         dedication: state.dedication,

@@ -3,6 +3,51 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { getThemeById } from "@/data/themes";
 import { isValidLanguageCode } from "@/data/languages";
+import { AppearanceProfile } from "@/types/child";
+
+/**
+ * Whitelisted Character Profile keys accepted from the client.
+ * referenceSheetUrl is intentionally excluded — it is only ever set
+ * server-side by the book pipeline.
+ */
+const PROFILE_KEYS = [
+  "hairColor",
+  "hairStyle",
+  "hairLength",
+  "hairTexture",
+  "skinTone",
+  "faceShape",
+  "facialFeatures",
+  "eyeColor",
+  "eyeShape",
+  "approximateAge",
+  "freckles",
+  "glasses",
+  "distinctiveFeatures",
+  "description",
+] as const;
+
+/** Sanitises a client-supplied Character Profile. Returns null if unusable. */
+function sanitizeProfile(raw: unknown): AppearanceProfile | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const obj = raw as Record<string, unknown>;
+  const cleaned: Record<string, string> = {};
+  for (const key of PROFILE_KEYS) {
+    const value = obj[key];
+    if (typeof value === "string" && value.trim()) {
+      cleaned[key] = value.trim().slice(0, 300);
+    }
+  }
+  if (Object.keys(cleaned).length === 0) return null;
+
+  return {
+    skinTone: cleaned.skinTone || "warm medium",
+    hairColor: cleaned.hairColor || "brown",
+    hairStyle: cleaned.hairStyle || "short straight",
+    eyeColor: cleaned.eyeColor || "brown",
+    ...cleaned,
+  } as AppearanceProfile;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +84,13 @@ export async function POST(request: NextRequest) {
       secondChildAge,
       secondChildGender,
       secondChildPhotoUrl,
+      appearanceProfile,
+      secondAppearanceDescription,
+      secondAppearanceProfile,
     } = body;
+
+    const sanitizedProfile = sanitizeProfile(appearanceProfile);
+    const sanitizedSecondProfile = sanitizeProfile(secondAppearanceProfile);
 
     // Validate required fields
     if (!childName || childAge === undefined || !childGender || !themeId) {
@@ -90,6 +141,7 @@ export async function POST(request: NextRequest) {
         age: childAge,
         gender: childGender,
         photo_url: photoUrl || null,
+        appearance_profile: sanitizedProfile,
       })
       .select("id")
       .single();
@@ -113,6 +165,7 @@ export async function POST(request: NextRequest) {
           age: secondChildAge,
           gender: secondChildGender,
           photo_url: secondChildPhotoUrl || null,
+          appearance_profile: sanitizedSecondProfile,
         })
         .select("id")
         .single();
@@ -143,6 +196,9 @@ export async function POST(request: NextRequest) {
         contextual_answers: {
           ...(contextualAnswers || {}),
           ...(appearanceDescription ? { __appearance_desc: appearanceDescription } : {}),
+          ...(secondAppearanceDescription
+            ? { __appearance_desc2: secondAppearanceDescription }
+            : {}),
         },
         dedication: dedication?.trim() || null,
         language: isValidLanguageCode(language) ? language : "en",

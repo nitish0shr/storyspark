@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
-  allowedDevOrigins: ["*.replit.dev", "*.spock.replit.dev"],
+  allowedDevOrigins: [
+    "*.replit.dev",
+    "*.spock.replit.dev",
+    "*.riker.replit.dev",
+    ...(process.env.REPLIT_DEV_DOMAIN ? [process.env.REPLIT_DEV_DOMAIN] : []),
+  ],
   images: {
     remotePatterns: [
       {

@@ -1,1 +1,4 @@
 - [UK English convention](uk-english-convention.md) — Starmee Stories user-facing copy uses UK English; currency (USD vs GBP) is an open Stripe-tied decision; landing/classic is dead code.
+- [Character identity pipeline](character-identity-pipeline.md) — photo analysed once then deleted; ref sheet reused via gpt-image-1 images.edit input_fidelity high; never blend two children; referenceSheetUrl is server-side only.
+- Next.js `allowedDevOrigins` wildcards match one label only — `*.replit.dev` does NOT cover `x.riker.replit.dev`; include `process.env.REPLIT_DEV_DOMAIN` dynamically.
+- Runtime E2E of AI generation may be impossible when the OpenAI account is over quota (429 insufficient_quota) — verify via `npm run build` + code review instead; after a prod build, `rm -rf .next` before restarting the dev workflow.
