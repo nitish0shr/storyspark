@@ -6,6 +6,7 @@ import {
   STORY_GENERATION_SYSTEM_PROMPT,
   fillPromptTemplate,
 } from "@/data/prompts";
+import { resolveCreatureFromAnswers, buildCreatureStoryRule } from "@/data/animals";
 
 /**
  * Derives pronouns from the child's gender.
@@ -207,7 +208,7 @@ export async function generateStory(params: {
   };
   const languageName = languageNames[language] || "English";
 
-  const systemPrompt = fillPromptTemplate(STORY_GENERATION_SYSTEM_PROMPT, {
+  let systemPrompt = fillPromptTemplate(STORY_GENERATION_SYSTEM_PROMPT, {
     name: childName,
     age: ageLabel,
     gender: genderLabel,
@@ -219,6 +220,14 @@ export async function generateStory(params: {
     appearance_notes: appearanceNotes,
     contextual_answers: formatContextualAnswers(contextualAnswers),
   });
+
+  // The customer-selected animal is a hard requirement: it must be named
+  // explicitly in the story and in every scene description so the
+  // illustrator draws the correct creature.
+  const storyCreature = resolveCreatureFromAnswers(contextualAnswers);
+  if (storyCreature) {
+    systemPrompt += "\n\n" + buildCreatureStoryRule(storyCreature);
+  }
 
   let dualCharacterInstruction = "";
   if (secondChild) {
