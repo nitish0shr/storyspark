@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/utils";
 import { PRICE_BASE, PRICE_MID, PRICE_PREMIUM } from "@/lib/stripe";
 import Navbar from "@/components/shared/Navbar";
 import CheckoutForm from "./CheckoutForm";
+import { toViewableUrl } from "@/lib/storage-urls";
 
 export const metadata: Metadata = {
   title: "Checkout - Starmee",
@@ -77,6 +78,8 @@ export default async function CheckoutPage({
     .eq("book_id", bookId)
     .eq("page_number", 1)
     .single();
+  // Private bucket: sign the cover thumbnail for display.
+  const coverUrl = await toViewableUrl(coverPage?.illustration_url ?? null);
 
   const tiers = [
     {
@@ -135,12 +138,12 @@ export default async function CheckoutPage({
         </div>
 
         {/* Book preview thumbnail */}
-        {coverPage?.illustration_url && (
+        {coverUrl && (
           <div className="flex justify-center mb-10">
             <div className="relative w-40 h-52 sm:w-48 sm:h-64 rounded-xl overflow-hidden shadow-lg shadow-violet-200/40 border-2 border-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={coverPage.illustration_url}
+                src={coverUrl}
                 alt={`${book.child_name}'s book cover`}
                 className="w-full h-full object-cover"
               />
