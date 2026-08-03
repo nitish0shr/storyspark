@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Mail, Sparkles, Shield, AlertCircle } from "lucide-react";
+import { PRIVACY_NOTICE, MARKETING_CONSENT_LABEL, ADULT_CONFIRMATION_LABEL } from "@/lib/consent";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -30,12 +31,14 @@ export function StepEmail() {
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
 
   const valid = isValidEmail(email);
   const showError = touched && !valid && email.length > 0;
 
   const handleGenerate = async () => {
-    if (!valid || submitting) return;
+    if (!valid || !adultConfirmed || submitting) return;
 
     setSubmitting(true);
     setError(null);
@@ -53,6 +56,8 @@ export function StepEmail() {
           themeId: selectedThemeId,
           contextualAnswers,
           email,
+          marketingConsent,
+          adultConfirmed,
         }),
       });
 
@@ -125,6 +130,61 @@ export function StepEmail() {
         )}
       </div>
 
+      <div className="starmee-consent space-y-3 rounded-xl bg-violet-50/60 p-4">
+
+        <p className="text-sm text-gray-600">
+
+          {PRIVACY_NOTICE.replace("Privacy Policy.", "")}
+
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-violet-700 underline">
+
+            Privacy Policy
+
+          </a>
+
+          .
+
+        </p>
+
+        <label className="flex items-start gap-3 text-sm text-gray-700">
+
+          <input
+
+            type="checkbox"
+
+            className="mt-1 h-5 w-5 shrink-0"
+
+            checked={adultConfirmed}
+
+            onChange={(e) => setAdultConfirmed(e.target.checked)}
+
+          />
+
+          <span>{ADULT_CONFIRMATION_LABEL}</span>
+
+        </label>
+
+        <label className="flex items-start gap-3 text-sm text-gray-700">
+
+          <input
+
+            type="checkbox"
+
+            className="mt-1 h-5 w-5 shrink-0"
+
+            checked={marketingConsent}
+
+            onChange={(e) => setMarketingConsent(e.target.checked)}
+
+          />
+
+          <span>{MARKETING_CONSENT_LABEL}</span>
+
+        </label>
+
+      </div>
+
+      
       {error && (
         <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -134,7 +194,7 @@ export function StepEmail() {
 
       <Button
         onClick={handleGenerate}
-        disabled={!valid || submitting}
+        disabled={!valid || !adultConfirmed || submitting}
         className={cn(
           "h-14 w-full rounded-xl text-lg font-semibold transition-all",
           valid && !submitting

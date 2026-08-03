@@ -4,6 +4,8 @@ import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { getThemeById } from "@/data/themes";
 import { isValidLanguageCode } from "@/data/languages";
 import { AppearanceProfile } from "@/types/child";
+import { CONSENT_VERSION } from "@/lib/consent";
+import { resolveCreatureFromAnswers } from "@/data/animals";
 
 /**
  * Whitelisted Character Profile keys accepted from the client.
@@ -80,6 +82,8 @@ export async function POST(request: NextRequest) {
       dedication,
       language,
       email,
+      marketingConsent,
+      adultConfirmed,
       secondChildName,
       secondChildAge,
       secondChildGender,
@@ -184,6 +188,37 @@ export async function POST(request: NextRequest) {
       ? `${childName} & ${secondChildName}'s ${theme.name}`
       : theme.titleTemplate?.replace("[Child]", childName) || `${childName}'s ${theme.name}`;
 
+    // --- Starmee order + consent capture (server-side validated) ---
+
+    const nowIso = new Date().toISOString();
+
+    const purchaserEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(purchaserEmail)) {
+
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+
+    }
+
+    const recipientName = typeof childName === "string" ? childName.trim() : "";
+
+    if (!recipientName || recipientName.length > 40) {
+
+      return NextResponse.json({ error: "Please enter the child's name (40 characters or fewer)." }, { status: 400 });
+
+    }
+
+    if (adultConfirmed !== true) {
+
+      return NextResponse.json({ error: "Please confirm you are 18 or older to place this order." }, { status: 400 });
+
+    }
+
+    const marketingOptIn = marketingConsent === true;
+
+    const selectedCreature = resolveCreatureFromAnswers(contextualAnswers as Record<string, unknown>);
+
+    
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .insert({
@@ -193,6 +228,14 @@ export async function POST(request: NextRequest) {
         theme_id: themeId,
         child_name: secondChildProfileId ? `${childName} & ${secondChildName}` : childName,
         theme_title: bookTitle,
+        purchaser_email: purchaserEmail,
+        recipient_name: recipientName,
+        selected_animal: selectedCreature ? selectedCreature.label : null,
+        marketing_consent: marketingOptIn,
+        marketing_consent_at: marketingOptIn ? nowIso : null,
+        consent_version: CONSENT_VERSION,
+        adult_confirmed: true,
+        adult_confirmed_at: nowIso,
         contextual_answers: {
           ...(contextualAnswers || {}),
           ...(appearanceDescription ? { __appearance_desc: appearanceDescription } : {}),
