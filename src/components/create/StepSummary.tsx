@@ -12,6 +12,7 @@ import {
   Sparkles, Shield, AlertCircle, User, Palette, Camera, MessageCircle, Heart, Globe,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
+import { PRIVACY_NOTICE, MARKETING_CONSENT_LABEL, ADULT_CONFIRMATION_LABEL } from "@/lib/consent";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -38,6 +39,8 @@ export function StepSummary() {
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
 
   const valid = isValidEmail(email);
   const showEmailError = touched && !valid && email.length > 0;
@@ -47,7 +50,7 @@ export function StepSummary() {
   const ageLabel = childAge === -1 ? "Not yet born" : `${childAge} year${childAge !== 1 ? "s" : ""} old`;
 
   const handleGenerate = async () => {
-    if (!valid || submitting) return;
+    if (!valid || !adultConfirmed || submitting) return;
     setSubmitting(true);
     setError(null);
 
@@ -63,6 +66,8 @@ export function StepSummary() {
           themeId: selectedThemeId, contextualAnswers,
           dedication: dedication.trim() || undefined,
           language, email,
+          marketingConsent,
+          adultConfirmed,
           ...(hasSecondChild ? {
             secondChildName, secondChildAge, secondChildGender,
             secondChildPhotoUrl: useWizardStore.getState().secondChildPhotoUrl || undefined,
@@ -274,6 +279,53 @@ export function StepSummary() {
         <p className="font-body text-xs text-[#262625]/40">We&apos;ll save your preview to this email.</p>
       </div>
 
+      {/* Privacy notice + consent */}
+
+      <div className="starmee-consent mt-4 space-y-3 rounded-xl bg-[#FFF7E6] p-4">
+
+        <p className="font-body text-xs text-[#262625]/70">
+
+          {PRIVACY_NOTICE.replace(" Please see our Privacy Policy for more information.", " ")}
+
+          See our{" "}
+
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">
+
+            Privacy Policy
+
+          </a>{" "}
+
+          for more information.
+
+        </p>
+
+        <label className="flex items-start gap-3 font-body text-sm text-[#262625]">
+
+          <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0"
+
+            checked={adultConfirmed}
+
+            onChange={(e) => setAdultConfirmed(e.target.checked)} />
+
+          <span>{ADULT_CONFIRMATION_LABEL}</span>
+
+        </label>
+
+        <label className="flex items-start gap-3 font-body text-sm text-[#262625]">
+
+          <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0"
+
+            checked={marketingConsent}
+
+            onChange={(e) => setMarketingConsent(e.target.checked)} />
+
+          <span>{MARKETING_CONSENT_LABEL}</span>
+
+        </label>
+
+      </div>
+
+      
       {/* Error */}
       {error && (
         <div className="flex items-start gap-2 rounded-xl bg-red-50 border-2 border-red-100 px-4 py-3 font-body text-sm text-red-600">
@@ -285,7 +337,7 @@ export function StepSummary() {
       {/* CTA */}
       <button
         onClick={handleGenerate}
-        disabled={!valid || submitting}
+        disabled={!valid || !adultConfirmed || submitting}
         className={cn(
           "btn-chunky h-14 w-full flex items-center justify-center gap-2 font-heading font-bold text-lg transition-all",
           valid && !submitting

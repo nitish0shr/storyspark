@@ -12,6 +12,7 @@ import { assemblePdf } from "@/services/pdf-assembly";
 import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
 import { sendPreviewReadyEmail, sendBookReadyEmail } from "@/lib/email-notifications";
+import { runValidationGate } from "@/services/review-gate";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -276,7 +277,10 @@ async function prepareIllustrationChildren(
  * 5. Inserts preview pages into book_pages table
  * 6. Sends preview-ready email to parent
  */
-export async function generatePreview(bookId: string): Promise<void> {
+export async function generatePreview(
+  bookId: string,
+  skipGate = false,
+): Promise<void> {
   try {
     await updateBookStatus(bookId, "preview_generating");
 
@@ -355,6 +359,19 @@ export async function generatePreview(bookId: string): Promise<void> {
       preview_pages: previewPages,
       page_count: storyPages.length,
     });
+
+  // Nothing is released to the customer here. Validate, then hand the book
+  // to the human review queue. skipGate is set when this call IS the retry.
+  if (!skipGate) {
+    try {
+      const gate = await runValidationGate(bookId, async (id) => {
+        await generatePreview(id, true);
+      });
+      console.log("[gate] book " + bookId + ": " + gate.message);
+    } catch (err) {
+      console.error("[gate] failed for book " + bookId + ":", err);
+    }
+  }
 
     // Populate book_pages table (required by the preview page UI)
     await upsertBookPages(bookId, storyPages, allIllustrationUrls, previewPageNumbers);
