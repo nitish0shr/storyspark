@@ -1,4 +1,5 @@
 import { AppearanceProfile } from "@/types/child";
+import { buildCreatureBlock, type CreatureSpec } from "./animals";
 
 /**
  * System prompt template for story generation via LLM.
@@ -191,8 +192,9 @@ export function buildIllustrationPrompt(params: {
   sceneDescription: string;
   characters: IllustrationCharacter[];
   referenceNames?: string[];
+  creature?: CreatureSpec | null;
 }): string {
-  const { sceneDescription, characters, referenceNames = [] } = params;
+  const { sceneDescription, characters, referenceNames = [], creature = null } = params;
 
   const characterBlocks = characters
     .map((c, i) => buildCharacterBlock(c, i, characters.length))
@@ -207,6 +209,7 @@ export function buildIllustrationPrompt(params: {
     ILLUSTRATION_STYLE,
     `Scene: ${sceneDescription}\nDepict every character, creature, and object mentioned in the scene description — do not omit any of them.`,
     characterBlocks,
+    creature ? buildCreatureBlock(creature) : "",
     togetherNote,
     buildReferenceImagesNote(referenceNames, characters),
     buildConsistencyRules(characters),

@@ -335,6 +335,7 @@ export async function generatePreview(bookId: string): Promise<void> {
       sceneDescriptions,
       pageNumbers: previewPageNumbers,
       children: illustrationChildren,
+      contextualAnswers: book.contextual_answers as Record<string, unknown> | null,
     });
 
     // Build the full illustration_urls array with nulls for non-preview pages
@@ -438,6 +439,7 @@ export async function generateFullBook(bookId: string): Promise<void> {
         sceneDescriptions,
         pageNumbers: remainingPageNumbers,
         children: illustrationChildren,
+        contextualAnswers: book.contextual_answers as Record<string, unknown> | null,
       });
 
       // Merge new URLs into the full array

@@ -276,7 +276,7 @@ export default function Hero() {
                     </h3>
                     <div className="w-16 h-0.5 bg-white/30 rounded-full mx-auto mb-3" />
                     <p className="text-white/50 text-xs font-semibold tracking-[0.2em] uppercase">
-                      A StorySpark Book
+                      A Starmee Book
                     </p>
                   </div>
 

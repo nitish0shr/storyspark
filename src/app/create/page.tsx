@@ -87,7 +87,7 @@ export default function CreatePage() {
           <Link href="/" className="flex items-center">
             <img
               src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
-              alt="StorySpark"
+              alt="Starmee"
               className="h-9 w-auto"
             />
           </Link>

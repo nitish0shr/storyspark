@@ -18,7 +18,7 @@ const dynapuff = DynaPuff({
 });
 
 export const metadata: Metadata = {
-  title: "StorySpark — Personalised AI Storybooks for Kids",
+  title: "Starmee — Personalised AI Storybooks for Kids",
   description:
     "Your child is the star of their own story! Upload a photo, pick an adventure, and AI creates a beautiful personalised storybook. Free preview — no credit card needed!",
   keywords: [
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "personalised gift for kids",
   ],
   openGraph: {
-    title: "StorySpark — Your Child Is the Star of Their Own Story!",
+    title: "Starmee — Your Child Is the Star of Their Own Story!",
     description:
       "Upload a photo, pick a magical adventure theme, and get a beautifully illustrated storybook with your child as the hero. Free preview in about 2 minutes!",
     type: "website",

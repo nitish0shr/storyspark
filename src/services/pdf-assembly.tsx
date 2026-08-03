@@ -280,7 +280,7 @@ function BookPdfDocument({
 
   return h(
     Document,
-    { title: `${displayNames}'s ${themeName} - StorySpark`, author: "StorySpark" },
+    { title: `${displayNames}'s ${themeName} - Starmee`, author: "Starmee" },
     h(
       Page,
       { size: "A4", style: pageStyle },
@@ -374,7 +374,7 @@ function BookPdfDocument({
             ? `Created with love for ${childName} and ${secondChildName}`
             : `Created with love for ${childName}`
         ),
-        h(Text, { style: styles.backLogo }, "StorySpark"),
+        h(Text, { style: styles.backLogo }, "Starmee"),
         h(
           Text,
           { style: styles.backBrand },
@@ -383,7 +383,7 @@ function BookPdfDocument({
         h(
           Text,
           { style: [styles.backBrand, { marginTop: 20, fontSize: 11 }] },
-          "storyspark.com"
+          "starmeestories.com"
         )
       )
     )

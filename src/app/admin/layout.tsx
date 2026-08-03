@@ -21,10 +21,16 @@ const navItems = [
 
 function isAdmin(email: string | undefined): boolean {
   if (!email) return false;
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
+  const configured = process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "";
+  const adminEmails = configured
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
   if (adminEmails.length === 0) {
-    // If no ADMIN_EMAILS set, allow the first user (dev mode)
-    return true;
+    // Fail closed. The previous behaviour returned true here, which let ANY
+    // signed-in customer reach /admin whenever the allow-list was unset.
+    console.error("[admin] ADMIN_EMAILS is not configured - denying admin access.");
+    return false;
   }
   return adminEmails.includes(email.toLowerCase());
 }
@@ -61,7 +67,7 @@ export default async function AdminLayout({
               Site
             </Link>
             <span className="text-lg font-bold text-violet-700">
-              StorySpark Admin
+              Starmee Admin
             </span>
           </div>
           <span className="text-xs text-gray-400">{user.email}</span>
