@@ -1,0 +1,56 @@
+/**
+ * The ONLY place an order can be approved or rejected.
+ *
+ * POST only. There is deliberately no GET handler: an email security scanner
+ * or link preview that fetches the review URL must never be able to approve
+ * anything. The reviewer has to submit this form on the review page.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { resolveReviewToken, consumeReviewToken } from "@/lib/review-tokens";
+import { approveBook, rejectBook } from "@/lib/review-workflow";
+
+export const dynamic = "force-dynamic";
+
+function back(req: NextRequest, token: string, message: string) {
+  const url = new URL("/review/" + encodeURIComponent(token), req.url);
+  url.searchParams.set("m", message);
+  return NextResponse.redirect(url, { status: 303 });
+}
+
+export async function POST(req: NextRequest) {
+  const form = await req.formData();
+  const token = String(form.get("token") || "");
+  const action = String(form.get("action") || "");
+  const reviewer = String(form.get("reviewer") || "").trim();
+  const notes = String(form.get("notes") || "").trim();
+
+  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 400 });
+
+  const resolved = await resolveReviewToken(token);
+  if (resolved.state !== "valid" || !resolved.bookId || !resolved.tokenId) {
+    return back(req, token, "This review link is " + resolved.state + ".");
+  }
+
+  if (!reviewer) {
+    return back(req, token, "Please enter your name so we can record who reviewed this.");
+  }
+
+  let message: string;
+  if (action === "approve") {
+    const r = await approveBook({ bookId: resolved.bookId, reviewer, notes });
+    message = r.message;
+  } else if (action === "reject") {
+    if (!notes) {
+      return back(req, token, "Please say what is wrong so the retry can fix it.");
+    }
+    const r = await rejectBook({ bookId: resolved.bookId, reviewer, reason: notes });
+    message = r.message;
+  } else {
+    return back(req, token, "Unknown action.");
+  }
+
+  // Burn the link once a decision has been recorded.
+  await consumeReviewToken(resolved.tokenId);
+  return back(req, token, message);
+}
