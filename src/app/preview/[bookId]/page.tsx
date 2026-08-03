@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/utils";
+import { toViewableUrls } from "@/lib/storage-urls";
 import BookViewer from "@/components/preview/BookViewer";
 import Navbar from "@/components/shared/Navbar";
 import { ChevronLeft, Sparkles } from "lucide-react";
@@ -96,24 +97,15 @@ export async function generateMetadata({
       description,
       type: "website",
       url: `${appUrl}/preview/${bookId}`,
-      images: book.pages?.[0]?.illustration_url
-        ? [
-            {
-              url: book.pages[0].illustration_url,
-              width: 1200,
-              height: 630,
-              alt: `${book.child_name}'s story cover`,
-            },
-          ]
-        : [],
+      // Illustrations live in a private bucket and must not be exposed to
+      // social crawlers before a story is approved.
+      images: [],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: book.pages?.[0]?.illustration_url
-        ? [book.pages[0].illustration_url]
-        : [],
+      images: [],
     },
   };
 }
@@ -169,6 +161,12 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
   // Sort pages by page_number
   const sortedPages = [...(book.pages || [])].sort(
     (a, b) => a.page_number - b.page_number
+  );
+
+  // Illustrations live in a private bucket: mint short-lived signed URLs
+  // so unapproved artwork is not reachable straight from storage.
+  const signedPageUrls = await toViewableUrls(
+    sortedPages.map((p: { illustration_url: string | null }) => p.illustration_url),
   );
 
   const isOwner = user?.id === book.user_id;
@@ -227,10 +225,10 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
 
         {/* Book Viewer */}
         <BookViewer
-          pages={sortedPages.map((p) => ({
+          pages={sortedPages.map((p, i) => ({
             pageNumber: p.page_number,
             text: p.text,
-            illustrationUrl: p.illustration_url,
+            illustrationUrl: signedPageUrls[i] ?? p.illustration_url,
             audioUrl: p.audio_url || null,
           }))}
           previewPageCount={

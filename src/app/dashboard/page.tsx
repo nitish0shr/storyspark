@@ -11,6 +11,7 @@ import BookLibrary from "@/components/dashboard/BookLibrary";
 import OrderHistory from "@/components/dashboard/OrderHistory";
 import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
 import { Sparkles, Plus, UserPlus, BookOpen, Receipt, Crown } from "lucide-react";
+import { toViewableUrls } from "@/lib/storage-urls";
 
 export const metadata = {
   title: "Dashboard | Starmee Stories",
@@ -54,6 +55,12 @@ export default async function DashboardPage() {
     createdAt: row.created_at, updatedAt: row.updated_at,
   }));
 
+  // Private bucket: swap stored URLs for short-lived signed ones.
+  for (const b of books) {
+    if (Array.isArray(b.illustrationUrls) && b.illustrationUrls.length) {
+      b.illustrationUrls = (await toViewableUrls(b.illustrationUrls)).filter(Boolean) as string[];
+    }
+  }
   const orders: Order[] = (ordersRes.data ?? []).map((row: any) => ({
     id: row.id, userId: row.user_id, bookId: row.book_id,
     stripeCheckoutSessionId: row.stripe_checkout_session_id,

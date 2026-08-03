@@ -8,6 +8,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resolveReviewToken } from "@/lib/review-tokens";
+import { toViewableUrls } from "@/lib/storage-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -70,9 +71,11 @@ export default async function ReviewPage({
   }
 
   const processed = book.status !== "pending_review";
-  const images: string[] = Array.isArray(book.illustration_urls)
+  const storedImages: string[] = Array.isArray(book.illustration_urls)
     ? (book.illustration_urls as string[]).filter(Boolean)
     : [];
+  // Illustrations live in a private bucket; mint short-lived signed URLs.
+  const images = (await toViewableUrls(storedImages)).filter(Boolean) as string[];
   const validation = book.validation_result as
     | { ok?: boolean; failures?: Array<{ code: string; detail: string }> }
     | null;
