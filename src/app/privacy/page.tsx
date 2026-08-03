@@ -2,13 +2,19 @@ import { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/landing/Footer";
+import { CONSENT_VERSION, RETENTION_PERIOD, privacyContactEmail } from "@/lib/consent";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Starmee",
+  title: "Privacy Policy - Starmee",
   description: "How Starmee handles your data and protects your family's privacy.",
 };
 
+const H2 = "font-heading text-xl font-semibold text-gray-900 mb-3";
+const UL = "list-disc pl-6 space-y-2";
+const LINK = "text-[#7C3AED] hover:underline";
+
 export default function PrivacyPage() {
+  const contact = privacyContactEmail();
   return (
     <div className="min-h-screen bg-[#FFFBF5]">
       <Navbar />
@@ -16,141 +22,170 @@ export default function PrivacyPage() {
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-sm text-gray-400 mb-10">Last updated: June 2026</p>
+        <p className="text-sm text-gray-400 mb-10">
+          Version {CONSENT_VERSION}
+        </p>
 
         <div className="prose prose-gray max-w-none space-y-8 text-gray-600 text-[15px] leading-relaxed">
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              1. Information We Collect
-            </h2>
+            <h2 className={H2}>The short version</h2>
             <p>
-              When you use Starmee, we collect the information you provide directly:
-              your email address, your child&apos;s first name, age, and gender, and
-              optionally a photo of your child. We also collect standard usage data
-              (browser type, pages visited) to improve the service.
+              Starmee makes personalized storybooks for children. We ask for the
+              small amount of information we need to write, check and deliver a
+              story, and nothing more. We do not sell your information. Marketing
+              email is entirely optional and off unless you tick the box.
             </p>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              2. Children&apos;s Photos
-            </h2>
-            <p className="mb-4">
-              We take extra care with photos of children. Here is exactly what happens
-              when you choose to upload one:
-            </p>
-            <ul className="list-disc pl-6 space-y-3">
+            <h2 className={H2}>What we collect</h2>
+            <ul className={UL}>
               <li>
-                <strong>Uploading a photo is completely optional.</strong> You can
-                create a full, beautiful storybook without ever providing a photo. This
-                step can be skipped at any time.
+                <strong>Your email address</strong> - so we can send you the
+                finished story and order updates.
               </li>
               <li>
-                <strong>The photo is used only to create that child&apos;s storybook.</strong>{" "}
-                It is sent to our AI system, which reads it to write a brief description
-                of your child&apos;s appearance (for example, hair colour, skin tone, and
-                eye colour). That description is then used to make the storybook
-                illustrations look like your child.
+                <strong>The name of the child the story is for</strong> - so the
+                story can be personalized.
               </li>
               <li>
-                <strong>The photo is deleted immediately after analysis.</strong> It is
-                not saved to our servers, not stored in any database, and not retained
-                in any backup. Only the short text description (e.g. &quot;curly auburn
-                hair, fair skin, green eyes&quot;) is kept — and only for as long as
-                your book exists.
+                <strong>Story choices</strong> - the theme, the animal or main
+                character, and the short answers you give in the create wizard.
               </li>
               <li>
-                <strong>Photos are never used to train AI models.</strong> Your
-                child&apos;s image is not shared with any AI training dataset, used to
-                improve machine-learning systems, or retained for any purpose beyond
-                generating your specific book.
+                <strong>Your consent choices</strong> - whether you opted in to
+                marketing, your confirmation that you are an adult, and the date
+                and version of the wording you agreed to.
               </li>
               <li>
-                <strong>Only a parent or legal guardian may upload a photo.</strong> By
-                uploading a photo, you confirm that you are the parent or legal guardian
-                of the child pictured and that you have the right to use the photo for
-                this purpose.
-              </li>
-              <li>
-                <strong>To request deletion of your data</strong> — including the
-                appearance description stored with your book — email us at{" "}
-                <a
-                  href="mailto:hello@starmeestories.com"
-                  className="text-[#7C3AED] hover:underline"
-                >
-                  hello@starmeestories.com
-                </a>{" "}
-                and we will remove it promptly.
+                <strong>Order records</strong> - the generated story and
+                illustrations, the order status, and our internal review notes.
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              3. Data Storage and Security
-            </h2>
+            <h2 className={H2}>What we deliberately do not collect</h2>
             <p>
-              Your data is stored securely using Supabase (hosted on AWS) with
-              row-level security policies. Payment information is handled entirely by
-              Stripe — we never store credit card details. All data transmission uses
-              HTTPS encryption.
+              We do not ask for, and you should not send us, a child&apos;s email
+              address, date of birth, home address, school, location, photographs
+              or any other personal detail about a child. The story only needs a
+              first name and a few fun choices.
             </p>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              4. Children&apos;s Privacy (COPPA)
-            </h2>
+            <h2 className={H2}>Why we collect it and how it is used</h2>
+            <ul className={UL}>
+              <li>To generate your personalized story and illustrations.</li>
+              <li>
+                To let a member of our team read and check the story before it is
+                sent to you (see below).
+              </li>
+              <li>To deliver the finished story and respond if you contact us.</li>
+              <li>
+                To send you occasional marketing email - only if you ticked the
+                optional box.
+              </li>
+            </ul>
             <p>
-              Starmee is designed for parents and guardians to create books for
-              their children. Only parents create accounts. Child information is stored
-              within parent accounts and is parent-controlled. We do not knowingly
-              collect information directly from children under 13.
+              We do not use your information to build advertising profiles, and we
+              do not sell or rent it to anyone.
             </p>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              5. Data Sharing
-            </h2>
+            <h2 className={H2}>A person reads every story</h2>
             <p>
-              We do not sell your personal information. We share data only with service
-              providers necessary to operate Starmee: Supabase (database), Stripe
-              (payments), Resend (email), and OpenAI (story, appearance analysis, and
-              illustration generation). Each provider has their own privacy policy.
+              Before any story is emailed to you, a member of the Starmee team
+              reads the text and looks at the illustrations to check they are
+              accurate and appropriate for children. This means a small number of
+              trained people can see the child&apos;s first name and the story
+              itself. Nothing is delivered automatically without that check.
             </p>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              6. Your Rights
-            </h2>
+            <h2 className={H2}>Marketing email is separate and optional</h2>
             <p>
-              You can access, update, or delete your account and all associated data
-              at any time from your dashboard. To request complete data deletion,
-              contact us at{" "}
-              <Link href="/contact" className="text-[#7C3AED] hover:underline">
-                our contact page
-              </Link>
-              .
+              The marketing checkbox is unticked by default, is never required to
+              place an order, and is stored separately from the details we need to
+              fulfil your order. If you tick it we record the date, time and the
+              version of the wording you agreed to.
+            </p>
+            <p>
+              You can withdraw consent at any time by clicking unsubscribe in any
+              marketing email, or by emailing{" "}
+              <a className={LINK} href={`mailto:${contact}`}>{contact}</a>. Withdrawing
+              marketing consent does not affect emails about an order you have
+              already placed.
             </p>
           </section>
 
           <section>
-            <h2 className="font-heading text-xl font-semibold text-gray-900 mb-3">
-              7. Contact
-            </h2>
+            <h2 className={H2}>Who else processes your information</h2>
             <p>
-              For privacy-related questions, email us at{" "}
-              <a
-                href="mailto:hello@starmeestories.com"
-                className="text-[#7C3AED] hover:underline"
-              >
-                hello@starmeestories.com
-              </a>
-              .
+              We use a small number of service providers to run Starmee: a
+              database and file storage provider, an AI provider that generates the
+              story text and illustrations, our application hosting provider, and
+              an email delivery provider. They process your information only to
+              provide those services to us.
             </p>
           </section>
+
+          <section>
+            <h2 className={H2}>How long we keep it</h2>
+            <p>
+              We generally keep order information for {RETENTION_PERIOD} so you can
+              re-download your book and so we can help if something goes wrong.
+              After that we delete or anonymise it. If you ask us to delete your
+              information sooner, we will.
+            </p>
+          </section>
+
+          <section>
+            <h2 className={H2}>Your choices</h2>
+            <p>
+              You can ask us to give you a copy of your information, correct it, or
+              delete it. Email{" "}
+              <a className={LINK} href={`mailto:${contact}`}>{contact}</a> and we will
+              respond within a reasonable time. We may need to confirm you are the
+              person who placed the order before we act.
+            </p>
+          </section>
+
+          <section>
+            <h2 className={H2}>Children</h2>
+            <p>
+              Starmee is bought by adults, for children. When you place an order you
+              confirm that you are 18 or older and that you are allowed to give us
+              the personalization details. Starmee accounts are not intended for
+              children, and we do not knowingly collect information directly from
+              children. If you believe a child has given us information, email{" "}
+              <a className={LINK} href={`mailto:${contact}`}>{contact}</a> and we will
+              delete it.
+            </p>
+          </section>
+
+          <section>
+            <h2 className={H2}>Contact us</h2>
+            <p>
+              For any privacy question or request, email{" "}
+              <a className={LINK} href={`mailto:${contact}`}>{contact}</a>. You can also
+              reach us through our <Link className={LINK} href="/contact">contact page</Link>.
+            </p>
+          </section>
+
+          <section>
+            <h2 className={H2}>Changes to this policy</h2>
+            <p>
+              If we change this policy we will update the version number at the top
+              of this page. This policy describes our current practices in plain
+              language; it is not legal advice, and it is not a claim of
+              certification under any particular law.
+            </p>
+          </section>
+
         </div>
       </main>
       <Footer />
