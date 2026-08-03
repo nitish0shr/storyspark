@@ -9,6 +9,7 @@ import {
   buildPersonLabel,
   IllustrationCharacter,
 } from "@/data/prompts";
+import { resolveCreatureFromAnswers } from "@/data/animals";
 
 const STORAGE_BUCKET = "book-illustrations";
 
@@ -332,9 +333,13 @@ export async function generateIllustrations(params: {
   sceneDescriptions: string[];
   pageNumbers?: number[];
   children: IllustrationChild[];
+  contextualAnswers?: Record<string, unknown> | null;
 }): Promise<string[]> {
-  const { bookId, storyPages, themeId, sceneDescriptions, pageNumbers, children } =
+  const { bookId, storyPages, themeId, sceneDescriptions, pageNumbers, children, contextualAnswers } =
     params;
+
+  // The customer-selected animal is a hard requirement, not a suggestion.
+  const creature = resolveCreatureFromAnswers(contextualAnswers);
 
   const outfit = THEME_OUTFITS[themeId] || "a colorful, age-appropriate outfit";
 
@@ -364,6 +369,7 @@ export async function generateIllustrations(params: {
         sceneDescription: scene,
         characters,
         referenceNames,
+        creature,
       });
 
       const storagePath = `${bookId}/page-${page.pageNumber}.png`;
