@@ -61,7 +61,7 @@ export default async function AdminLayout({
               Site
             </Link>
             <span className="text-lg font-bold text-violet-700">
-              StorySpark Admin
+              Starmee Admin
             </span>
           </div>
           <span className="text-xs text-gray-400">{user.email}</span>

@@ -68,7 +68,7 @@ export default function Navbar({ user }: NavbarProps) {
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="font-heading text-xl font-bold text-white">
-              StorySpark
+              Starmee
             </span>
           </Link>
 

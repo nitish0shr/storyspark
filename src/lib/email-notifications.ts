@@ -83,7 +83,7 @@ function previewEmailHtml({
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.10)">
 
         <tr><td style="background:linear-gradient(135deg,#7C3AED 0%,#EC4899 100%);padding:44px 40px 36px;text-align:center">
-          <p style="margin:0 0 10px;color:rgba(255,255,255,0.80);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif">StorySpark</p>
+          <p style="margin:0 0 10px;color:rgba(255,255,255,0.80);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif">Starmee</p>
           <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:bold;line-height:1.25">${childName}'s story is ready! ✨</h1>
         </td></tr>
 
@@ -112,7 +112,7 @@ function previewEmailHtml({
 
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
-            StorySpark &middot; Personalised storybooks for every child<br>
+            Starmee &middot; Personalised storybooks for every child<br>
             You received this because you created a story at starmeestories.com
           </p>
         </td></tr>
@@ -154,7 +154,7 @@ function bookReadyEmailHtml({
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(124,58,237,0.10)">
 
         <tr><td style="background:linear-gradient(135deg,#7C3AED 0%,#EC4899 100%);padding:44px 40px 36px;text-align:center">
-          <p style="margin:0 0 10px;color:rgba(255,255,255,0.80);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif">StorySpark</p>
+          <p style="margin:0 0 10px;color:rgba(255,255,255,0.80);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif">Starmee</p>
           <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:bold;line-height:1.25">🎉 ${childName}'s book is complete!</h1>
         </td></tr>
 
@@ -180,7 +180,7 @@ function bookReadyEmailHtml({
 
         <tr><td style="padding:20px 40px 32px;text-align:center;border-top:1px solid #F3F4F6">
           <p style="margin:0;font-size:12px;color:#9CA3AF;font-family:Arial,sans-serif;line-height:1.6">
-            StorySpark &middot; Personalised storybooks for every child<br>
+            Starmee &middot; Personalised storybooks for every child<br>
             You received this because you purchased a story at starmeestories.com
           </p>
         </td></tr>
