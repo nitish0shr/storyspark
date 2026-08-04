@@ -48,7 +48,7 @@ export async function runValidationGate(
     const { data: book } = await supabaseAdmin
       .from("books")
       .select(
-        "id, story_text, illustration_urls, contextual_answers, recipient_name, child_name, generation_attempts",
+        "id, story_text, illustration_urls, contextual_answers, recipient_name, child_name, generation_attempts, theme_title",
       )
       .eq("id", bookId)
       .maybeSingle();
@@ -69,6 +69,7 @@ export async function runValidationGate(
       creature,
       recipientName: book.recipient_name || book.child_name || "",
       attempt,
+      themeTitle: book.theme_title ?? null,
     });
 
     await supabaseAdmin
