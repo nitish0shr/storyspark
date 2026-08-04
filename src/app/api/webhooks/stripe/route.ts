@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { decideCheckoutProcessing } from "@/lib/webhook-idempotency";
 import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
 import { generateFullBook } from "@/services/book-pipeline";
 import { getAppUrl } from "@/lib/utils";
@@ -116,6 +117,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (!bookId || !userId) {
     console.error("Missing book_id or user_id in session metadata");
+    return;
+  }
+
+  // 0. Replay protection. Stripe retries and can redeliver the same event.
+  const { data: existingOrder } = await supabaseAdmin
+    .from("orders")
+    .select("id, status")
+    .eq("stripe_checkout_session_id", session.id)
+    .maybeSingle();
+
+  const decision = decideCheckoutProcessing({
+    sessionId: session.id,
+    order: existingOrder,
+  });
+  if (!decision.process) {
+    console.warn("[stripe] skipping checkout.session.completed: " + decision.detail);
     return;
   }
 

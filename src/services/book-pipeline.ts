@@ -312,6 +312,7 @@ export async function generatePreview(
     // independent — run them in parallel. Both are needed before illustrating.
     const [storyPages, illustrationChildren] = await Promise.all([
       generateStory({
+        regenerationNote: book.rejection_reason ?? null,
         childName: child.name,
         childAge: child.age,
         childGender: child.gender,

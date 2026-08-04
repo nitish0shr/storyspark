@@ -178,6 +178,12 @@ export async function POST(request: NextRequest) {
 
     if (orderError) {
       console.error("Failed to create order record:", orderError);
+      // Fail closed. Previously the checkout URL was returned anyway, which
+      // meant a customer could pay with no order row for the webhook to match.
+      return NextResponse.json(
+        { error: "Could not start checkout. Please try again." },
+        { status: 500 },
+      );
       // Don't block checkout — the webhook will reconcile
     }
 
