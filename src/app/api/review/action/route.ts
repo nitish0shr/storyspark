@@ -46,6 +46,19 @@ export async function POST(req: NextRequest) {
     }
     const r = await rejectBook({ bookId: resolved.bookId, reviewer, reason: notes });
     message = r.message;
+
+    // A human rejection should immediately trigger a fresh attempt that uses
+    // their written feedback. Fire and forget so the reviewer is not left
+    // waiting on image generation; if it fails the book simply stays in
+    // needs_regeneration for a manual retry.
+    if (r.ok) {
+      const bookId = resolved.bookId;
+      void import("@/services/book-pipeline")
+        .then((m) => m.generatePreview(bookId))
+        .catch((err) => {
+          console.error("[review] auto-regeneration failed for " + bookId, err);
+        });
+    }
   } else {
     return back(req, token, "Unknown action.");
   }

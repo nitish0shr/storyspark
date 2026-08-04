@@ -171,6 +171,7 @@ interface VisionVerdict {
   monster_like: boolean;
   frightening: boolean;
   child_friendly: boolean;
+  matches_theme: boolean;
   description: string;
 }
 
@@ -182,8 +183,9 @@ interface VisionVerdict {
 export async function validateIllustration(params: {
   imageUrl: string;
   creature: CreatureSpec | null;
+  themeTitle?: string | null;
 }): Promise<ValidationFailure[]> {
-  const { imageUrl, creature } = params;
+  const { imageUrl, creature, themeTitle } = params;
   const failures: ValidationFailure[] = [];
   if (!imageUrl) return failures;
 
@@ -206,7 +208,10 @@ export async function validateIllustration(params: {
                 '"child_friendly": bool, "description": "one sentence"}. ' +
                 "List every animal or creature you can actually see, using common names " +
                 "(for example dolphin, turtle, octopus, lion). Set monster_like to true if any " +
-                "creature looks mythical, serpentine, dragon-like or like a Loch Ness monster.",
+                "creature looks mythical, serpentine, dragon-like or like a Loch Ness monster. " +
+                (themeTitle
+                  ? "Set matches_theme to false ONLY if the picture clearly contradicts the story theme \"" + themeTitle + "\"; if it is plausible or you are unsure, set it to true."
+                  : "Set matches_theme to true."),
             },
             { type: "image_url", image_url: { url: imageUrl } },
           ],
@@ -259,6 +264,13 @@ export async function validateIllustration(params: {
     }
   }
 
+  if (themeTitle && verdict.matches_theme === false) {
+    failures.push({
+      code: "theme_mismatch",
+      detail: 'Illustration does not match the chosen theme (' + themeTitle + '). ' + verdict.description,
+    });
+  }
+
   if (verdict.monster_like && creature.kind !== "fantasy") {
     failures.push({
       code: "monster_present",
@@ -285,8 +297,9 @@ export async function validateBook(params: {
   creature: CreatureSpec | null;
   recipientName: string;
   attempt: number;
+  themeTitle?: string | null;
 }): Promise<ValidationResult> {
-  const { storyText, imageUrls, creature, recipientName, attempt } = params;
+  const { storyText, imageUrls, creature, recipientName, attempt, themeTitle } = params;
 
   const failures: ValidationFailure[] = validateStoryText({
     storyText,
@@ -296,7 +309,7 @@ export async function validateBook(params: {
 
   const images = (imageUrls || []).filter(Boolean);
   const imageResults = await Promise.all(
-    images.map((url) => validateIllustration({ imageUrl: url, creature })),
+    images.map((url) => validateIllustration({ imageUrl: url, creature, themeTitle })),
   );
   for (const r of imageResults) failures.push(...r);
 
