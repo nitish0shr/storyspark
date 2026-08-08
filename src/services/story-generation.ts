@@ -163,6 +163,8 @@ export async function generateStory(params: {
   contextualAnswers: Record<string, string>;
   language?: string;
   secondChild?: SecondChild;
+  /** Reviewer feedback from a human rejection, fed back into the retry. */
+  regenerationNote?: string | null;
 }): Promise<BookPage[]> {
   const {
     childName,
@@ -224,6 +226,15 @@ export async function generateStory(params: {
   // The customer-selected animal is a hard requirement: it must be named
   // explicitly in the story and in every scene description so the
   // illustrator draws the correct creature.
+  // A human reviewer rejected the previous attempt: put their words directly
+  // into the prompt so the retry fixes the thing they actually objected to.
+  if (params.regenerationNote && params.regenerationNote.trim()) {
+    systemPrompt +=
+      "\n\nREVIEWER REJECTED THE PREVIOUS VERSION. Their feedback: \"" +
+      params.regenerationNote.trim() +
+      "\". You MUST address this specific problem in this new version.";
+  }
+
   const storyCreature = resolveCreatureFromAnswers(contextualAnswers);
   if (storyCreature) {
     systemPrompt += "\n\n" + buildCreatureStoryRule(storyCreature);

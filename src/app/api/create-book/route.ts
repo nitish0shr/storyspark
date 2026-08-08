@@ -6,6 +6,7 @@ import { isValidLanguageCode } from "@/data/languages";
 import { AppearanceProfile } from "@/types/child";
 import { CONSENT_VERSION } from "@/lib/consent";
 import { resolveCreatureFromAnswers } from "@/data/animals";
+import { checkRateLimit, clientKeyFromHeaders } from "@/lib/rate-limit";
 
 /**
  * Whitelisted Character Profile keys accepted from the client.
@@ -53,6 +54,19 @@ function sanitizeProfile(raw: unknown): AppearanceProfile | null {
 
 export async function POST(request: NextRequest) {
   try {
+    // The preview is public and unmetered, and every run costs money at the
+    // AI provider. Throttle per client before doing any work.
+    const rate = checkRateLimit(clientKeyFromHeaders(request.headers));
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "You have created several stories recently. Please try again in a little while.",
+        },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+      );
+    }
+
     if (!isSupabaseConfigured() || !isAdminConfigured()) {
       return NextResponse.json(
         { error: "Database not configured. Please add Supabase environment variables." },
