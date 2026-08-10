@@ -6,6 +6,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/shared/Navbar";
 import BookStatusPoller from "./BookStatusPoller";
+import PurchaseConversion from "@/components/shared/PurchaseConversion";
+import { centsToMajorUnits } from "@/lib/analytics";
 import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -57,11 +59,15 @@ export default async function CheckoutSuccessPage({
   let bookId = book_id || null;
   let childName = "";
   let themeTitle = "";
+  let purchaseValue: number | null = null;
+  let purchaseCurrency = "USD";
 
   if (session_id) {
     try {
       const session = await stripe.checkout.sessions.retrieve(session_id);
       bookId = session.metadata?.book_id || bookId;
+      purchaseValue = centsToMajorUnits(session.amount_total);
+      purchaseCurrency = (session.currency ?? "usd").toUpperCase();
     } catch (err) {
       console.error("Failed to retrieve Stripe session:", err);
     }
@@ -92,6 +98,11 @@ export default async function CheckoutSuccessPage({
       <Navbar user={user} />
 
       <main className="max-w-2xl mx-auto px-4 py-12 sm:py-20">
+        <PurchaseConversion
+          transactionId={session_id ?? bookId}
+          value={purchaseValue}
+          currency={purchaseCurrency}
+        />
         {/* Confetti CSS animation */}
         <div className="confetti-container" aria-hidden="true">
           {Array.from({ length: 24 }).map((_, i) => (
