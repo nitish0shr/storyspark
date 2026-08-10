@@ -13,5 +13,6 @@
     "types": ["node"],
     "jsx": "react-jsx"
   },
-  "include": ["tests/**/*.ts"]
+  "include": ["tests/**/*.ts"],
+  "exclude": ["node_modules", ".test-build"]
 }

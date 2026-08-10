@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import GoogleTags from "@/components/shared/GoogleTags";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
       )}
     >
       <body className="antialiased">
+        <GoogleTags />
         <PostHogProvider>
           {children}
           <Toaster />
