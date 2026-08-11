@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/utils";
 import { toViewableUrls } from "@/lib/storage-urls";
 import BookViewer from "@/components/preview/BookViewer";
+import ConversionTracker from "@/components/shared/ConversionTracker";
 import Navbar from "@/components/shared/Navbar";
 import { ChevronLeft, Sparkles } from "lucide-react";
 
@@ -176,6 +177,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5]">
+      <ConversionTracker kind="preview" transactionId={bookId} value={null} />
       <Navbar user={user} />
 
       <main className="py-6 sm:py-10">

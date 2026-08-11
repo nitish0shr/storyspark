@@ -1,22 +1,24 @@
 import Script from "next/script";
 
-import { configurableIds, isTaggingEnabled, readGoogleTagConfig } from "@/lib/analytics";
+import {
+  configurableIds,
+  isGoogleEnabled,
+  readTagConfig,
+} from "@/lib/analytics";
 
-const config = readGoogleTagConfig({
+const config = readTagConfig({
   NEXT_PUBLIC_GA4_ID: process.env.NEXT_PUBLIC_GA4_ID,
   NEXT_PUBLIC_GOOGLE_ADS_ID: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
-  NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL:
-    process.env.NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL,
 });
 
 /**
- * Loads gtag.js for GA4 and/or Google Ads.
+ * Loads gtag.js for GA4 and/or Google Ads, and opens window.dataLayer so a
+ * Google Tag Manager container could read our ecommerce pushes.
  *
- * Renders nothing at all when no IDs are configured, so the site ships
- * untagged until marketing provides them.
+ * Renders nothing when no Google IDs are configured.
  */
 export default function GoogleTags() {
-  if (isTaggingEnabled(config) === false) return null;
+  if (isGoogleEnabled(config) === false) return null;
 
   const ids = configurableIds(config);
 

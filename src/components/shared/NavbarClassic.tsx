@@ -63,14 +63,17 @@ export default function Navbar({ user }: NavbarProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
+          <a
+            href={process.env.NEXT_PUBLIC_MARKETING_URL || "https://starmeestories.com"}
+            className="flex items-center gap-2 group shrink-0"
+          >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="font-heading text-xl font-bold text-white">
               Starmee
             </span>
-          </Link>
+          </a>
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">

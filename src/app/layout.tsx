@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import GoogleTags from "@/components/shared/GoogleTags";
+import MetaPixel from "@/components/shared/MetaPixel";
+import SensitiveRouteGate from "@/components/shared/SensitiveRouteGate";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -51,7 +53,10 @@ export default function RootLayout({
       )}
     >
       <body className="antialiased">
-        <GoogleTags />
+        <SensitiveRouteGate>
+          <GoogleTags />
+          <MetaPixel />
+        </SensitiveRouteGate>
         <PostHogProvider>
           {children}
           <Toaster />
