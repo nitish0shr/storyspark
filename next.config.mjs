@@ -36,6 +36,12 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: "frame-ancestors *;",
           },
+          {
+            // Never leak full URLs (e.g. password-reset tokens in query
+            // strings) to third-party origins via the Referer header.
+            key: "Referrer-Policy",
+            value: "strict-origin",
+          },
         ],
       },
     ];

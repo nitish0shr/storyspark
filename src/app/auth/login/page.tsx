@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Star } from "lucide-react";
+import { getMarketingUrl } from "@/lib/utils";
 
 export default function LoginPage() {
   return (
@@ -126,13 +127,13 @@ function LoginPageContent() {
     <div className="min-h-screen bg-[#FDF5E7] bg-stars flex flex-col">
       {/* Header */}
       <div className="p-6">
-        <Link href="/" className="inline-flex items-center">
+        <a href={getMarketingUrl()} className="inline-flex items-center">
           <img
             src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
             alt="Starmee Stories"
             className="h-9 w-auto"
           />
-        </Link>
+        </a>
       </div>
 
       {/* Main Content */}
@@ -192,6 +193,14 @@ function LoginPageContent() {
                   autoComplete="current-password"
                   className="h-11 rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 font-body text-base placeholder:text-[#262625]/30 focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
                 />
+                <div className="text-right mt-1.5">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="font-body text-xs text-[#5E17EB] hover:underline font-bold"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
               <Button
                 type="submit"

@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/shared/Navbar";
 import BookStatusPoller from "./BookStatusPoller";
-import PurchaseConversion from "@/components/shared/PurchaseConversion";
+import ConversionTracker from "@/components/shared/ConversionTracker";
 import { centsToMajorUnits } from "@/lib/analytics";
 import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
 
@@ -98,7 +98,8 @@ export default async function CheckoutSuccessPage({
       <Navbar user={user} />
 
       <main className="max-w-2xl mx-auto px-4 py-12 sm:py-20">
-        <PurchaseConversion
+        <ConversionTracker
+          kind="purchase"
           transactionId={session_id ?? bookId}
           value={purchaseValue}
           currency={purchaseCurrency}

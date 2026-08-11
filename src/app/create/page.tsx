@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useWizardStore } from "@/components/create/WizardProvider";
 import { ProgressSteps } from "@/components/shared/ProgressSteps";
 import { StepChildInfo } from "@/components/create/StepChildInfo";
@@ -12,7 +11,7 @@ import { StepSummary } from "@/components/create/StepSummary";
 import { StepPreview } from "@/components/create/StepPreview";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getMarketingUrl } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 // Maps internal step numbers (1–6) → visible progress steps (1–5)
@@ -84,13 +83,13 @@ export default function CreatePage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 border-b-[2.5px] border-[#262625] bg-[#FDF5E7]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center">
+          <a href={getMarketingUrl()} className="flex items-center">
             <img
               src="https://starmeestories.com/wp-content/uploads/2026/04/Starmee-Logo-Primary.png"
               alt="Starmee"
               className="h-9 w-auto"
             />
-          </Link>
+          </a>
 
           {step < 6 && (
             <span className="font-body text-xs font-bold text-[#262625]/50 hidden sm:block">
