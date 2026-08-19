@@ -189,6 +189,11 @@ export async function validateIllustration(params: {
   const failures: ValidationFailure[] = [];
   if (!imageUrl) return failures;
 
+  // The illustration bucket is private, so the stored public URL now returns
+  // 400 and vision cannot read it. Hand it a signed URL it can download.
+  const { toViewableUrl } = await import("@/lib/storage-urls");
+  const viewableUrl = (await toViewableUrl(imageUrl)) ?? imageUrl;
+
   const { getOpenAI } = await import("@/lib/openai");
   let verdict: VisionVerdict;
   try {
@@ -213,7 +218,7 @@ export async function validateIllustration(params: {
                   ? "Set matches_theme to false ONLY if the picture clearly contradicts the story theme \"" + themeTitle + "\"; if it is plausible or you are unsure, set it to true."
                   : "Set matches_theme to true."),
             },
-            { type: "image_url", image_url: { url: imageUrl } },
+            { type: "image_url", image_url: { url: viewableUrl } },
           ],
         },
       ],
@@ -285,6 +290,20 @@ export async function validateIllustration(params: {
  * Hard cap on automatic regeneration. After this many attempts the book is
  * routed to a human as "needs_regeneration" rather than looping forever.
  */
+/**
+ * Codes that describe OUR infrastructure failing, not the content being wrong.
+ *
+ * These are recorded for diagnostics but must never fail a book or trigger a
+ * regeneration: re-rolling the story cannot fix an image we could not download,
+ * it just burns another few minutes and another round of OpenAI spend.
+ */
+const ADVISORY_CODES = new Set(["vision_unavailable"]);
+
+/** True when a failure reflects the content itself, so a retry could help. */
+export function isBlockingFailure(failure: ValidationFailure): boolean {
+  return ADVISORY_CODES.has(failure.code) === false;
+}
+
 export const MAX_GENERATION_ATTEMPTS = 2;
 
 /**
@@ -314,7 +333,7 @@ export async function validateBook(params: {
   for (const r of imageResults) failures.push(...r);
 
   return {
-    ok: failures.length === 0,
+    ok: failures.filter(isBlockingFailure).length === 0,
     failures,
     attempt,
     checkedAt: new Date().toISOString(),
@@ -333,7 +352,7 @@ export function buildCorrectivePrompt(
   const lines = [
     "CORRECTION REQUIRED. The previous attempt was rejected by automated checks:",
   ];
-  for (const f of failures) lines.push("- " + f.detail);
+  for (const f of failures.filter(isBlockingFailure)) lines.push("- " + f.detail);
   if (creature) {
     lines.push(
       "You MUST clearly and unambiguously feature a " + creature.label + ". " +
