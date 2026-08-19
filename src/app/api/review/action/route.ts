@@ -9,11 +9,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveReviewToken, consumeReviewToken } from "@/lib/review-tokens";
 import { approveBook, rejectBook } from "@/lib/review-workflow";
+import { getAppUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function back(req: NextRequest, token: string, message: string) {
-  const url = new URL("/review/" + encodeURIComponent(token), req.url);
+/**
+ * Behind Replit's proxy req.url resolves to http://0.0.0.0:PORT, so a redirect
+ * built from it sends the reviewer to a dead address and the browser shows
+ * "site cannot be reached". Always redirect from the configured public origin.
+ */
+function back(token: string, message: string) {
+  const url = new URL("/review/" + encodeURIComponent(token), getAppUrl());
   url.searchParams.set("m", message);
   return NextResponse.redirect(url, { status: 303 });
 }
@@ -29,11 +35,11 @@ export async function POST(req: NextRequest) {
 
   const resolved = await resolveReviewToken(token);
   if (resolved.state !== "valid" || !resolved.bookId || !resolved.tokenId) {
-    return back(req, token, "This review link is " + resolved.state + ".");
+    return back(token, "This review link is " + resolved.state + ".");
   }
 
   if (!reviewer) {
-    return back(req, token, "Please enter your name so we can record who reviewed this.");
+    return back(token, "Please enter your name so we can record who reviewed this.");
   }
 
   let message: string;
@@ -42,7 +48,7 @@ export async function POST(req: NextRequest) {
     message = r.message;
   } else if (action === "reject") {
     if (!notes) {
-      return back(req, token, "Please say what is wrong so the retry can fix it.");
+      return back(token, "Please say what is wrong so the retry can fix it.");
     }
     const r = await rejectBook({ bookId: resolved.bookId, reviewer, reason: notes });
     message = r.message;
@@ -60,10 +66,10 @@ export async function POST(req: NextRequest) {
         });
     }
   } else {
-    return back(req, token, "Unknown action.");
+    return back(token, "Unknown action.");
   }
 
   // Burn the link once a decision has been recorded.
   await consumeReviewToken(resolved.tokenId);
-  return back(req, token, message);
+  return back(token, message);
 }
