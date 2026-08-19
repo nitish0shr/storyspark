@@ -131,6 +131,11 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
     book.is_purchased &&
     (book.status === "pending_approval" || book.status === "approved");
 
+  // A finished book still waits here for human approval. Saying it is
+  // still being written would be a lie, and it is why customers thought
+  // generation had hung.
+  const awaitingReview = book.status === "pending_review";
+
   if (!isReady) {
     return (
       <div className="min-h-screen bg-[#FFFBF5]">
@@ -140,12 +145,12 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
             <Sparkles className="h-8 w-8 text-[#7C3AED] animate-pulse" />
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-            Your Story Is Being Created
+            {awaitingReview ? "Nearly Ready" : "Your Story Is Being Created"}
           </h1>
           <p className="text-gray-500 max-w-md mb-8">
-            {book.child_name}&apos;s magical story is still being crafted. Check
-            back in a moment — the illustrations and story pages are almost
-            ready!
+            {awaitingReview
+              ? `The story and pictures for ${book.child_name} are finished. A real person is now checking every page before we share it, which is how we keep each Starmee book safe for little readers.`
+              : `${book.child_name}'s magical story is being created right now. This usually takes about two minutes.`}
           </p>
           <Link
             href="/dashboard"

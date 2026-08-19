@@ -11,7 +11,8 @@ const POLL_INTERVAL = 3000;
 const POLL_TIMEOUT = 120000;
 
 export function StepPreview() {
-  const { childName, isGenerating, generationStep, bookId, setGenerating } = useWizardStore();
+  const { childName, isGenerating, generationStep, bookId, setGenerating, reset } =
+    useWizardStore();
   const [ready, setReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [pollError, setPollError] = useState<string | null>(null);
@@ -141,8 +142,19 @@ export function StepPreview() {
         <ArrowRight className="h-5 w-5" />
       </Link>
 
+      {/* Without this, anyone returning to /create is stuck on whichever book
+          was last in progress - including a stranger's on a shared device -
+          because the wizard always resumes saved state. */}
+      <button
+        type="button"
+        onClick={reset}
+        className="mt-4 w-full font-body text-sm text-[#262625]/60 underline underline-offset-4 transition-colors hover:text-[#7C3AED]"
+      >
+        Start a different book
+      </button>
+
       <p className="font-body text-xs text-[#262625]/40">
-        Your preview is saved to your account. You can view it anytime from your dashboard.
+        Bookmark this page to come back to your preview anytime.
       </p>
     </div>
   );
