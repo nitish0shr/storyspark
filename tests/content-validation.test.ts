@@ -1,7 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { CREATURES, resolveCreature, resolveCreatureFromAnswers, buildCreatureBlock } from "@/data/animals";
-import { validateStoryText, buildCorrectivePrompt, MAX_GENERATION_ATTEMPTS } from "@/lib/content-validation";
+import {
+  validateStoryText,
+  buildCorrectivePrompt,
+  isBlockingFailure,
+  MAX_GENERATION_ATTEMPTS,
+} from "@/lib/content-validation";
 
 const dolphin = CREATURES.dolphin;
 const werewolf = CREATURES.werewolf;
@@ -101,5 +106,56 @@ describe("corrective prompt", () => {
 
   test("returns empty string when there is nothing to correct", () => {
     assert.equal(buildCorrectivePrompt([], dolphin), "");
+  });
+});
+
+// Regression cover for the outage where a private storage bucket made every
+// illustration unreadable to vision, which failed every book and burned a
+// second full generation attempt on a problem retrying could never fix.
+describe("advisory vs blocking failures", () => {
+  test("vision_unavailable is advisory, not blocking", () => {
+    assert.equal(
+      isBlockingFailure({
+        code: "vision_unavailable",
+        detail: "400 Error while downloading file",
+      }),
+      false,
+    );
+  });
+
+  test("real content problems stay blocking", () => {
+    const codes = [
+      "unsafe_content",
+      "monster_present",
+      "animal_missing",
+      "theme_mismatch",
+    ] as const;
+    for (const code of codes) {
+      assert.equal(
+        isBlockingFailure({ code, detail: "x" }),
+        true,
+        code + " must still block",
+      );
+    }
+  });
+
+  test("a corrective prompt is not built from advisory failures alone", () => {
+    const prompt = buildCorrectivePrompt(
+      [{ code: "vision_unavailable", detail: "could not download" }],
+      null,
+    );
+    assert.equal(prompt.includes("could not download"), false);
+  });
+
+  test("a corrective prompt still carries real content problems", () => {
+    const prompt = buildCorrectivePrompt(
+      [
+        { code: "vision_unavailable", detail: "could not download" },
+        { code: "monster_present", detail: "dolphin looks like a sea monster" },
+      ],
+      null,
+    );
+    assert.equal(prompt.includes("sea monster"), true);
+    assert.equal(prompt.includes("could not download"), false);
   });
 });
