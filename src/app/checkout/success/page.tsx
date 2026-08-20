@@ -11,8 +11,12 @@ import { centsToMajorUnits } from "@/lib/analytics";
 import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
 import {
   canExposeDeliveredArtefacts,
+  canIssueFinalBookSignedLink,
   isExactVerifiedPayment,
 } from "@/lib/book-access";
+import {
+  createFinalBookSignedUrl,
+} from "@/lib/storage-urls";
 
 export const metadata: Metadata = {
   title: "Order Complete - Starmee",
@@ -73,6 +77,7 @@ export default async function CheckoutSuccessPage({
   let purchaseValue: number | null = null;
   let purchaseCurrency = "USD";
   let hasExactVerifiedPayment = false;
+  let authorisedOrderId: string | null = null;
 
   if (session_id && isStripeConfigured()) {
     try {
@@ -153,6 +158,7 @@ export default async function CheckoutSuccessPage({
         orderStatus: order.status,
         paymentVerifiedAt: order.payment_verified_at,
       });
+      authorisedOrderId = hasExactVerifiedPayment ? order.id : null;
     } else {
       redirect("/dashboard");
     }
@@ -167,6 +173,7 @@ export default async function CheckoutSuccessPage({
       .limit(1)
       .maybeSingle();
     hasExactVerifiedPayment = Boolean(paidOrder);
+    authorisedOrderId = paidOrder?.id ?? null;
   }
 
   childName = book.child_name || "Your child";
@@ -178,12 +185,32 @@ export default async function CheckoutSuccessPage({
   const canonicalStage = (book.lifecycle_stage as string | null) ?? null;
   const legacyStatus = (book.status as string | null) ?? null;
   const deliveredAt = (book.stage_delivered_at as string | null) ?? null;
+  let hasAccessAuthorisation = Boolean(
+    user && user.id === book.user_id && hasExactVerifiedPayment,
+  );
+  if (!hasAccessAuthorisation && authorisedOrderId && book.approved_version_id) {
+    const { data: accessGrant } = await supabaseAdmin
+      .from("access_grants")
+      .select("id, expires_at")
+      .eq("order_id", authorisedOrderId)
+      .eq("book_id", bookId)
+      .eq("version_id", book.approved_version_id)
+      .in("access_kind", ["full_book", "download", "gift"])
+      .is("revoked_at", null)
+      .not("verified_at", "is", null)
+      .limit(1)
+      .maybeSingle();
+    hasAccessAuthorisation = Boolean(
+      accessGrant &&
+        (!accessGrant.expires_at ||
+          Date.parse(accessGrant.expires_at) > Date.now()),
+    );
+  }
   const canExposeDeliveryLinks = canExposeDeliveredArtefacts({
     stage: canonicalStage,
     approvedVersionId: book.approved_version_id,
     hasExactVerifiedPayment,
-  });
-  const pdfUrl = canExposeDeliveryLinks ? book.pdf_url : null;
+  }) && hasAccessAuthorisation;
 
   // Durable, verified final storage/access links — only shown once the book is
   // Delivered. We only surface artefacts confirmed present in storage
@@ -192,7 +219,7 @@ export default async function CheckoutSuccessPage({
   if (canExposeDeliveryLinks) {
     const { data: artefacts } = await supabaseAdmin
       .from("product_artefacts")
-      .select("kind, url, access_url, durable_verified_at, created_at")
+      .select("kind, version_id, storage_path, metadata, durable_verified_at, created_at")
       .eq("book_id", bookId)
       .eq("version_id", book.approved_version_id)
       .not("durable_verified_at", "is", null)
@@ -201,9 +228,24 @@ export default async function CheckoutSuccessPage({
       .order("created_at", { ascending: false });
 
     for (const a of artefacts ?? []) {
-      const url =
-        ((a as Record<string, unknown>).access_url as string | null) ||
-        ((a as Record<string, unknown>).url as string | null);
+      const metadata =
+        (a.metadata as Record<string, unknown> | null) ?? null;
+      if (!canIssueFinalBookSignedLink({
+        stage: canonicalStage,
+        bookId,
+        approvedVersionId: book.approved_version_id,
+        artefactVersionId: a.version_id,
+        storagePath: a.storage_path,
+        storageBucket:
+          typeof metadata?.storage_bucket === "string"
+            ? metadata.storage_bucket
+            : null,
+        hasExactVerifiedPayment,
+        hasAccessAuthorisation,
+      })) continue;
+      const url = a.storage_path
+        ? await createFinalBookSignedUrl(a.storage_path)
+        : null;
       if (!url) continue;
       const kind = (a as Record<string, unknown>).kind as string;
       const label =
@@ -214,6 +256,9 @@ export default async function CheckoutSuccessPage({
       }
     }
   }
+  const pdfUrl =
+    durableLinks.find((link) => link.label === "Download the book")?.url ??
+    null;
 
   return (
     <div className="min-h-screen bg-[#FFFBF5]">

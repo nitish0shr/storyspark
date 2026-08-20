@@ -1,17 +1,19 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { isEmailConfigured, sendEmail } from "@/lib/email-provider";
+import {
+  getEmailRuntimeState,
+  isEmailConfigured,
+  sendEmail,
+} from "@/lib/email-provider";
 import {
   shouldSendPurchaseConfirmation,
   shouldSendDelivery,
 } from "@/lib/webhook-idempotency";
 
 /**
- * These tests run with SENDGRID_API_KEY deliberately unset, which is the
- * current reality. The contract is that an unconfigured provider degrades
- * safely: sendEmail resolves to { sent: false, reason: "not_configured" }
- * rather than throwing. Callers must check result.sent before recording
- * delivery — never mark something delivered when the send did not happen.
+ * The contract is that non-production never calls a provider, regardless of
+ * credentials, while production requires an explicit provider mode and full
+ * provider configuration.
  *
  * No real email is sent in any of these tests.
  */
@@ -22,7 +24,7 @@ describe("email provider (no credentials configured)", () => {
     assert.equal(isEmailConfigured(), false);
   });
 
-  test("sendEmail resolves to { sent: false, reason: 'not_configured' }", async () => {
+  test("non-production defaults to a suppressed, unsent result", async () => {
     delete process.env.SENDGRID_API_KEY;
     const result = await sendEmail({
       to: "nobody@example.com",
@@ -30,7 +32,80 @@ describe("email provider (no credentials configured)", () => {
       html: "<p>test</p>",
     });
     assert.equal(result.sent, false);
-    assert.equal(result.reason, "not_configured");
+    assert.equal(result.reason, "suppressed_not_sent");
+  });
+
+  test("a provider key cannot cause a non-production network call", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalMode = process.env.EMAIL_MODE;
+    const originalKey = process.env.SENDGRID_API_KEY;
+    const originalFetch = globalThis.fetch;
+    let providerCalls = 0;
+    try {
+      process.env.NODE_ENV = "development";
+      process.env.EMAIL_MODE = "provider";
+      process.env.SENDGRID_API_KEY = "test-never-used";
+      globalThis.fetch = (async () => {
+        providerCalls += 1;
+        throw new Error("provider must not be called");
+      }) as typeof fetch;
+      const result = await sendEmail({
+        to: "nobody@example.com",
+        subject: "test",
+        html: "<p>test</p>",
+      });
+      assert.equal(result.sent, false);
+      assert.equal(result.reason, "suppressed_not_sent");
+      assert.equal(providerCalls, 0);
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+      if (originalMode === undefined) delete process.env.EMAIL_MODE;
+      else process.env.EMAIL_MODE = originalMode;
+      if (originalKey === undefined) delete process.env.SENDGRID_API_KEY;
+      else process.env.SENDGRID_API_KEY = originalKey;
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("capture is internal and never reports sent", () => {
+    const state = getEmailRuntimeState({
+      NODE_ENV: "test",
+      EMAIL_MODE: "capture",
+      SENDGRID_API_KEY: "test-never-used",
+    });
+    assert.deepEqual(state, {
+      mode: "capture",
+      reason: "non_production_capture",
+    });
+  });
+
+  test("production fails closed without explicit complete provider readiness", () => {
+    assert.equal(
+      getEmailRuntimeState({
+        NODE_ENV: "production",
+        SENDGRID_API_KEY: "configured",
+        EMAIL_FROM: "hello@example.com",
+      }).mode,
+      "unavailable",
+    );
+    assert.equal(
+      getEmailRuntimeState({
+        NODE_ENV: "production",
+        EMAIL_MODE: "provider",
+        SENDGRID_API_KEY: "configured",
+      }).mode,
+      "unavailable",
+    );
+    assert.equal(
+      getEmailRuntimeState({
+        NODE_ENV: "production",
+        EMAIL_MODE: "provider",
+        SENDGRID_API_KEY: "configured",
+        EMAIL_FROM: "hello@example.com",
+      }).mode,
+      "provider",
+    );
   });
 
   test("delivery must not be recorded when result.sent is false", async () => {
@@ -173,5 +248,21 @@ describe("purchase confirmation email copy", () => {
       src.includes("Preview and Complete Your Purchase"),
       'email-notifications.ts must contain exact CTA: "Preview and Complete Your Purchase"'
     );
+  });
+
+  test("application email routes contain no direct Resend provider send", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    for (const relativePath of [
+      "src/app/api/email/route.ts",
+      "src/app/api/webhooks/stripe/route.ts",
+    ]) {
+      const src: string = fs.readFileSync(
+        path.resolve(process.cwd(), relativePath),
+        "utf-8",
+      );
+      assert.ok(!src.includes("resend.emails.send"));
+      assert.ok(src.includes("sendEmail("));
+    }
   });
 });

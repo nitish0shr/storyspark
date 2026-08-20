@@ -10,10 +10,8 @@ import {
   IllustrationChild,
 } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
-import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
 import {
-  sendBookReadyEmail,
   sendDeliveryEmail,
 } from "@/lib/email-notifications";
 import { getAppUrl } from "@/lib/utils";
@@ -32,6 +30,15 @@ import type { LifecycleStage } from "@/types/book";
 import { applyRevision } from "@/services/revision-engine";
 import { validateBook } from "@/lib/content-validation";
 import { resolveCreatureFromAnswers } from "@/data/animals";
+import {
+  createFinalBookSignedUrl,
+  FINAL_BOOK_BUCKET,
+} from "@/lib/storage-urls";
+import {
+  isUsableLinkedDeliveryGrant,
+  type LinkedDeliveryGrantEvidence,
+} from "@/lib/delivery-recovery";
+import { canInvokeCanonicalFullBook } from "@/lib/legacy-recovery";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -307,18 +314,66 @@ async function prepareIllustrationChildren(
  * Idempotent/resumable: safe to call again if a previous run failed.
  * No customer preview email is sent before approval.
  */
+export interface PreviewGenerationControls {
+  expectedPageCount?: number;
+  allowAutomaticRegeneration?: boolean;
+  actor?: string;
+  controlledLegacyRecovery?: boolean;
+}
+
 export async function generatePreview(
   bookId: string,
   skipGate = false,
+  controls: PreviewGenerationControls = {},
 ): Promise<void> {
-  // Record the attempt
-  await setOperationalState(bookId, "generating_preview", {
-    generation_attempt_started_at: new Date().toISOString(),
-  });
-  await updateBookStatus(bookId, "preview_generating");
-
+  let generationStarted = false;
   try {
     const { book, child, secondChild } = await fetchBookWithChildren(bookId);
+    const lifecycleStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
+    const isControlledLegacyRecovery =
+      controls.controlledLegacyRecovery === true;
+    if (isControlledLegacyRecovery) {
+      if (
+        lifecycleStage !== null ||
+        skipGate ||
+        controls.expectedPageCount !== 12 ||
+        controls.allowAutomaticRegeneration !== false ||
+        !controls.actor?.startsWith("admin:")
+      ) {
+        throw new Error(
+          "Invalid controlled legacy recovery invocation; exact admin, lifecycle, page-count, and retry controls are required",
+        );
+      }
+    } else if (skipGate) {
+      if (lifecycleStage !== "Generated") {
+        throw new Error(
+          "Automatic preview regeneration is allowed only from the canonical Generated stage",
+        );
+      }
+    } else if (lifecycleStage !== null || book.status !== "draft") {
+      throw new Error(
+        "Preview generation is allowed only for a new draft or an explicitly controlled legacy recovery",
+      );
+    }
+
+    // Record the attempt only after the invocation boundary has been proven.
+    await setOperationalState(bookId, "generating_preview", {
+      generation_attempt_started_at: new Date().toISOString(),
+    });
+    await updateBookStatus(bookId, "preview_generating");
+    generationStarted = true;
+
+    const skeleton = storySkeletons[book.theme_id];
+    if (controls.expectedPageCount !== undefined) {
+      const skeletonIsExact =
+        skeleton?.length === controls.expectedPageCount &&
+        skeleton.every((page, index) => page.pageNumber === index + 1);
+      if (!skeletonIsExact) {
+        throw new Error(
+          `Controlled recovery requires a contiguous ${controls.expectedPageCount}-page story skeleton`,
+        );
+      }
+    }
 
     const contextualAnswers: Record<string, string> =
       book.contextual_answers || {};
@@ -361,7 +416,17 @@ export async function generatePreview(
       prepareIllustrationChildren(child, secondChild, descriptions),
     ]);
 
-    const skeleton = storySkeletons[book.theme_id];
+    if (controls.expectedPageCount !== undefined) {
+      const generatedPagesAreExact =
+        storyPages.length === controls.expectedPageCount &&
+        storyPages.every((page, index) => page.pageNumber === index + 1);
+      if (!generatedPagesAreExact) {
+        throw new Error(
+          `Controlled recovery generated ${storyPages.length} pages instead of the required contiguous ${controls.expectedPageCount}`,
+        );
+      }
+    }
+
     const hasTwoChildren = !!secondChild;
     const sceneDescriptions = skeleton
       ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
@@ -413,6 +478,8 @@ export async function generatePreview(
       metadata: {
         generatedAt: new Date().toISOString(),
         pageCount: storyPages.length,
+        controlledLegacyRecovery:
+          controls.controlledLegacyRecovery === true,
       },
     });
 
@@ -440,8 +507,10 @@ export async function generatePreview(
     const genTransition = await transitionStage(
       bookId,
       "Generated",
-      "system",
-      "All pages and illustrations generated successfully",
+      controls.actor ?? "system",
+      controls.controlledLegacyRecovery
+        ? "Explicitly confirmed controlled legacy recovery generated a complete canonical version"
+        : "All pages and illustrations generated successfully",
     );
 
     if (!genTransition.ok) {
@@ -455,9 +524,13 @@ export async function generatePreview(
     // Nothing is released to the customer here. Validate, then hand to review queue.
     if (!skipGate) {
       try {
-        const gate = await runValidationGate(bookId, async (id) => {
-          await generatePreview(id, true);
-        });
+        const regenerate =
+          controls.allowAutomaticRegeneration === false
+            ? undefined
+            : async (id: string) => {
+                await generatePreview(id, true);
+              };
+        const gate = await runValidationGate(bookId, regenerate);
         console.log("[gate] book " + bookId + ": " + gate.message);
       } catch (err) {
         console.error("[gate] failed for book " + bookId + ":", err);
@@ -471,9 +544,11 @@ export async function generatePreview(
     // Customers receive an invitation ONLY after a human approves (review-workflow.ts).
   } catch (error) {
     console.error(`Preview generation failed for book ${bookId}:`, error);
-    await updateBookStatus(bookId, "failed");
-    await recordOperationalError(bookId, "generatePreview", error);
-    await setOperationalState(bookId, "failed");
+    if (generationStarted) {
+      await updateBookStatus(bookId, "failed");
+      await recordOperationalError(bookId, "generatePreview", error);
+      await setOperationalState(bookId, "failed");
+    }
     throw error;
   }
 }
@@ -744,7 +819,7 @@ async function verifyReachableUrl(url: string): Promise<boolean> {
     });
     return response.ok;
   } catch (error) {
-    console.error(`[pipeline] URL verification failed for ${url}:`, error);
+    console.error("[pipeline] Bounded URL verification failed:", error);
     return false;
   } finally {
     clearTimeout(timeout);
@@ -773,6 +848,12 @@ export async function finalisePurchasedBook(
    *  on completion. */
   orderId?: string | null,
 ): Promise<void> {
+  let claimedDeliveryAttempt: {
+    id: string;
+    attemptNumber: number;
+  } | null = null;
+  let providerCallStarted = false;
+
   // ── Idempotency: skip if order already fulfilled ───────────────────────────
   if (orderId) {
     const { data: ord } = await supabaseAdmin
@@ -824,12 +905,35 @@ export async function finalisePurchasedBook(
       .in("status", ["paid", "fulfilled"])
       .not("stripe_payment_intent_id", "is", null)
       .not("payment_verified_at", "is", null);
-    const { data: fulfilmentOrder, error: orderError } = orderId
-      ? await orderQuery.eq("id", orderId).maybeSingle()
-      : await orderQuery
-          .order("payment_verified_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    type FulfilmentOrder = {
+      id: string;
+      book_id: string;
+      version_id: string;
+      user_id: string | null;
+      purchaser_email: string | null;
+      status: string;
+      fulfilled_at: string | null;
+      stripe_payment_intent_id: string;
+      payment_verified_at: string;
+    };
+    let fulfilmentOrder: FulfilmentOrder | null = null;
+    let orderError: { message: string } | null = null;
+    if (orderId) {
+      const orderResult = await orderQuery.eq("id", orderId).maybeSingle();
+      fulfilmentOrder = orderResult.data as FulfilmentOrder | null;
+      orderError = orderResult.error;
+    } else {
+      const orderResult = await orderQuery.limit(2);
+      orderError = orderResult.error;
+      if ((orderResult.data?.length ?? 0) === 1) {
+        fulfilmentOrder = orderResult.data![0] as FulfilmentOrder;
+      } else if (!orderError) {
+        orderError = {
+          message:
+            "expected exactly one verified paid order; explicit operator reconciliation is required",
+        };
+      }
+    }
     if (orderError || !fulfilmentOrder) {
       throw new Error(
         `finalisePurchasedBook: no verified paid order for exact version ${approvedVersionId}: ${orderError?.message ?? "not found"}`,
@@ -873,7 +977,9 @@ export async function finalisePurchasedBook(
     // ── Idempotency: reuse an existing verified PDF artefact if present ─────
     const { data: existingArtefact } = await supabaseAdmin
       .from("product_artefacts")
-      .select("id, storage_path, url, access_url, durable_verified_at, access_verified_at")
+      .select(
+        "id, storage_path, metadata, durable_verified_at, access_verified_at",
+      )
       .eq("book_id", bookId)
       .eq("version_id", approvedVersionId)
       .eq("kind", "pdf_digital")
@@ -884,29 +990,31 @@ export async function finalisePurchasedBook(
 
     let pdfUrl: string;
     let pdfPrintUrl: string | null = null;
+    let digitalArtefactId: string | null = null;
 
-    const existingStorageReachable = Boolean(
+    const existingMetadata =
+      (existingArtefact?.metadata as Record<string, unknown> | null) ?? null;
+    const existingSignedUrl =
       existingArtefact?.storage_path &&
-        existingArtefact.url &&
-        (await verifyReachableUrl(existingArtefact.url as string)),
-    );
-    const existingAccessReachable = Boolean(
-      existingArtefact?.access_url &&
-        (await verifyReachableUrl(existingArtefact.access_url as string)),
+      existingMetadata?.storage_bucket === FINAL_BOOK_BUCKET
+        ? await createFinalBookSignedUrl(existingArtefact.storage_path as string)
+        : null;
+    const existingStorageReachable = Boolean(
+      existingSignedUrl && (await verifyReachableUrl(existingSignedUrl)),
     );
     if (
       existingArtefact &&
-      existingArtefact.url &&
       existingStorageReachable &&
-      existingAccessReachable
+      existingSignedUrl
     ) {
-      pdfUrl = existingArtefact.url as string;
+      digitalArtefactId = existingArtefact.id as string;
+      pdfUrl = existingSignedUrl;
       const verifiedAt = new Date().toISOString();
       const { error: verifyArtefactError } = await supabaseAdmin
         .from("product_artefacts")
         .update({
           durable_verified_at: verifiedAt,
-          access_verified_at: verifiedAt,
+          access_url: null,
         })
         .eq("id", existingArtefact.id);
       if (verifyArtefactError) {
@@ -921,27 +1029,14 @@ export async function finalisePurchasedBook(
       // ── Populate legacy book_pages + audio so PDF assembly reads real content
       await upsertBookPages(bookId, storyPages, allIllustrationUrls);
 
-      let audioStatus: "complete" | "failed" | "skipped" = "skipped";
-      if (isOpenAIConfigured()) {
-        try {
-          console.log(`Generating audio narration for book ${bookId}...`);
-          const pagesForAudio = storyPages.map((page) => ({
-            pageNumber: page.pageNumber,
-            text: page.text,
-          }));
-          await generateNarration(bookId, pagesForAudio);
-          audioStatus = "complete";
-        } catch (audioError) {
-          audioStatus = "failed";
-          console.error(
-            `Audio narration failed for book ${bookId} (continuing to PDF):`,
-            audioError
-          );
-        }
-      }
+      // Legacy narration stored public bearer URLs. Keep it disabled until
+      // audio has the same private, exact-payment access path as final PDFs.
+      const audioStatus = "skipped";
 
       // ── Assemble the durable PDF artefact ────────────────────────────────
-      const assembled = await assemblePdf(bookId);
+      const assembled = await assemblePdf(bookId, {
+        versionId: approvedVersionId,
+      });
       if (!assembled.pdfUrl) {
         throw new Error(
           "PDF assembly failed — pdfUrl is empty. Cannot finalise."
@@ -964,11 +1059,15 @@ export async function finalisePurchasedBook(
           version_id: approvedVersionId,
           kind: "pdf_digital",
           storage_path: assembled.storagePath,
-          url: pdfUrl,
-          access_url: pdfUrl,
+          url: `private://${FINAL_BOOK_BUCKET}/${assembled.storagePath}`,
+          access_url: null,
           durable_verified_at: nowIso,
-          access_verified_at: nowIso,
-          metadata: { assembledBy: "finalisePurchasedBook" },
+          access_verified_at: null,
+          metadata: {
+            assembledBy: "finalisePurchasedBook",
+            storage_bucket: FINAL_BOOK_BUCKET,
+            signed_url_ttl_seconds: 15 * 60,
+          },
         },
       ];
       if (pdfPrintUrl) {
@@ -977,26 +1076,38 @@ export async function finalisePurchasedBook(
           version_id: approvedVersionId,
           kind: "pdf_print",
           storage_path: assembled.printStoragePath,
-          url: pdfPrintUrl,
-          access_url: pdfPrintUrl,
+          url: `private://${FINAL_BOOK_BUCKET}/${assembled.printStoragePath}`,
+          access_url: null,
           durable_verified_at: null,
           access_verified_at: null,
-          metadata: { assembledBy: "finalisePurchasedBook" },
+          metadata: {
+            assembledBy: "finalisePurchasedBook",
+            storage_bucket: FINAL_BOOK_BUCKET,
+            signed_url_ttl_seconds: 15 * 60,
+          },
         });
       }
-      const { error: artefactErr } = await supabaseAdmin
+      const { data: insertedArtefacts, error: artefactErr } = await supabaseAdmin
         .from("product_artefacts")
-        .insert(artefactRows);
+        .insert(artefactRows)
+        .select("id, kind");
       if (artefactErr) {
         throw new Error(
           `Failed to record durable product_artefacts for book ${bookId}: ${artefactErr.message}`
         );
       }
+      digitalArtefactId =
+        (insertedArtefacts?.find((row) => row.kind === "pdf_digital")?.id as
+          | string
+          | undefined) ?? null;
+      if (!digitalArtefactId) {
+        throw new Error(
+          `Failed to resolve the durable digital artefact for book ${bookId}`,
+        );
+      }
 
       // Legacy status columns (best-effort; not the source of truth).
       await updateBookStatus(bookId, "complete", {
-        pdf_url: pdfUrl,
-        pdf_print_url: pdfPrintUrl,
         illustration_urls: allIllustrationUrls,
         audio_status: audioStatus,
       });
@@ -1005,18 +1116,67 @@ export async function finalisePurchasedBook(
     // ── Grant exact-version full-book access (idempotent) ───────────────────
     // If a successful notification already exists, do not send it again. The
     // canonical transition remains safe and idempotent.
-    const { data: existingSentAttempt } = await supabaseAdmin
+    const { data: existingSentAttempts, error: sentAttemptsError } =
+      await supabaseAdmin
       .from("delivery_attempts")
-      .select("id")
+      .select("id, access_grant_id")
       .eq("order_id", orderIdForGrant)
       .eq("book_id", bookId)
       .eq("version_id", approvedVersionId)
       .eq("status", "sent")
       .not("notification_sent_at", "is", null)
       .not("access_verified_at", "is", null)
-      .limit(1)
-      .maybeSingle();
-    if (existingSentAttempt) {
+      .order("created_at", { ascending: false });
+    if (sentAttemptsError) {
+      throw new Error(
+        `Could not read sent delivery attempts: ${sentAttemptsError.message}`,
+      );
+    }
+    const linkedGrantIds = Array.from(
+      new Set(
+        (existingSentAttempts ?? [])
+          .map((attempt) => attempt.access_grant_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    let linkedGrants: LinkedDeliveryGrantEvidence[] = [];
+    if (linkedGrantIds.length > 0) {
+      const { data: grantRows, error: linkedGrantsError } = await supabaseAdmin
+        .from("access_grants")
+        .select(
+          "id, order_id, book_id, version_id, access_kind, token_hash, verified_at, revoked_at, expires_at",
+        )
+        .in("id", linkedGrantIds);
+      if (linkedGrantsError) {
+        throw new Error(
+          `Could not verify sent delivery grants: ${linkedGrantsError.message}`,
+        );
+      }
+      linkedGrants = (grantRows ?? []).map((grant) => ({
+        id: grant.id as string,
+        orderId: grant.order_id as string | null,
+        bookId: grant.book_id as string,
+        versionId: grant.version_id as string,
+        accessKind: grant.access_kind as string,
+        tokenHash: grant.token_hash as string | null,
+        verifiedAt: grant.verified_at as string | null,
+        revokedAt: grant.revoked_at as string | null,
+        expiresAt: grant.expires_at as string | null,
+      }));
+    }
+    const usableSentAttempt = (existingSentAttempts ?? []).find((attempt) => {
+      const accessGrantId = attempt.access_grant_id as string | null;
+      const grant =
+        linkedGrants.find((candidate) => candidate.id === accessGrantId) ?? null;
+      return isUsableLinkedDeliveryGrant({
+        grant,
+        accessGrantId,
+        orderId: orderIdForGrant,
+        bookId,
+        versionId: approvedVersionId,
+      });
+    });
+    if (usableSentAttempt) {
       const replayTransition = await transitionStage(
         bookId,
         "Delivered",
@@ -1031,6 +1191,74 @@ export async function finalisePurchasedBook(
       await setOperationalState(bookId, "idle");
       return;
     }
+    if ((existingSentAttempts?.length ?? 0) > 0) {
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "sent_delivery_grant_unusable",
+        errorDetail:
+          "A previously sent delivery attempt no longer has its exact verified usable access grant; a replacement delivery attempt is required.",
+        context: {
+          staleAttemptIds: existingSentAttempts!.map((attempt) => attempt.id),
+        },
+      });
+    }
+
+    const email =
+      fulfilmentOrder.purchaser_email ??
+      (await fetchBookEmail(bookId));
+    if (!email) {
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "delivery_no_recipient",
+        errorDetail: "No captured email address to deliver the book to.",
+      });
+      await recordDeliveryAttempt({
+        orderId: orderIdForGrant,
+        bookId,
+        versionId: approvedVersionId,
+        status: "failed",
+        errorDetail: "No recipient email",
+      });
+      await setOperationalState(bookId, "awaiting_delivery");
+      throw new Error(
+        `finalisePurchasedBook: book ${bookId} has no recipient email — remaining Purchased`
+      );
+    }
+
+    // Claim this exact order/version before revoking or minting any capability.
+    // The migration's partial unique index ensures only one worker can hold a
+    // pending delivery claim, even when its preliminary read raced.
+    const { data: ambiguousAttempt, error: ambiguousAttemptError } =
+      await supabaseAdmin
+        .from("delivery_attempts")
+        .select("id, attempt_number, created_at")
+        .eq("order_id", orderIdForGrant)
+        .eq("book_id", bookId)
+        .eq("version_id", approvedVersionId)
+        .eq("channel", "email")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (ambiguousAttemptError) {
+      throw new Error(
+        `Could not check pending delivery attempts: ${ambiguousAttemptError.message}`,
+      );
+    }
+    if (ambiguousAttempt) {
+      throw new Error(
+        `Ambiguous pending delivery attempt ${ambiguousAttempt.id}; reconcile provider status before retrying`,
+      );
+    }
+    claimedDeliveryAttempt = await beginDeliveryAttempt({
+      orderId: orderIdForGrant,
+      bookId,
+      versionId: approvedVersionId,
+    });
 
     // A hash-only grant cannot recover the raw URL token on retry. Revoke any
     // unsent prior grant and mint a fresh exact-version token for this attempt.
@@ -1096,66 +1324,61 @@ export async function finalisePurchasedBook(
     if (verifyGrantError) {
       throw new Error(`Failed to record verified access grant: ${verifyGrantError.message}`);
     }
-
-    // ── Send the delivery email and CONFIRM it was actually sent ────────────
-    const email =
-      fulfilmentOrder.purchaser_email ??
-      (await fetchBookEmail(bookId));
-    if (!email) {
-      // No recipient captured — cannot confirm delivery. Remain Purchased.
-      await recordOperationalFailure({
-        bookId,
-        orderId: orderIdForGrant,
-        stage: "Purchased",
-        errorCode: "delivery_no_recipient",
-        errorDetail: "No captured email address to deliver the book to.",
-      });
-      await recordDeliveryAttempt({
-        orderId: orderIdForGrant,
-        bookId,
-        versionId: approvedVersionId,
-        status: "failed",
-        errorDetail: "No recipient email",
-      });
-      await setOperationalState(bookId, "awaiting_delivery");
-      throw new Error(
-        `finalisePurchasedBook: book ${bookId} has no recipient email — remaining Purchased`
-      );
-    }
-
-    // A pending attempt means a provider call may already have succeeded while
-    // our acknowledgement write failed. Do not automatically resend and risk a
-    // duplicate notification; leave an explicit reconciliation case instead.
-    const { data: ambiguousAttempt, error: ambiguousAttemptError } =
+    const { error: linkGrantError, count: linkedGrantCount } =
       await supabaseAdmin
         .from("delivery_attempts")
-        .select("id, attempt_number, created_at")
+        .update(
+          {
+            access_grant_id: createdGrant.id,
+            access_verified_at: accessVerifiedAt,
+          },
+          { count: "exact" },
+        )
+        .eq("id", claimedDeliveryAttempt.id)
         .eq("order_id", orderIdForGrant)
+        .eq("version_id", approvedVersionId)
+        .eq("status", "pending")
+        .is("access_grant_id", null);
+    if (linkGrantError || (linkedGrantCount ?? 0) !== 1) {
+      throw new Error(
+        `Failed to bind delivery attempt to its verified access grant: ${
+          linkGrantError?.message ?? "delivery claim was lost"
+        }`,
+      );
+    }
+    if (!digitalArtefactId) {
+      throw new Error(
+        `Cannot record customer access for book ${bookId}: digital artefact identity is missing`,
+      );
+    }
+    const { error: verifyArtefactAccessError, count: verifiedArtefactCount } =
+      await supabaseAdmin
+        .from("product_artefacts")
+        .update(
+          {
+            access_url: null,
+            access_verified_at: accessVerifiedAt,
+          },
+          { count: "exact" },
+        )
+        .eq("id", digitalArtefactId)
         .eq("book_id", bookId)
         .eq("version_id", approvedVersionId)
-        .eq("channel", "email")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-    if (ambiguousAttemptError) {
+        .eq("kind", "pdf_digital")
+        .not("durable_verified_at", "is", null);
+    if (
+      verifyArtefactAccessError ||
+      (verifiedArtefactCount ?? 0) !== 1
+    ) {
       throw new Error(
-        `Could not check pending delivery attempts: ${ambiguousAttemptError.message}`,
-      );
-    }
-    if (ambiguousAttempt) {
-      throw new Error(
-        `Ambiguous pending delivery attempt ${ambiguousAttempt.id}; reconcile provider status before retrying`,
+        `Failed to record verified customer artefact access: ${
+          verifyArtefactAccessError?.message ?? "artefact was not durable"
+        }`,
       );
     }
 
-    const deliveryAttempt = await beginDeliveryAttempt({
-      orderId: orderIdForGrant,
-      bookId,
-      versionId: approvedVersionId,
-      accessVerifiedAt,
-    });
-
+    // ── Send the delivery email and CONFIRM it was actually sent ────────────
+    providerCallStarted = true;
     const sendResult = await sendDeliveryEmail({
       email,
       recipientName:
@@ -1177,10 +1400,11 @@ export async function finalisePurchasedBook(
         errorDetail: sendResult.reason ?? "Email provider did not confirm send",
       });
       await finishDeliveryAttempt({
-        attemptId: deliveryAttempt.id,
+        attemptId: claimedDeliveryAttempt.id,
         status: "failed",
         errorDetail: sendResult.reason ?? "not_sent",
       });
+      claimedDeliveryAttempt = null;
       await setOperationalState(bookId, "awaiting_delivery");
       throw new Error(
         `finalisePurchasedBook: delivery email for book ${bookId} was not sent (${sendResult.reason ?? "unknown"}) — remaining Purchased`
@@ -1191,7 +1415,7 @@ export async function finalisePurchasedBook(
     // attempt. If this write fails, the pending row deliberately blocks an
     // automatic resend until an operator reconciles provider status.
     const deliveryRecorded = await finishDeliveryAttempt({
-      attemptId: deliveryAttempt.id,
+      attemptId: claimedDeliveryAttempt.id,
       status: "sent",
       notificationSentAt: new Date().toISOString(),
       providerMessageId:
@@ -1202,6 +1426,7 @@ export async function finalisePurchasedBook(
         `Delivery notification was accepted but its durable attempt record failed for order ${orderIdForGrant}`,
       );
     }
+    claimedDeliveryAttempt = null;
 
     // ── Transition Purchased -> Delivered (only after all of the above) ─────
     const deliverTransition = await transitionStage(
@@ -1220,6 +1445,18 @@ export async function finalisePurchasedBook(
     await setOperationalState(bookId, "idle");
     console.log(`[pipeline] Book ${bookId} finalised and delivered.`);
   } catch (error) {
+    // Deterministic pre-provider failures are safe to release for retry.
+    // Once a provider call starts, an unfinished pending row is intentionally
+    // ambiguous and must be reconciled instead of automatically resent.
+    if (claimedDeliveryAttempt && !providerCallStarted) {
+      await finishDeliveryAttempt({
+        attemptId: claimedDeliveryAttempt.id,
+        status: "failed",
+        errorDetail:
+          error instanceof Error ? error.message : "pre-provider finalisation failed",
+      });
+      claimedDeliveryAttempt = null;
+    }
     // Never fulfil on failure. Remain Purchased (do NOT set status=failed here,
     // which would obscure the lifecycle stage) and record a retryable failure.
     console.error(`Full book finalisation failed for book ${bookId}:`, error);
@@ -1240,7 +1477,6 @@ async function beginDeliveryAttempt(params: {
   orderId: string;
   bookId: string;
   versionId: string;
-  accessVerifiedAt: string;
 }): Promise<{ id: string; attemptNumber: number }> {
   const { data: prior, error: priorError } = await supabaseAdmin
     .from("delivery_attempts")
@@ -1270,7 +1506,8 @@ async function beginDeliveryAttempt(params: {
       channel: "email",
       status: "pending",
       idempotency_key: idempotencyKey,
-      access_verified_at: params.accessVerifiedAt,
+      access_grant_id: null,
+      access_verified_at: null,
       metadata: { retryable: true, awaiting_provider_result: true },
     })
     .select("id")
@@ -1380,146 +1617,19 @@ async function recordDeliveryAttempt(params: {
   return true;
 }
 
-/**
- * Compatibility alias: generateFullBook now delegates to finalisePurchasedBook
- * but only for books that are in the "Purchased" stage. For legacy books that
- * are still using the old status system, the full generation is performed directly.
- */
+/** Canonical compatibility alias. Legacy status-based generation is forbidden. */
 export async function generateFullBook(bookId: string): Promise<void> {
-  // Check current lifecycle stage
-  const { data: book } = await supabaseAdmin
+  const { data: book, error } = await supabaseAdmin
     .from("books")
-    .select("lifecycle_stage, status, story_text, illustration_urls")
+    .select("lifecycle_stage")
     .eq("id", bookId)
     .maybeSingle();
 
-  const lifecycleStage = book?.lifecycle_stage as LifecycleStage | null;
-
-  if (lifecycleStage === "Purchased") {
-    // Use the new finalisation path for books in the canonical lifecycle
-    return finalisePurchasedBook(bookId);
-  }
-
-  // Any OTHER canonical lifecycle stage is not a valid target for full
-  // generation — only 'Purchased' books may be fulfilled. Reject rather than
-  // silently running the legacy path against a canonical book.
-  if (lifecycleStage !== null && lifecycleStage !== undefined) {
+  const lifecycleStage = book?.lifecycle_stage as LifecycleStage | null | undefined;
+  if (error || !book || !canInvokeCanonicalFullBook(lifecycleStage)) {
     throw new Error(
-      `generateFullBook: book ${bookId} is in lifecycle stage '${lifecycleStage}'; only 'Purchased' books can be fulfilled`
+      `generateFullBook: book ${bookId} must be an existing canonical Purchased book; lifecycle-null legacy generation is disabled`,
     );
   }
-
-  // ── Legacy path (backward compatibility) ──────────────────────────────────
-  // Reached ONLY when lifecycle_stage is null (pre-canonical books). We do not
-  // invent a lifecycle for these; the old status-based flow runs unchanged.
-  try {
-    await updateBookStatus(bookId, "generating");
-
-    const { book: fullBook, child, secondChild } = await fetchBookWithChildren(bookId);
-
-    if (!fullBook.story_text || !Array.isArray(fullBook.story_text)) {
-      throw new Error("Book has no story text. Generate a preview first.");
-    }
-
-    const storyPages: BookPage[] = fullBook.story_text as BookPage[];
-    const existingUrls: (string | null)[] = (fullBook.illustration_urls as (string | null)[]) || [];
-
-    const remainingPageNumbers: number[] = [];
-    storyPages.forEach((page, idx) => {
-      if (!existingUrls[idx]) {
-        remainingPageNumbers.push(page.pageNumber);
-      }
-    });
-
-    let allIllustrationUrls = [...existingUrls];
-
-    if (remainingPageNumbers.length > 0) {
-      const skeleton = storySkeletons[fullBook.theme_id];
-      const hasTwoChildren = !!secondChild;
-      const sceneDescriptions = skeleton
-        ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
-        : [];
-
-      const descriptions = extractAppearanceDescriptions(fullBook.contextual_answers);
-      const illustrationChildren = await prepareIllustrationChildren(
-        child,
-        secondChild,
-        descriptions
-      );
-
-      const newUrls = await generateIllustrations({
-        bookId,
-        storyPages,
-        themeId: fullBook.theme_id,
-        sceneDescriptions,
-        pageNumbers: remainingPageNumbers,
-        children: illustrationChildren,
-        contextualAnswers: fullBook.contextual_answers as Record<string, unknown> | null,
-      });
-
-      let newUrlIdx = 0;
-      allIllustrationUrls = storyPages.map((page, idx) => {
-        if (!existingUrls[idx] && newUrlIdx < newUrls.length) {
-          return newUrls[newUrlIdx++];
-        }
-        return existingUrls[idx] || null;
-      });
-    }
-
-    await updateBookStatus(bookId, "generating", {
-      illustration_urls: allIllustrationUrls,
-    });
-
-    await upsertBookPages(bookId, storyPages, allIllustrationUrls);
-
-    let audioStatus: "complete" | "failed" | "skipped" = "skipped";
-    if (isOpenAIConfigured()) {
-      try {
-        console.log(`Generating audio narration for book ${bookId}...`);
-        const pagesForAudio = storyPages.map((page) => ({
-          pageNumber: page.pageNumber,
-          text: page.text,
-        }));
-        await generateNarration(bookId, pagesForAudio);
-        audioStatus = "complete";
-        console.log(`Audio narration complete for book ${bookId}`);
-      } catch (audioError) {
-        audioStatus = "failed";
-        console.error(
-          `Audio narration failed for book ${bookId} (continuing to PDF):`,
-          audioError
-        );
-      }
-    }
-
-    const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
-
-    await updateBookStatus(bookId, "complete", {
-      pdf_url: pdfUrl,
-      pdf_print_url: pdfPrintUrl,
-      audio_status: audioStatus,
-    });
-
-    fetchBookEmail(bookId)
-      .then((email) => {
-        if (email) {
-          return sendBookReadyEmail({
-            email,
-            childName: child.name,
-            bookId,
-            pdfUrl,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error(
-          `Failed to send book-ready email for book ${bookId}:`,
-          err
-        );
-      });
-  } catch (error) {
-    console.error(`Full book generation failed for book ${bookId}:`, error);
-    await updateBookStatus(bookId, "failed");
-    throw error;
-  }
+  return finalisePurchasedBook(bookId);
 }
