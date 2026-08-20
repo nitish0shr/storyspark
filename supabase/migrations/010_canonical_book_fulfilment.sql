@@ -1,7 +1,7 @@
 -- 010: Canonical book fulfilment data contract.
--- Strictly additive and safe to re-run.
--- All DDL uses IF NOT EXISTS or DO-block guards.
--- Does NOT drop, rename, or modify any existing column or constraint.
+-- Additive, data-preserving, and safe to re-run.
+-- DDL uses IF NOT EXISTS, guarded DO blocks, or deliberate constraint replacement.
+-- Does not rewrite any historical migration.
 -- CREATE POLICY IF NOT EXISTS is unsupported in older Postgres versions;
 -- every policy is guarded with a DO block instead.
 
@@ -110,6 +110,31 @@ create index if not exists idx_book_version_pages_version
 
 create index if not exists idx_book_version_pages_preview
   on public.book_version_pages(version_id, is_preview) where is_preview = true;
+
+-- Review links must bind the exact immutable version the reviewer sees.
+alter table public.book_review_tokens
+  add column if not exists version_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'book_review_tokens_version_id_fkey'
+      and conrelid = 'public.book_review_tokens'::regclass
+  ) then
+    alter table public.book_review_tokens
+      add constraint book_review_tokens_version_id_fkey
+      foreign key (version_id)
+      references public.book_versions(id)
+      on delete set null;
+  end if;
+end
+$$;
+
+create index if not exists idx_book_review_tokens_version
+  on public.book_review_tokens(version_id)
+  where version_id is not null;
 
 -- ============================================================
 -- 7. book_quality_findings (separate table, version-scoped)

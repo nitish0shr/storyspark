@@ -78,7 +78,7 @@ export async function transitionStage(
   const approvedVersionId = book.approved_version_id as string | null;
   const versionId =
     toStage === "Approved"
-      ? reviewVersionId ?? currentVersionId
+      ? reviewVersionId
       : toStage === "Ready for Purchase" ||
           toStage === "Purchased" ||
           toStage === "Delivered"

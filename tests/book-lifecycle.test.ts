@@ -10,9 +10,53 @@ import {
   checkDeliveryPrerequisites,
   resolveCanonicalStage,
   isDeliveredStage,
+  reviewTokenVersionForStage,
   type LifecycleStage,
 } from "@/lib/book-lifecycle";
 import type { BookVersionPage } from "@/types/book";
+
+describe("exact review-version binding", () => {
+  test("entering review uses the current complete version", () => {
+    assert.equal(
+      reviewTokenVersionForStage({
+        stage: "Generated",
+        currentVersionId: "version-current",
+        reviewVersionId: null,
+      }),
+      "version-current",
+    );
+  });
+
+  test("Under Review never falls back to a newer current version", () => {
+    assert.equal(
+      reviewTokenVersionForStage({
+        stage: "Under Review",
+        currentVersionId: "version-newer",
+        reviewVersionId: null,
+      }),
+      null,
+    );
+    assert.equal(
+      reviewTokenVersionForStage({
+        stage: "Under Review",
+        currentVersionId: "version-newer",
+        reviewVersionId: "version-reviewed",
+      }),
+      "version-reviewed",
+    );
+  });
+
+  test("Revised also requires its authoritative review pointer", () => {
+    assert.equal(
+      reviewTokenVersionForStage({
+        stage: "Revised",
+        currentVersionId: "version-successor",
+        reviewVersionId: null,
+      }),
+      null,
+    );
+  });
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

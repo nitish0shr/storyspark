@@ -26,7 +26,10 @@ import { sendEmail } from "@/lib/email-provider";
 import { revokeReviewTokens } from "@/lib/review-tokens";
 import { recordOperationalError } from "@/lib/lifecycle-service";
 import { fetchVersionPages } from "@/lib/book-versions";
-import { selectPreviewPages } from "@/lib/book-lifecycle";
+import {
+  reviewTokenVersionForStage,
+  selectPreviewPages,
+} from "@/lib/book-lifecycle";
 import type { LifecycleStage } from "@/types/book";
 
 export type ReviewAction =
@@ -164,7 +167,7 @@ export async function submitForReview(bookId: string): Promise<WorkflowResult> {
   const { data: book, error: fetchErr } = await supabaseAdmin
     .from("books")
     .select(
-      "id, lifecycle_stage, current_version_id, child_name, recipient_name, theme_title, selected_animal, public_ref",
+      "id, lifecycle_stage, current_version_id, review_version_id, child_name, recipient_name, theme_title, selected_animal, public_ref",
     )
     .eq("id", bookId)
     .maybeSingle();
@@ -174,11 +177,11 @@ export async function submitForReview(bookId: string): Promise<WorkflowResult> {
   }
 
   const currentStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
-  const currentVersionId = (book.current_version_id as string | null) ?? null;
-
-  if (currentStage === "Under Review") {
-    return { ok: true, status: "Under Review", message: "Already under review." };
-  }
+  const currentVersionId = reviewTokenVersionForStage({
+    stage: currentStage,
+    currentVersionId: (book.current_version_id as string | null) ?? null,
+    reviewVersionId: (book.review_version_id as string | null) ?? null,
+  });
 
   if (!currentVersionId) {
     return {
@@ -187,32 +190,47 @@ export async function submitForReview(bookId: string): Promise<WorkflowResult> {
     };
   }
 
-  const transition = await transitionLifecycle({
-    bookId,
-    expectedStage: currentStage,
-    toStage: "Under Review",
-    versionId: currentVersionId,
-    actor: "system",
-    reason: "Automated validation passed — submitted for human review",
-  });
+  if (currentStage !== "Under Review") {
+    const transition = await transitionLifecycle({
+      bookId,
+      expectedStage: currentStage,
+      toStage: "Under Review",
+      versionId: currentVersionId,
+      actor: "system",
+      reason: "Automated validation passed — submitted for human review",
+    });
 
-  if (!transition.ok) {
-    return {
-      ok: false,
-      message: "Book cannot be submitted for review: " + (transition.error ?? "transition rejected"),
-    };
+    if (!transition.ok) {
+      return {
+        ok: false,
+        message:
+          "Book cannot be submitted for review: " +
+          (transition.error ?? "transition rejected"),
+      };
+    }
+
+    await logReviewEvent({
+      bookId,
+      action: "submitted",
+      toStatus: "Under Review",
+    });
   }
-
-  await logReviewEvent({ bookId, action: "submitted", toStatus: "Under Review" });
 
   // Mint a reviewer link bound to the EXACT version being reviewed.
   const { createReviewToken } = await import("@/lib/review-tokens");
-  let link = appUrl() + "/admin/books";
+  let link: string;
   try {
     const token = await createReviewToken(bookId, currentVersionId);
     link = appUrl() + "/review/" + token;
   } catch (err) {
     console.error("[review] could not mint review token:", err);
+    await recordOperationalError(bookId, "review_token_creation", err);
+    return {
+      ok: false,
+      status: "Under Review",
+      message:
+        "Book is under review, but the version-bound review link could not be created. Retry the review submission.",
+    };
   }
 
   const to = reviewerInbox();
@@ -291,7 +309,6 @@ export async function approveBook(params: {
 
   const currentStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
   const reviewVersionId = (book.review_version_id as string | null) ?? null;
-  const currentVersionId = (book.current_version_id as string | null) ?? null;
 
   // Idempotency: already approved or further along.
   if (
@@ -322,13 +339,10 @@ export async function approveBook(params: {
   }
 
   // ── Exact-version binding: token version must equal review_version_id ──────
-  // "Revised" may be approved directly if the token is for the exact current /
-  // review version. We compare against review_version_id first (set by the RPC
-  // when the version entered Under Review), falling back to current_version_id.
   const expectedVersionId =
     currentStage === "Approved"
       ? ((book.approved_version_id as string | null) ?? null)
-      : reviewVersionId ?? currentVersionId;
+      : reviewVersionId;
   if (!expectedVersionId) {
     return { ok: false, message: "Cannot approve: no reviewed version is bound to this book." };
   }
@@ -743,14 +757,11 @@ export async function rejectBook(params: {
 
   const { data: book } = await supabaseAdmin
     .from("books")
-    .select("review_version_id, current_version_id")
+    .select("review_version_id")
     .eq("id", bookId)
     .maybeSingle();
 
-  const versionId =
-    (book?.review_version_id as string | null) ||
-    (book?.current_version_id as string | null) ||
-    null;
+  const versionId = (book?.review_version_id as string | null) || null;
 
   const { createRevisionRequest } = await import("@/services/revision-engine");
   const result = await createRevisionRequest({

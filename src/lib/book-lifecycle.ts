@@ -68,6 +68,24 @@ export function isDeliveredStage(
   return resolveCanonicalStage(lifecycleStage, legacyStatus) === "Delivered";
 }
 
+/**
+ * Selects the only version that may be placed in a canonical review token.
+ * Entering review binds the current complete version; once Under Review or
+ * Revised, the immutable review pointer is authoritative and must never fall
+ * back to a newer current version.
+ */
+export function reviewTokenVersionForStage(params: {
+  stage: LifecycleStage | null;
+  currentVersionId: string | null;
+  reviewVersionId: string | null;
+}): string | null {
+  if (params.stage === "Generated") return params.currentVersionId;
+  if (params.stage === "Under Review" || params.stage === "Revised") {
+    return params.reviewVersionId;
+  }
+  return null;
+}
+
 // ─── Legal transition map ─────────────────────────────────────────────────────
 
 /**

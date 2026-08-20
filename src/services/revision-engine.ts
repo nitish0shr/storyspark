@@ -32,7 +32,10 @@ import {
   textSimilarity,
   persistPageFindings,
 } from "@/lib/book-versions";
-import { hasMaterialDifference } from "@/lib/book-lifecycle";
+import {
+  hasMaterialDifference,
+  reviewTokenVersionForStage,
+} from "@/lib/book-lifecycle";
 import { recordOperationalError } from "@/lib/lifecycle-service";
 import type { BookPage, BookVersionPage, LifecycleStage } from "@/types/book";
 
@@ -247,10 +250,13 @@ export async function createRevisionRequest(params: {
         ? null
         : Number(book.lifecycle_revision);
     if (!effectiveVersionId) {
-      effectiveVersionId =
-        (book?.review_version_id as string | null) ||
-        (book?.current_version_id as string | null) ||
-        null;
+      effectiveVersionId = reviewTokenVersionForStage({
+        stage: currentStage,
+        currentVersionId:
+          (book?.current_version_id as string | null) ?? null,
+        reviewVersionId:
+          (book?.review_version_id as string | null) ?? null,
+      });
     }
     if (currentStage !== "Under Review") {
       return {

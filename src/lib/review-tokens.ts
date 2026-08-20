@@ -14,8 +14,7 @@
  *   - carries no action, so opening the link can never approve anything
  *   - tokens bind an exact version_id so the reviewer approves or rejects the
  *     precise snapshot they looked at, not a later replacement
- *     (version_id column added by the canonical migration; gracefully absent
- *     on legacy databases)
+ *     (version_id column added by the canonical migration)
  */
 
 import crypto from "crypto";
@@ -27,43 +26,60 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+export interface ReviewTokenRecord {
+  book_id: string;
+  token_hash: string;
+  expires_at: string;
+  version_id?: string;
+}
+
+type ReviewTokenInsert = (
+  record: ReviewTokenRecord,
+) => Promise<{ error: { message: string } | null }>;
+
+export async function persistReviewTokenRecord(
+  record: ReviewTokenRecord,
+  insert: ReviewTokenInsert,
+): Promise<void> {
+  const { error } = await insert(record);
+  if (error) {
+    throw new Error("Could not create review token: " + error.message);
+  }
+}
+
 /**
  * Issue a fresh review link for a book.
  *
  * @param bookId    - The book this token authorises reviewing.
  * @param versionId - The exact book_versions.id snapshot being reviewed.
- *                    Pass null/undefined for legacy books without versioning.
  * @returns The raw token (shown once; only the hash is persisted).
  */
 export async function createReviewToken(
   bookId: string,
-  versionId?: string | null,
+  versionId: string,
 ): Promise<string> {
+  if (!versionId) {
+    throw new Error(
+      "Could not create review token: an exact version_id is required.",
+    );
+  }
   const token = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
 
-  // Attempt to store version_id if provided. The column was added by the
-  // canonical migration; on older databases omit it rather than failing.
-  if (versionId) {
-    const { error: withVersion } = await supabaseAdmin
-      .from("book_review_tokens")
-      .insert({
-        book_id: bookId,
-        token_hash: hashToken(token),
-        expires_at: expiresAt.toISOString(),
-        version_id: versionId,
-      });
-    if (!withVersion) return token;
-    // Fall through and retry without version_id if the column is missing.
-    console.warn("[review-tokens] version_id column not available; falling back:", withVersion.message);
-  }
-
-  const { error } = await supabaseAdmin.from("book_review_tokens").insert({
+  const record: ReviewTokenRecord = {
     book_id: bookId,
     token_hash: hashToken(token),
     expires_at: expiresAt.toISOString(),
+    version_id: versionId,
+  };
+  await persistReviewTokenRecord(record, async (value) => {
+    const { error } = await supabaseAdmin
+      .from("book_review_tokens")
+      .insert(value);
+    return {
+      error: error ? { message: error.message } : null,
+    };
   });
-  if (error) throw new Error("Could not create review token: " + error.message);
 
   return token;
 }

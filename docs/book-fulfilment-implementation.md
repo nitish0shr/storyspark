@@ -99,6 +99,12 @@ Delivery is **never** inferred from provider acceptance alone.
   single immutable version id. The RPC re-checks version identity server-side:
   approval requires the version to equal `review_version_id`; Ready for
   Purchase / Purchased / Delivered require it to equal `approved_version_id`.
+- `book_review_tokens.version_id` references the exact immutable snapshot.
+  Canonical token creation never falls back to an unbound token; persistence
+  failure is recorded as an operational error and can be retried while the book
+  remains Under Review. An Under Review/Revised row missing
+  `review_version_id` is routed to reconciliation and never substitutes
+  `current_version_id`.
 - `books` carries three version pointers — `current_version_id`,
   `review_version_id`, `approved_version_id` — plus `lifecycle_revision`.
 
@@ -119,7 +125,8 @@ automatically by application startup.
 1. `books` additive columns: `lifecycle_stage` (+ CHECK), operational state,
    the eight `stage_*_at` timestamps, version pointers, `lifecycle_revision`.
 2. Immutable tables `book_versions`, `book_version_pages` (+ immutability
-   triggers) and `book_quality_findings`.
+   triggers), exact-version binding for `book_review_tokens`, and
+   `book_quality_findings`.
 3. `revision_requests`, `revision_request_items`, `lifecycle_events`,
    `product_artefacts`.
 4. `orders` additive columns (`version_id`, `checkout_idempotency_key`,
@@ -364,7 +371,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 249 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 256 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit --incremental false -p tsconfig.json` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop/mobile | **Passed**: homepage, retired admin GET routes, invalid review token, invalid preview fail-closed |

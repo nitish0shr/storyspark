@@ -114,12 +114,10 @@ function stageLabel(stage: string | null, status: string): string {
   return map[status] ?? status;
 }
 
-/** The book is actionable if it is "Under Review" or "Revised" (lifecycle),
- *  or legacy "pending_review". */
+/** Only canonically version-bound review stages are actionable. */
 function isActionable(stage: string | null, status: string): boolean {
-  if (stage === "Under Review" || stage === "Revised") return true;
-  if (!stage && status === "pending_review") return true;
-  return false;
+  void status;
+  return stage === "Under Review" || stage === "Revised";
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -314,7 +312,7 @@ export default async function ReviewPage({
   const { data: book } = await supabaseAdmin
     .from("books")
     .select(
-      "id, status, lifecycle_stage, public_ref, purchaser_email, recipient_name, child_name, theme_title, selected_animal, story_text, illustration_urls, cover_illustration_url, validation_result, generation_attempts, reviewed_by, reviewed_at, review_notes, rejection_reason, created_at, current_version_id",
+      "id, status, lifecycle_stage, public_ref, purchaser_email, recipient_name, child_name, theme_title, selected_animal, story_text, illustration_urls, cover_illustration_url, validation_result, generation_attempts, reviewed_by, reviewed_at, review_notes, rejection_reason, created_at, current_version_id, review_version_id",
     )
     .eq("id", resolved.bookId)
     .maybeSingle();
@@ -330,14 +328,20 @@ export default async function ReviewPage({
   }
 
   const lifecycleStage = (book as Record<string, unknown>).lifecycle_stage as string | null ?? null;
-  const actionable = isActionable(lifecycleStage, book.status);
+  const stageIsActionable = isActionable(lifecycleStage, book.status);
+  const reviewVersionId =
+    ((book as Record<string, unknown>).review_version_id as string | null) ??
+    null;
+  const exactReviewBinding = Boolean(
+    resolved.versionId && resolved.versionId === reviewVersionId,
+  );
+  const actionable =
+    resolved.state === "valid" && stageIsActionable && exactReviewBinding;
 
   // ── Resolve the exact version bound to this token ────────────────────────
-  // Prefer the token's versionId; fall back to current_version_id on the book.
+  // A mismatched/missing binding in an actionable stage is fail-closed.
   const versionId =
-    resolved.versionId ??
-    ((book as Record<string, unknown>).current_version_id as string | null) ??
-    null;
+    stageIsActionable && !exactReviewBinding ? null : resolved.versionId;
 
   let version: BookVersionRow | null = null;
   let pages: VersionPage[] = [];

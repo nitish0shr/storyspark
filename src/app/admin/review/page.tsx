@@ -1,9 +1,8 @@
 /**
  * Admin review queue.
  *
- * Shows ONLY the stories that need a person to act: pending_review and
- * needs_regeneration. Everything else is deliberately excluded so the queue
- * stays a to-do list rather than a browsable archive.
+ * Shows ONLY canonically versioned stories that need a person to act.
+ * Ambiguous legacy rows remain in the books list for operator reconciliation.
  *
  * Access is already gated by src/app/admin/layout.tsx (Supabase session +
  * ADMIN_EMAILS allow-list). Each row mints a fresh single-use review link.
@@ -12,6 +11,8 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createReviewToken } from "@/lib/review-tokens";
+import { reviewTokenVersionForStage } from "@/lib/book-lifecycle";
+import type { LifecycleStage } from "@/types/book";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,6 @@ export const metadata = { title: "Review queue - Starmee" };
  */
 const ACTIONABLE_STAGES = ["Under Review", "Revised"];
 
-/** Legacy status values that map to an actionable review state. Used ONLY as a
- *  fallback for rows without a canonical lifecycle_stage. */
-const ACTIONABLE_LEGACY = ["pending_review", "needs_regeneration"];
-
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -38,17 +35,17 @@ function timeAgo(iso: string | null): string {
   return Math.floor(hours / 24) + "d ago";
 }
 
-/** Human label for the canonical stage, falling back to legacy status. */
+/** Human label for the canonical review stage. */
 function stageLabel(
   stage: string | null,
   status: string,
 ): { label: string; needsRegen: boolean } {
   if (stage === "Revised") return { label: "Revised — re-review", needsRegen: false };
   if (stage === "Under Review") return { label: "Under review", needsRegen: false };
-  // Legacy fallback (only reached when lifecycle_stage is null).
-  if (status === "needs_regeneration")
-    return { label: "Needs regeneration", needsRegen: true };
-  return { label: "Pending review", needsRegen: false };
+  return {
+    label: status === "needs_regeneration" ? "Needs regeneration" : "Under review",
+    needsRegen: status === "needs_regeneration",
+  };
 }
 
 export default async function ReviewQueuePage() {
@@ -62,30 +59,19 @@ export default async function ReviewQueuePage() {
     .in("lifecycle_stage", ACTIONABLE_STAGES)
     .order("created_at", { ascending: true });
 
-  // Legacy-actionable rows: only those without a canonical stage set.
-  const { data: legacyRows } = await supabaseAdmin
-    .from("books")
-    .select(select)
-    .is("lifecycle_stage", null)
-    .in("status", ACTIONABLE_LEGACY)
-    .order("created_at", { ascending: true });
+  const rows = canonicalRows ?? [];
 
-  const rows = [...(canonicalRows ?? []), ...(legacyRows ?? [])].sort(
-    (a, b) =>
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-
-  // Mint each link bound to the EXACT review version (preferring
-  // review_version_id, then current_version_id) so the reviewer sees the
-  // precise version awaiting approval.
+  // Mint each link only from the authoritative review pointer. Missing bindings
+  // are reconciliation cases and must never substitute current_version_id.
   const links = await Promise.all(
     rows.map((r) => {
       const rec = r as Record<string, unknown>;
-      const versionId =
-        (rec.review_version_id as string | null) ??
-        (rec.current_version_id as string | null) ??
-        null;
-      return createReviewToken(r.id, versionId);
+      const versionId = reviewTokenVersionForStage({
+        stage: (rec.lifecycle_stage as LifecycleStage | null) ?? null,
+        currentVersionId: (rec.current_version_id as string | null) ?? null,
+        reviewVersionId: (rec.review_version_id as string | null) ?? null,
+      });
+      return versionId ? createReviewToken(r.id, versionId) : null;
     }),
   );
 
@@ -144,12 +130,21 @@ export default async function ReviewQueuePage() {
                     >
                       {stageText}
                     </span>
-                    <Link
-                      href={"/review/" + links[i]}
-                      className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
-                    >
-                      Open review
-                    </Link>
+                    {links[i] ? (
+                      <Link
+                        href={"/review/" + links[i]}
+                        className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
+                      >
+                        Open review
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/admin/books"
+                        className="rounded-lg bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-900"
+                      >
+                        Reconcile missing version
+                      </Link>
+                    )}
                   </div>
                 </div>
 
