@@ -258,11 +258,13 @@ export async function createRevisionRequest(params: {
           (book?.review_version_id as string | null) ?? null,
       });
     }
-    if (currentStage !== "Under Review") {
+    if (currentStage !== "Under Review" && currentStage !== "Revised") {
       return {
         ok: false,
         requestId: null,
-        error: `Book is not Under Review (current stage: ${currentStage ?? "none"}).`,
+        error:
+          `Book is not in an actionable review stage ` +
+          `(current stage: ${currentStage ?? "none"}).`,
       };
     }
     if (

@@ -190,7 +190,7 @@ export async function submitForReview(bookId: string): Promise<WorkflowResult> {
     };
   }
 
-  if (currentStage !== "Under Review") {
+  if (currentStage !== "Under Review" && currentStage !== "Revised") {
     const transition = await transitionLifecycle({
       bookId,
       expectedStage: currentStage,

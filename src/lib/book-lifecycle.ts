@@ -97,7 +97,7 @@ const LEGAL_TRANSITIONS: ReadonlyMap<LifecycleStage | null, ReadonlySet<Lifecycl
   ["Generated",           new Set<LifecycleStage>(["Under Review"])],
   ["Under Review",        new Set<LifecycleStage>(["Approved", "Changes Requested"])],
   ["Changes Requested",   new Set<LifecycleStage>(["Revised", "Generated"])],
-  ["Revised",             new Set<LifecycleStage>(["Under Review", "Approved"])],
+  ["Revised",             new Set<LifecycleStage>(["Changes Requested", "Approved"])],
   ["Approved",            new Set<LifecycleStage>(["Ready for Purchase"])],
   ["Ready for Purchase",  new Set<LifecycleStage>(["Purchased"])],
   ["Purchased",           new Set<LifecycleStage>(["Delivered"])],

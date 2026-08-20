@@ -17,7 +17,7 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 257 passed, 0 failed.
+- `npm test`: 258 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
 - Safe desktop/mobile browser smoke: passed for the homepage, retired admin GET
@@ -57,6 +57,10 @@ provider setup. Unchecked items below must not be interpreted as passed.
   Under Review → Changes Requested; review tokens revoked.
 - [ ] Repeat with **Reject**.
   **Expect:** same structure with decision `reject`; single transition.
+- [ ] After a successful successor reaches **Revised**, request another targeted
+  correction and replay the same submission once.
+  **Expect:** Revised → Changes Requested; exactly one new request and item set;
+  the replay returns the original request without duplicating rows.
 
 ## C. Scope-targeted revision
 
@@ -199,7 +203,7 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 257/257 |
+| Automated tests | **Pass** | 258/258 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
 | Safe browser smoke | **Pass** | Desktop and mobile |

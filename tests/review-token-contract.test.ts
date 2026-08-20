@@ -38,6 +38,29 @@ describe("version-bound review token schema", () => {
       /if v_book\.review_version_id is distinct from v_effective_vid then\s+return jsonb_build_object\(\s*'ok', false, 'error', 'version_mismatch'/i,
     );
   });
+
+  test("re-review RPC accepts one idempotent decision from Revised", () => {
+    assert.match(
+      canonicalMigration,
+      /v_from_stage = 'Revised'\s+and p_to_stage in \('Changes Requested', 'Approved'\)/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /if v_book\.lifecycle_stage not in \('Under Review', 'Revised'\) then/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /select id into v_existing_request_id\s+from public\.revision_requests\s+where book_id = p_book_id\s+and idempotency_key = p_idempotency_key/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /create unique index if not exists uq_revision_requests_idempotency/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /public\.transition_book_lifecycle\(\s*p_book_id,\s*v_book\.lifecycle_stage,\s*'Changes Requested'/i,
+    );
+  });
 });
 
 describe("canonical review token persistence", () => {

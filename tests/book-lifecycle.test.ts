@@ -137,8 +137,8 @@ describe("isLegalTransition – valid moves", () => {
     assert.equal(isLegalTransition("Changes Requested", "Revised").allowed, true);
   });
 
-  test("Revised -> Under Review", () => {
-    assert.equal(isLegalTransition("Revised", "Under Review").allowed, true);
+  test("Revised -> Changes Requested", () => {
+    assert.equal(isLegalTransition("Revised", "Changes Requested").allowed, true);
   });
 
   test("Approved -> Ready for Purchase", () => {
@@ -640,10 +640,11 @@ describe("full lifecycle happy path", () => {
     }
   });
 
-  test("revision cycle: Under Review -> Changes Requested -> Revised -> Under Review", () => {
+  test("revision cycle permits another change request from Revised", () => {
     assert.equal(isLegalTransition("Under Review", "Changes Requested").allowed, true);
     assert.equal(isLegalTransition("Changes Requested", "Revised").allowed, true);
-    assert.equal(isLegalTransition("Revised", "Under Review").allowed, true);
+    assert.equal(isLegalTransition("Revised", "Changes Requested").allowed, true);
+    assert.equal(isLegalTransition("Revised", "Under Review").allowed, false);
   });
 
   test("re-generation path: Changes Requested -> Generated -> Under Review", () => {

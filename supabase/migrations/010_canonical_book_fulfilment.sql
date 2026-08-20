@@ -212,12 +212,20 @@ create table if not exists public.revision_requests (
   reason       text,                   -- kept for backward compat
   status       text        not null default 'open'
                check (status in ('open', 'addressed', 'withdrawn')),
+  idempotency_key text,
   resolved_at  timestamptz,
   created_at   timestamptz not null default now()
 );
 
+alter table public.revision_requests
+  add column if not exists idempotency_key text;
+
 create index if not exists idx_revision_requests_book
   on public.revision_requests(book_id, created_at desc);
+
+create unique index if not exists uq_revision_requests_idempotency
+  on public.revision_requests(idempotency_key)
+  where idempotency_key is not null;
 
 -- ============================================================
 -- 10. revision_request_items
@@ -1261,7 +1269,7 @@ begin
     or (v_from_stage = 'Generated'          and p_to_stage = 'Under Review')
     or (v_from_stage = 'Under Review'       and p_to_stage in ('Approved', 'Changes Requested'))
     or (v_from_stage = 'Changes Requested'  and p_to_stage in ('Revised', 'Generated'))
-    or (v_from_stage = 'Revised'            and p_to_stage in ('Under Review', 'Approved'))
+    or (v_from_stage = 'Revised'            and p_to_stage in ('Changes Requested', 'Approved'))
     or (v_from_stage = 'Approved'           and p_to_stage = 'Ready for Purchase')
     or (v_from_stage = 'Ready for Purchase' and p_to_stage = 'Purchased')
     or (v_from_stage = 'Purchased'          and p_to_stage = 'Delivered')
@@ -1803,6 +1811,7 @@ as $$
 declare
   v_book public.books%rowtype;
   v_request_id uuid := gen_random_uuid();
+  v_existing_request_id uuid;
   v_transition jsonb;
 begin
   select * into v_book
@@ -1813,7 +1822,25 @@ begin
   if not found then
     return jsonb_build_object('ok', false, 'error', 'book_not_found');
   end if;
-  if v_book.lifecycle_stage <> 'Under Review' then
+
+  -- Idempotent replay must be checked before the stage guard because a
+  -- successful first call has already moved the book to Changes Requested.
+  if p_idempotency_key is not null then
+    select id into v_existing_request_id
+    from public.revision_requests
+    where book_id = p_book_id
+      and idempotency_key = p_idempotency_key;
+
+    if found then
+      return jsonb_build_object(
+        'ok', true,
+        'idempotent_replay', true,
+        'request_id', v_existing_request_id
+      );
+    end if;
+  end if;
+
+  if v_book.lifecycle_stage not in ('Under Review', 'Revised') then
     return jsonb_build_object(
       'ok', false, 'error', 'stage_conflict',
       'current_stage', v_book.lifecycle_stage
@@ -1862,10 +1889,12 @@ begin
 
   begin
     insert into public.revision_requests (
-      id, book_id, version_id, requested_by, decision, feedback, reason, status
+      id, book_id, version_id, requested_by, decision, feedback, reason, status,
+      idempotency_key
     ) values (
       v_request_id, p_book_id, p_version_id, btrim(p_requested_by),
-      p_decision, btrim(p_feedback), btrim(p_feedback), 'open'
+      p_decision, btrim(p_feedback), btrim(p_feedback), 'open',
+      p_idempotency_key
     );
 
     insert into public.revision_request_items (
@@ -1884,7 +1913,7 @@ begin
 
     v_transition := public.transition_book_lifecycle(
       p_book_id,
-      'Under Review',
+      v_book.lifecycle_stage,
       'Changes Requested',
       p_version_id,
       p_expected_revision,

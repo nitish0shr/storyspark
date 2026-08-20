@@ -36,7 +36,7 @@ stage.
 | **Under Review** | The exact `review_version_id` is with a human reviewer, with all findings visible. | Complete version with every ordered text/illustration pair. Blocker findings are shown to the reviewer rather than hiding the version. Binds `review_version_id`. |
 | **Changes Requested** | A reviewer rejected or requested changes; exactly one structured `revision_requests` row (plus `revision_request_items`) is open. | Reached only from Under Review. |
 | **Revised** | A successor immutable version, materially different from its predecessor, satisfies the request. | Complete version; no `blocker` findings; the revision engine confirmed material difference and non-duplication. |
-| **Approved** | A human approved the exact reviewed version. Binds `approved_version_id`. | Reached from Under Review or Revised; the approved version must equal `review_version_id` when set. |
+| **Approved** | A human approved the exact reviewed version. Binds `approved_version_id`. | Reached from Under Review or Revised; a non-null `review_version_id` must exactly match the approved version. |
 | **Ready for Purchase** | The "Preview and Complete Your Purchase" invitation for the exact approved version was durably confirmed sent. | `approved_version_id` matches; a confirmed `approval_invitation_attempts` row (`status = 'sent'`, `notification_sent_at` set) exists for that exact version. |
 | **Purchased** | Stripe payment for the exact approved version was verified. | A paid/fulfilled `orders` row for the exact version with `stripe_payment_intent_id` **and** `payment_verified_at`. |
 | **Delivered** (terminal) | The final product is durably stored, access is verified, and a delivery notification was confirmed sent. | See §1.3. |
@@ -51,7 +51,7 @@ Enforced identically in SQL (`transition_book_lifecycle`) and in TypeScript
 Generated          → Under Review
 Under Review       → Approved | Changes Requested
 Changes Requested  → Revised | Generated
-Revised            → Under Review | Approved
+Revised            → Changes Requested | Approved
 Approved           → Ready for Purchase
 Ready for Purchase → Purchased
 Purchased          → Delivered
@@ -371,7 +371,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 257 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 258 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit --incremental false -p tsconfig.json` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop/mobile | **Passed**: homepage, retired admin GET routes, invalid review token, invalid preview fail-closed |
