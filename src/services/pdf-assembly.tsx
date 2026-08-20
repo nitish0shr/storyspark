@@ -396,7 +396,12 @@ function BookPdfDocument({
 
 export async function assemblePdf(
   bookId: string
-): Promise<{ pdfUrl: string; pdfPrintUrl: string }> {
+): Promise<{
+  pdfUrl: string;
+  pdfPrintUrl: string;
+  storagePath: string;
+  printStoragePath: string;
+}> {
   const { data: book, error: bookError } = await supabaseAdmin
     .from("books")
     .select("*")
@@ -490,5 +495,7 @@ export async function assemblePdf(
   return {
     pdfUrl: pdfUrlData.publicUrl,
     pdfPrintUrl: printUrlData.publicUrl,
+    storagePath,
+    printStoragePath: printPath,
   };
 }

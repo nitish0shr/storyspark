@@ -12,6 +12,10 @@
  *   - hard expiry (default 7 days)
  *   - single use: consumed the moment a reviewer actually acts
  *   - carries no action, so opening the link can never approve anything
+ *   - tokens bind an exact version_id so the reviewer approves or rejects the
+ *     precise snapshot they looked at, not a later replacement
+ *     (version_id column added by the canonical migration; gracefully absent
+ *     on legacy databases)
  */
 
 import crypto from "crypto";
@@ -23,10 +27,36 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-/** Issue a fresh review link for a book. Returns the raw token (shown once). */
-export async function createReviewToken(bookId: string): Promise<string> {
+/**
+ * Issue a fresh review link for a book.
+ *
+ * @param bookId    - The book this token authorises reviewing.
+ * @param versionId - The exact book_versions.id snapshot being reviewed.
+ *                    Pass null/undefined for legacy books without versioning.
+ * @returns The raw token (shown once; only the hash is persisted).
+ */
+export async function createReviewToken(
+  bookId: string,
+  versionId?: string | null,
+): Promise<string> {
   const token = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+  // Attempt to store version_id if provided. The column was added by the
+  // canonical migration; on older databases omit it rather than failing.
+  if (versionId) {
+    const { error: withVersion } = await supabaseAdmin
+      .from("book_review_tokens")
+      .insert({
+        book_id: bookId,
+        token_hash: hashToken(token),
+        expires_at: expiresAt.toISOString(),
+        version_id: versionId,
+      });
+    if (!withVersion) return token;
+    // Fall through and retry without version_id if the column is missing.
+    console.warn("[review-tokens] version_id column not available; falling back:", withVersion.message);
+  }
 
   const { error } = await supabaseAdmin.from("book_review_tokens").insert({
     book_id: bookId,
@@ -44,31 +74,39 @@ export interface ResolvedToken {
   state: TokenState;
   bookId: string | null;
   tokenId: string | null;
+  /** The exact version this token covers, or null for legacy tokens. */
+  versionId: string | null;
 }
 
 /**
- * Look up a raw token. Does NOT consume it - a reviewer must be able to open
+ * Look up a raw token. Does NOT consume it — a reviewer must be able to open
  * the page, read the story, and only then decide.
  */
 export async function resolveReviewToken(token: string): Promise<ResolvedToken> {
-  const miss: ResolvedToken = { state: "unknown", bookId: null, tokenId: null };
+  const miss: ResolvedToken = { state: "unknown", bookId: null, tokenId: null, versionId: null };
   if (!token || typeof token !== "string") return miss;
 
   const { data, error } = await supabaseAdmin
     .from("book_review_tokens")
-    .select("id, book_id, expires_at, used_at")
+    .select("id, book_id, expires_at, used_at, version_id")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
 
   if (error || !data) return miss;
 
+  // version_id may be absent on databases that pre-date the canonical migration.
+  const versionId =
+    typeof (data as Record<string, unknown>).version_id === "string"
+      ? ((data as Record<string, unknown>).version_id as string)
+      : null;
+
   if (data.used_at) {
-    return { state: "used", bookId: data.book_id, tokenId: data.id };
+    return { state: "used", bookId: data.book_id, tokenId: data.id, versionId };
   }
   if (new Date(data.expires_at).getTime() < Date.now()) {
-    return { state: "expired", bookId: data.book_id, tokenId: data.id };
+    return { state: "expired", bookId: data.book_id, tokenId: data.id, versionId };
   }
-  return { state: "valid", bookId: data.book_id, tokenId: data.id };
+  return { state: "valid", bookId: data.book_id, tokenId: data.id, versionId };
 }
 
 /**

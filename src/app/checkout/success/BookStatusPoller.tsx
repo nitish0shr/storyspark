@@ -6,145 +6,153 @@ import {
   BookOpen,
   Loader2,
   CheckCircle2,
-  ClipboardCheck,
-  Sparkles,
-  Palette,
-  ShieldCheck,
-  Package,
-  Mail,
-  Heart,
   AlertTriangle,
 } from "lucide-react";
+import {
+  LIFECYCLE_STAGES,
+  resolveCanonicalStage,
+  isDeliveredStage,
+  type LifecycleStage,
+} from "@/lib/book-lifecycle";
+
+/** A durable, final storage/access link shown once the book is Delivered. */
+export interface DurableLink {
+  label: string;
+  url: string;
+}
 
 interface BookStatusPollerProps {
   bookId: string;
-  initialStatus: string;
+  /** books.lifecycle_stage (canonical value) — may be null on legacy rows. */
+  initialStatus: string | null;
+  /** Legacy books.status column — used only as a fallback when the canonical stage is null. */
+  initialLegacyStatus?: string | null;
   initialPdfUrl: string | null;
   childName: string;
+  /** ISO timestamp when the book reached Delivered (stage_delivered_at). */
+  initialDeliveredAt?: string | null;
+  /** Durable, verified final storage/access links, available once Delivered. */
+  initialDurableLinks?: DurableLink[];
+  checkoutSessionId?: string | null;
 }
 
 /**
- * Pizza-tracker style stages. Each stage maps from one (or several) real
- * backend statuses on the `books` table. If/when the backend adds finer
- * grained statuses, just add them to `matches` — the UI updates automatically.
+ * Customer-facing progress tracker.
+ *
+ * Displays the EXACT canonical lifecycle stages the backend reports — it never
+ * simulates or invents fulfilment progress. The tracker advances only when the
+ * backend reports a new canonical stage.
+ *
+ * Canonical lifecycle (backend):
+ *   Generated → Under Review → (Changes Requested → Revised →) Approved
+ *   → Ready for Purchase → Purchased → Delivered
+ *
+ * Internal review stages are shown with customer-appropriate copy but remain
+ * the exact canonical stages — no collapsing into invented steps.
  */
-const STAGES = [
-  {
-    key: "received",
-    label: "Order received",
-    icon: ClipboardCheck,
-    blurb: "We've got your order — thank you!",
-    matches: ["paid", "received", "queued"],
+const STAGE_COPY: Record<LifecycleStage, { label: string; blurb: string }> = {
+  Generated: {
+    label: "Story created",
+    blurb: "Your child's story has been written — we're checking it over.",
   },
-  {
-    key: "story",
-    label: "Writing the story",
-    icon: Sparkles,
-    blurb: "Our AI storytellers are crafting a one-of-a-kind tale.",
-    matches: ["generating_story", "story", "preview_ready"],
+  "Under Review": {
+    label: "Being reviewed",
+    blurb: "Our team is reviewing every page to make sure it's just right.",
   },
-  {
-    key: "illustrations",
-    label: "Designing the book",
-    icon: Palette,
-    blurb: "Painting every page with your child as the hero.",
-    matches: ["generating", "generating_illustrations", "illustrating"],
+  "Changes Requested": {
+    label: "Being refined",
+    blurb: "We've asked for a few tweaks to make the book even better.",
   },
-  {
-    key: "quality",
-    label: "Quality check",
-    icon: ShieldCheck,
-    blurb: "Reviewing every page so it's just right.",
-    matches: ["quality_check", "reviewing"],
+  Revised: {
+    label: "Being refined",
+    blurb: "The story has been revised and is going back for a final look.",
   },
-  {
-    key: "packaging",
-    label: "Packaging your PDF",
-    icon: Package,
-    blurb: "Binding it all into a beautiful keepsake.",
-    matches: ["packaging", "rendering_pdf"],
+  Approved: {
+    label: "Approved",
+    blurb: "Your book has been approved — we're preparing it for you now.",
   },
-  {
-    key: "sending",
-    label: "Sending it your way",
-    icon: Mail,
-    blurb: "Your download link is on its way to your inbox.",
-    matches: ["sending", "emailing"],
+  "Ready for Purchase": {
+    label: "Ready",
+    blurb: "Your book is ready and being finalised.",
   },
-  {
-    key: "delivered",
-    label: "Delivered",
-    icon: Heart,
-    blurb: "Enjoy the story together!",
-    matches: ["complete", "completed", "delivered"],
+  Purchased: {
+    label: "Order confirmed",
+    blurb: "Your purchase is confirmed — we're finishing your book now.",
   },
-] as const;
+  Delivered: {
+    label: "Ready to read!",
+    blurb: "Your book is complete — enjoy the story together!",
+  },
+};
 
-function stageIndexFor(status: string): number {
-  const s = (status || "").toLowerCase();
-  for (let i = 0; i < STAGES.length; i++) {
-    if (STAGES[i].matches.some((m) => s === m)) return i;
-  }
-  // Unknown / early statuses (draft, pending, preview_generating) → before stage 1
-  return 0;
+/** Ordered stages shown in the customer tracker. Exact canonical stages. */
+const VISIBLE_STAGES: readonly LifecycleStage[] = LIFECYCLE_STAGES;
+
+/** Index of a canonical stage in the visible list, or -1 if not resolvable. */
+function stageIndexFor(stage: LifecycleStage | null): number {
+  if (!stage) return -1;
+  return VISIBLE_STAGES.indexOf(stage);
 }
 
 export default function BookStatusPoller({
   bookId,
   initialStatus,
+  initialLegacyStatus = null,
   initialPdfUrl,
   childName,
+  initialDeliveredAt = null,
+  initialDurableLinks = [],
+  checkoutSessionId = null,
 }: BookStatusPollerProps) {
-  const [status, setStatus] = useState(initialStatus);
+  const [canonicalStage, setCanonicalStage] = useState<LifecycleStage | null>(
+    () => resolveCanonicalStage(initialStatus, initialLegacyStatus)
+  );
   const [pdfUrl, setPdfUrl] = useState(initialPdfUrl);
-
-  // While we wait for the real backend to advance, the UI walks slowly
-  // through the early stages so the customer always feels progress.
-  const [simulatedIndex, setSimulatedIndex] = useState(() =>
-    stageIndexFor(initialStatus)
+  const [deliveredAt, setDeliveredAt] = useState<string | null>(initialDeliveredAt);
+  const [durableLinks, setDurableLinks] = useState<DurableLink[]>(initialDurableLinks);
+  const [failed, setFailed] = useState(
+    () => (initialLegacyStatus || "").toLowerCase() === "failed"
   );
 
-  const isFailed = status === "failed";
-  const isComplete =
-    status === "complete" || status === "completed" || status === "delivered";
-
-  const realIndex = stageIndexFor(status);
-  // Always show the furthest stage we've reached (real OR simulated), so the
-  // tracker only ever moves forward.
-  const currentIndex = Math.max(realIndex, simulatedIndex);
-  const polling = !isComplete && !isFailed;
+  const delivered = isDeliveredStage(canonicalStage);
+  const polling = !delivered && !failed;
 
   const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch(`/api/book-status?bookId=${bookId}`);
+      const query = new URLSearchParams({ bookId });
+      if (checkoutSessionId) query.set("sessionId", checkoutSessionId);
+      const res = await fetch(`/api/book-status?${query.toString()}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.status) setStatus(data.status);
+      const rawLegacy: string | null = data.status ?? null;
+      if ((rawLegacy || "").toLowerCase() === "failed") {
+        setFailed(true);
+        return;
+      }
+      // Prefer canonical lifecycle_stage; fall back to legacy status only when null.
+      const resolved = resolveCanonicalStage(data.lifecycleStage ?? null, rawLegacy);
+      if (resolved) setCanonicalStage(resolved);
       if (data.pdfUrl) setPdfUrl(data.pdfUrl);
+      if (data.deliveredAt) setDeliveredAt(data.deliveredAt);
+      if (Array.isArray(data.durableLinks) && data.durableLinks.length > 0) {
+        setDurableLinks(data.durableLinks as DurableLink[]);
+      }
     } catch {
-      // Silently retry on next interval — the next poll will recover.
+      // Silently retry on next interval.
     }
-  }, [bookId]);
+  }, [bookId, checkoutSessionId]);
 
-  // Poll the real backend every 3s.
+  // Poll every 5 s while in progress. No simulated advancement — the tracker
+  // reflects only what the backend reports.
   useEffect(() => {
     if (!polling) return;
-    const interval = setInterval(checkStatus, 3000);
-    return () => clearInterval(interval);
+    const id = setInterval(checkStatus, 5000);
+    return () => clearInterval(id);
   }, [polling, checkStatus]);
 
-  // Gently nudge the simulated index forward (max stops one step before
-  // "delivered" — only the real backend can mark it delivered).
-  useEffect(() => {
-    if (!polling) return;
-    const tick = setInterval(() => {
-      setSimulatedIndex((prev) => Math.min(prev + 1, STAGES.length - 2));
-    }, 18000);
-    return () => clearInterval(tick);
-  }, [polling]);
+  // ── Failure state ──────────────────────────────────────────────────────────
 
-  // -------- Failure state --------
-  if (isFailed) {
+  if (failed) {
     return (
       <div className="bg-white rounded-2xl border border-amber-200 p-8 text-center shadow-sm">
         <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-amber-50 mb-4">
@@ -180,8 +188,27 @@ export default function BookStatusPoller({
     );
   }
 
-  // -------- Complete state --------
-  if (isComplete && pdfUrl) {
+  // ── Delivered / complete state ─────────────────────────────────────────────
+
+  if (delivered) {
+    const deliveredLabel = deliveredAt
+      ? new Date(deliveredAt).toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
+
+    // Prefer durable, verified final links; fall back to the book PDF URL.
+    const links: DurableLink[] =
+      durableLinks.length > 0
+        ? durableLinks
+        : pdfUrl
+          ? [{ label: "Download the book", url: pdfUrl }]
+          : [];
+
     return (
       <div className="bg-white rounded-2xl border border-green-200 p-8 text-center shadow-sm">
         <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-green-50 mb-4">
@@ -190,19 +217,25 @@ export default function BookStatusPoller({
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
           {childName}&apos;s book is ready!
         </h2>
+        {deliveredLabel && (
+          <p className="text-sm text-gray-500 mb-1">Delivered {deliveredLabel}</p>
+        )}
         <p className="text-gray-500 mb-6">
           We&apos;ve also emailed you a download link, so you can come back to
           it any time.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href={pdfUrl}
-            download
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 text-white font-semibold shadow-lg shadow-violet-200 hover:shadow-violet-300 transition-shadow"
-          >
-            <Download className="h-5 w-5" />
-            Download the book
-          </a>
+          {links.map((link, i) => (
+            <a
+              key={link.url + i}
+              href={link.url}
+              download
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 text-white font-semibold shadow-lg shadow-violet-200 hover:shadow-violet-300 transition-shadow"
+            >
+              <Download className="h-5 w-5" />
+              {link.label}
+            </a>
+          ))}
           <a
             href={`/preview/${bookId}`}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border-2 border-violet-200 text-violet-700 font-semibold hover:border-violet-400 transition-colors"
@@ -215,9 +248,15 @@ export default function BookStatusPoller({
     );
   }
 
-  // -------- In-progress tracker --------
-  const activeStage = STAGES[currentIndex];
-  const progressPct = ((currentIndex + 1) / STAGES.length) * 100;
+  // ── In-progress tracker ────────────────────────────────────────────────────
+
+  // Only stages up to and including the current one are shown as reached; we
+  // never simulate stages the backend has not reported.
+  const currentIndex = stageIndexFor(canonicalStage);
+  const activeStage = currentIndex >= 0 ? VISIBLE_STAGES[currentIndex] : null;
+  const activeCopy = activeStage ? STAGE_COPY[activeStage] : null;
+  const reachedCount = currentIndex >= 0 ? currentIndex + 1 : 0;
+  const progressPct = (reachedCount / VISIBLE_STAGES.length) * 100;
 
   return (
     <div className="bg-white rounded-2xl border border-violet-100 p-6 sm:p-8 shadow-sm">
@@ -230,19 +269,20 @@ export default function BookStatusPoller({
           Creating {childName}&apos;s storybook
         </h2>
         <p className="text-gray-500 text-sm">
-          {activeStage.blurb}
+          {activeCopy
+            ? activeCopy.blurb
+            : "Your purchase is confirmed — we're getting started on your book."}
         </p>
       </div>
 
-      {/* Stage list */}
+      {/* Stage list — exact canonical stages */}
       <ol className="relative space-y-3 mb-6">
-        {STAGES.map((stage, i) => {
-          const done = i < currentIndex;
+        {VISIBLE_STAGES.map((stage, i) => {
+          const done = currentIndex >= 0 && i < currentIndex;
           const active = i === currentIndex;
-          const Icon = stage.icon;
           return (
             <li
-              key={stage.key}
+              key={stage}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
                 active
                   ? "bg-violet-50/70"
@@ -265,16 +305,20 @@ export default function BookStatusPoller({
                 ) : active ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Icon className="h-4 w-4" />
+                  <span className="text-xs font-semibold">{i + 1}</span>
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <p
                   className={`text-sm font-medium ${
-                    active ? "text-gray-900" : done ? "text-gray-700" : "text-gray-500"
+                    active
+                      ? "text-gray-900"
+                      : done
+                        ? "text-gray-700"
+                        : "text-gray-500"
                   }`}
                 >
-                  {stage.label}
+                  {STAGE_COPY[stage].label}
                 </p>
               </div>
               {active && (
@@ -292,7 +336,7 @@ export default function BookStatusPoller({
         })}
       </ol>
 
-      {/* Overall progress bar */}
+      {/* Progress bar */}
       <div className="mb-4">
         <div className="h-2 bg-violet-100 rounded-full overflow-hidden">
           <div
@@ -309,8 +353,7 @@ export default function BookStatusPoller({
           download link the moment it&apos;s ready.
         </p>
         <p className="text-xs text-gray-400">
-          Most books finish in a few minutes. Refreshing won&apos;t make it
-          faster — promise!
+          We&apos;ll keep this page up to date as your book progresses.
         </p>
       </div>
     </div>

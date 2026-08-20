@@ -12,13 +12,25 @@ const statusColor: Record<string, string> = {
   failed: "bg-red-100 text-red-700",
 };
 
+// Exact canonical lifecycle stages.
+const stageColor: Record<string, string> = {
+  Generated: "bg-gray-100 text-gray-700",
+  "Under Review": "bg-amber-100 text-amber-700",
+  "Changes Requested": "bg-orange-100 text-orange-700",
+  Revised: "bg-blue-100 text-blue-700",
+  Approved: "bg-emerald-100 text-emerald-700",
+  "Ready for Purchase": "bg-violet-100 text-violet-700",
+  Purchased: "bg-indigo-100 text-indigo-700",
+  Delivered: "bg-green-100 text-green-700",
+};
+
 async function getBooks() {
   const supabase = createAdminClient();
 
   const { data: books } = await supabase
     .from("books")
     .select(
-      "id, user_id, child_name, theme_id, theme_title, status, is_purchased, page_count, pdf_url, created_at, updated_at"
+      "id, user_id, child_name, theme_id, theme_title, status, lifecycle_stage, is_purchased, page_count, pdf_url, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -72,6 +84,9 @@ export default async function AdminBooksPage() {
                   Theme
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">
+                  Stage
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">
                   Status
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">
@@ -92,7 +107,7 @@ export default async function AdminBooksPage() {
               {books.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-gray-400"
                   >
                     No books yet.
@@ -109,6 +124,17 @@ export default async function AdminBooksPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {book.theme_title || book.theme_id}
+                    </td>
+                    <td className="px-4 py-3">
+                      {book.lifecycle_stage ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${stageColor[book.lifecycle_stage] ?? "bg-gray-100 text-gray-600"}`}
+                        >
+                          {book.lifecycle_stage}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span

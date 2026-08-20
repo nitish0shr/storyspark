@@ -17,7 +17,16 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Review queue - Starmee" };
 
-const ACTIONABLE = ["pending_review", "needs_regeneration"];
+/**
+ * Canonical lifecycle stages that require a reviewer to act. "Under Review" and
+ * "Revised" are both actionable. "Changes Requested" is awaiting an automated
+ * revision, not a person, so it is excluded.
+ */
+const ACTIONABLE_STAGES = ["Under Review", "Revised"];
+
+/** Legacy status values that map to an actionable review state. Used ONLY as a
+ *  fallback for rows without a canonical lifecycle_stage. */
+const ACTIONABLE_LEGACY = ["pending_review", "needs_regeneration"];
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -29,17 +38,56 @@ function timeAgo(iso: string | null): string {
   return Math.floor(hours / 24) + "d ago";
 }
 
+/** Human label for the canonical stage, falling back to legacy status. */
+function stageLabel(
+  stage: string | null,
+  status: string,
+): { label: string; needsRegen: boolean } {
+  if (stage === "Revised") return { label: "Revised — re-review", needsRegen: false };
+  if (stage === "Under Review") return { label: "Under review", needsRegen: false };
+  // Legacy fallback (only reached when lifecycle_stage is null).
+  if (status === "needs_regeneration")
+    return { label: "Needs regeneration", needsRegen: true };
+  return { label: "Pending review", needsRegen: false };
+}
+
 export default async function ReviewQueuePage() {
-  const { data } = await supabaseAdmin
+  const select =
+    "id, public_ref, status, lifecycle_stage, review_version_id, current_version_id, recipient_name, child_name, theme_title, selected_animal, generation_attempts, validation_result, created_at, rejection_reason";
+
+  // Canonical-actionable rows (exact lifecycle stages).
+  const { data: canonicalRows } = await supabaseAdmin
     .from("books")
-    .select(
-      "id, public_ref, status, recipient_name, child_name, theme_title, selected_animal, generation_attempts, validation_result, created_at, rejection_reason",
-    )
-    .in("status", ACTIONABLE)
+    .select(select)
+    .in("lifecycle_stage", ACTIONABLE_STAGES)
     .order("created_at", { ascending: true });
 
-  const rows = data ?? [];
-  const links = await Promise.all(rows.map((r) => createReviewToken(r.id)));
+  // Legacy-actionable rows: only those without a canonical stage set.
+  const { data: legacyRows } = await supabaseAdmin
+    .from("books")
+    .select(select)
+    .is("lifecycle_stage", null)
+    .in("status", ACTIONABLE_LEGACY)
+    .order("created_at", { ascending: true });
+
+  const rows = [...(canonicalRows ?? []), ...(legacyRows ?? [])].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  // Mint each link bound to the EXACT review version (preferring
+  // review_version_id, then current_version_id) so the reviewer sees the
+  // precise version awaiting approval.
+  const links = await Promise.all(
+    rows.map((r) => {
+      const rec = r as Record<string, unknown>;
+      const versionId =
+        (rec.review_version_id as string | null) ??
+        (rec.current_version_id as string | null) ??
+        null;
+      return createReviewToken(r.id, versionId);
+    }),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -61,7 +109,12 @@ export default async function ReviewQueuePage() {
           {rows.map((r, i) => {
             const failures =
               (r.validation_result as { failures?: unknown[] } | null)?.failures?.length ?? 0;
-            const needsRegen = r.status === "needs_regeneration";
+            const lifecycleStage =
+              ((r as Record<string, unknown>).lifecycle_stage as string | null) ?? null;
+            const { label: stageText, needsRegen } = stageLabel(
+              lifecycleStage,
+              r.status,
+            );
             return (
               <li
                 key={r.id}
@@ -89,7 +142,7 @@ export default async function ReviewQueuePage() {
                           : "bg-violet-100 text-violet-800")
                       }
                     >
-                      {needsRegen ? "Needs regeneration" : "Pending review"}
+                      {stageText}
                     </span>
                     <Link
                       href={"/review/" + links[i]}

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getLanguageByCode } from "@/data/languages";
+import { resolveCanonicalStage, type LifecycleStage } from "@/lib/book-lifecycle";
 import {
   BookOpen,
   Download,
@@ -19,6 +20,8 @@ import {
   Loader2,
   Globe,
   Users,
+  ShieldCheck,
+  PackageCheck,
 } from "lucide-react";
 
 interface BookLibraryProps {
@@ -35,19 +38,82 @@ function getTheme(themes: Theme[], themeId: string) {
   return themes.find((t) => t.id === themeId);
 }
 
-function statusConfig(status: Book["status"]) {
+interface StatusDisplay {
+  label: string;
+  variant: "default" | "destructive";
+  className: string;
+  icon: typeof Clock;
+  animate?: boolean;
+}
+
+/**
+ * Display config for the exact canonical lifecycle stages. Customer-facing copy
+ * (UK English). Internal review stages are shown with reassuring copy but remain
+ * the exact canonical stage — no invented steps.
+ */
+function lifecycleConfig(stage: LifecycleStage): StatusDisplay {
+  switch (stage) {
+    case "Generated":
+      return {
+        label: "Story created",
+        variant: "default",
+        className: "bg-violet-100 text-violet-700 border-violet-200",
+        icon: Sparkles,
+      };
+    case "Under Review":
+    case "Changes Requested":
+    case "Revised":
+      return {
+        label: "Being reviewed",
+        variant: "default",
+        className: "bg-amber-100 text-amber-700 border-amber-200",
+        icon: ShieldCheck,
+      };
+    case "Approved":
+      return {
+        label: "Approved",
+        variant: "default",
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: CheckCircle2,
+      };
+    case "Ready for Purchase":
+      return {
+        label: "Ready",
+        variant: "default",
+        className: "bg-violet-100 text-violet-700 border-violet-200",
+        icon: BookOpen,
+      };
+    case "Purchased":
+      return {
+        label: "Order confirmed",
+        variant: "default",
+        className: "bg-blue-100 text-blue-700 border-blue-200",
+        icon: PackageCheck,
+      };
+    case "Delivered":
+      return {
+        label: "Delivered",
+        variant: "default",
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: CheckCircle2,
+      };
+  }
+}
+
+/** Legacy status display — used ONLY when no canonical lifecycle stage exists. */
+function legacyStatusConfig(status: Book["status"]): StatusDisplay {
   switch (status) {
     case "complete":
       return {
         label: "Complete",
-        variant: "default" as const,
+        variant: "default",
         className: "bg-emerald-100 text-emerald-700 border-emerald-200",
         icon: CheckCircle2,
       };
     case "preview_ready":
       return {
         label: "Preview Ready",
-        variant: "default" as const,
+        variant: "default",
         className: "bg-violet-100 text-violet-700 border-violet-200",
         icon: Sparkles,
       };
@@ -55,32 +121,46 @@ function statusConfig(status: Book["status"]) {
     case "preview_generating":
       return {
         label: "Generating...",
-        variant: "default" as const,
+        variant: "default",
         className: "bg-amber-100 text-amber-700 border-amber-200",
         icon: Loader2,
+        animate: true,
       };
     case "draft":
       return {
         label: "Draft",
-        variant: "default" as const,
+        variant: "default",
         className: "bg-gray-100 text-gray-600 border-gray-200",
         icon: Clock,
       };
     case "failed":
       return {
         label: "Failed",
-        variant: "destructive" as const,
+        variant: "destructive",
         className: "bg-red-100 text-red-700 border-red-200",
         icon: AlertCircle,
       };
     default:
       return {
         label: status,
-        variant: "default" as const,
+        variant: "default",
         className: "bg-gray-100 text-gray-600 border-gray-200",
         icon: Clock,
       };
   }
+}
+
+/**
+ * Resolves the status badge for a book. Prefers the canonical lifecycle stage;
+ * only falls back to the legacy operational status when lifecycle_stage is null.
+ */
+function statusDisplay(book: Book): StatusDisplay {
+  if ((book.status as string) === "failed" && !book.lifecycleStage) {
+    return legacyStatusConfig(book.status);
+  }
+  const stage = resolveCanonicalStage(book.lifecycleStage, null);
+  if (stage) return lifecycleConfig(stage);
+  return legacyStatusConfig(book.status);
 }
 
 function BookCard({
@@ -92,8 +172,13 @@ function BookCard({
   childName: string;
   theme: Theme | undefined;
 }) {
-  const config = statusConfig(book.status);
+  const config = statusDisplay(book);
   const StatusIcon = config.icon;
+  const stage = resolveCanonicalStage(book.lifecycleStage, book.status);
+  const isDelivered = stage === "Delivered";
+  const isGenerating =
+    !book.lifecycleStage &&
+    (book.status === "generating" || book.status === "preview_generating");
   const gradientClass = theme?.colorScheme.coverGradient ?? "from-violet-900 to-pink-900";
   const date = new Date(book.createdAt).toLocaleDateString("en-US", {
     month: "short",
@@ -136,9 +221,7 @@ function BookCard({
             className={`${config.className} text-xs font-medium border px-2 py-0.5`}
           >
             <StatusIcon
-              className={`h-3 w-3 mr-1 ${
-                config.label === "Generating..." ? "animate-spin" : ""
-              }`}
+              className={`h-3 w-3 mr-1 ${config.animate ? "animate-spin" : ""}`}
             />
             {config.label}
           </Badge>
@@ -166,15 +249,16 @@ function BookCard({
         </div>
 
         {/* Actions */}
-        {book.status === "complete" && book.pdfUrl && (
-          <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer">
-            <Button className="w-full rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] hover:from-[#6D28D9] hover:to-[#5B21B6] text-white font-medium text-sm shadow-md shadow-violet-200/50 border-0">
-              <Download className="h-4 w-4 mr-1.5" />
-              Download PDF
-            </Button>
-          </a>
-        )}
-        {book.status === "preview_ready" && (
+        {(isDelivered || (!book.lifecycleStage && book.status === "complete")) &&
+          book.pdfUrl && (
+            <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer">
+              <Button className="w-full rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] hover:from-[#6D28D9] hover:to-[#5B21B6] text-white font-medium text-sm shadow-md shadow-violet-200/50 border-0">
+                <Download className="h-4 w-4 mr-1.5" />
+                Download PDF
+              </Button>
+            </a>
+          )}
+        {!book.lifecycleStage && book.status === "preview_ready" && (
           <Link href={`/preview/${book.id}`}>
             <Button
               variant="outline"
@@ -185,7 +269,7 @@ function BookCard({
             </Button>
           </Link>
         )}
-        {(book.status === "generating" || book.status === "preview_generating") && (
+        {isGenerating && (
           <div className="w-full py-2 text-center text-sm text-amber-600 font-medium">
             <Loader2 className="h-4 w-4 mr-1.5 inline animate-spin" />
             Creating magic...

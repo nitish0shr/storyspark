@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Lock,
@@ -9,15 +9,24 @@ import {
   Download,
   Gift,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PRICING } from "@/lib/stripe";
+import Link from "next/link";
 
 interface PaywallOverlayProps {
   bookId: string;
   childName: string;
   remainingPages: number;
   price?: string;
+  /** Exact approved version ID — forwarded to checkout so the backend can
+   *  verify the buyer is purchasing the version they previewed. */
+  versionId?: string;
+  /** Opaque access grant token from the URL.  Forwarded to checkout body so
+   *  an anonymous visitor with a valid preview grant can purchase.
+   *  Never placed in the share URL — only sent in the POST body. */
+  accessToken?: string;
 }
 
 export default function PaywallOverlay({
@@ -25,20 +34,58 @@ export default function PaywallOverlay({
   childName,
   remainingPages,
   price = PRICING.base.label,
+  versionId,
+  accessToken,
 }: PaywallOverlayProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [purchaserEmail, setPurchaserEmail] = useState("");
+
+  const handleUnlock = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = {
+        bookId,
+        tier: "base",
+      };
+      if (versionId) body.versionId = versionId;
+      // Access token sent in body only — never in the URL
+      if (accessToken) body.accessToken = accessToken;
+      if (accessToken) {
+        const normalisedEmail = purchaserEmail.trim();
+        if (!normalisedEmail) {
+          setError("Please enter the email address for your purchase.");
+          return;
+        }
+        body.purchaserEmail = normalisedEmail;
+      }
+
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const features = [
-    {
-      icon: BookOpen,
-      text: `Full story with ${remainingPages} more pages`,
-    },
-    {
-      icon: Download,
-      text: "High-quality PDF download",
-    },
-    {
-      icon: Sparkles,
-      text: "Saved to your account forever",
-    },
+    { icon: BookOpen, text: `Full story with ${remainingPages} more pages` },
+    { icon: Download, text: "High-quality PDF download" },
+    { icon: Sparkles, text: "Saved to your account forever" },
   ];
 
   return (
@@ -71,17 +118,16 @@ export default function PaywallOverlay({
 
         {/* Subheading */}
         <p className="text-gray-500 text-sm sm:text-base mb-6">
-          <span className="font-semibold text-[#7C3AED]">{remainingPages} more magical pages</span>{" "}
+          <span className="font-semibold text-[#7C3AED]">
+            {remainingPages} more magical pages
+          </span>{" "}
           waiting to be discovered
         </p>
 
         {/* Feature list */}
         <div className="w-full max-w-xs space-y-3 mb-8">
           {features.map((feature, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 text-left"
-            >
+            <div key={i} className="flex items-center gap-3 text-left">
               <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
                 <feature.icon className="h-4 w-4 text-[#7C3AED]" />
               </div>
@@ -90,21 +136,46 @@ export default function PaywallOverlay({
           ))}
         </div>
 
-        {/* CTA Button */}
-        <Link href={`/checkout?bookId=${bookId}`} className="w-full max-w-xs">
-          <Button
-            className={cn(
-              "w-full h-12 rounded-xl text-base font-semibold text-white border-0",
-              "bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#EC4899]",
-              "hover:from-[#6D28D9] hover:via-[#7C3AED] hover:to-[#DB2777]",
-              "shadow-lg shadow-violet-300/50 hover:shadow-xl hover:shadow-violet-300/60",
-              "transition-all duration-300 hover:-translate-y-0.5"
-            )}
-          >
+        {/* Error */}
+        {error && (
+          <p className="mb-4 text-sm text-red-600 max-w-xs">{error}</p>
+        )}
+
+        {accessToken ? (
+          <label className="mb-4 w-full max-w-xs text-left text-sm text-gray-700">
+            Purchase email
+            <input
+              type="email"
+              autoComplete="email"
+              required
+              value={purchaserEmail}
+              onChange={(event) => setPurchaserEmail(event.target.value)}
+              placeholder="you@example.com"
+              className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-gray-900 outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-violet-100"
+            />
+          </label>
+        ) : null}
+
+        {/* CTA Button — POSTs to checkout, no sensitive data in URL */}
+        <Button
+          onClick={handleUnlock}
+          disabled={loading}
+          className={cn(
+            "w-full max-w-xs h-12 rounded-xl text-base font-semibold text-white border-0",
+            "bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#EC4899]",
+            "hover:from-[#6D28D9] hover:via-[#7C3AED] hover:to-[#DB2777]",
+            "shadow-lg shadow-violet-300/50 hover:shadow-xl hover:shadow-violet-300/60",
+            "transition-all duration-300 hover:-translate-y-0.5",
+            "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0",
+          )}
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
             <Lock className="h-4 w-4 mr-2" />
-            Unlock Full Book — {price}
-          </Button>
-        </Link>
+          )}
+          {loading ? "Preparing checkout…" : `Unlock Full Book — ${price}`}
+        </Button>
 
         {/* Secondary link */}
         <Link
