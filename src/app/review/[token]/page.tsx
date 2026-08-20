@@ -16,6 +16,10 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resolveReviewToken } from "@/lib/review-tokens";
 import { toViewableUrls } from "@/lib/storage-urls";
+import {
+  canRenderCanonicalReview,
+  hasCanonicalReviewIdentity,
+} from "@/lib/review-page-access";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +35,19 @@ function Shell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
     </div>
+  );
+}
+
+function ReviewUnavailable() {
+  return (
+    <Shell>
+      <div className={CARD}>
+        <p className="text-gray-700">
+          This review link is no longer available. Ask an administrator for a
+          fresh link or reconciliation.
+        </p>
+      </div>
+    </Shell>
   );
 }
 
@@ -112,12 +129,6 @@ function stageLabel(stage: string | null, status: string): string {
     failed: "Failed",
   };
   return map[status] ?? status;
-}
-
-/** Only canonically version-bound review stages are actionable. */
-function isActionable(stage: string | null, status: string): boolean {
-  void status;
-  return stage === "Under Review" || stage === "Revised";
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -295,53 +306,32 @@ export default async function ReviewPage({
 
   const resolved = await resolveReviewToken(token);
 
-  if (!resolved.bookId) {
-    return (
-      <Shell>
-        <div className={CARD}>
-          <p className="text-gray-700">
-            This review link is not valid. It may have been mistyped, or it may belong
-            to an order that has since been removed.
-          </p>
-        </div>
-      </Shell>
-    );
+  if (
+    !hasCanonicalReviewIdentity({
+      tokenState: resolved.state,
+      bookId: resolved.bookId,
+      tokenVersionId: resolved.versionId,
+    })
+  ) {
+    return <ReviewUnavailable />;
   }
 
   // Fetch the book with both lifecycle_stage and legacy status.
   const { data: book } = await supabaseAdmin
     .from("books")
     .select(
-      "id, status, lifecycle_stage, public_ref, purchaser_email, recipient_name, child_name, theme_title, selected_animal, story_text, illustration_urls, cover_illustration_url, validation_result, generation_attempts, reviewed_by, reviewed_at, review_notes, rejection_reason, created_at, current_version_id, review_version_id",
+      "id, status, lifecycle_stage, public_ref, purchaser_email, recipient_name, child_name, theme_title, selected_animal, generation_attempts, created_at, review_version_id",
     )
     .eq("id", resolved.bookId)
     .maybeSingle();
 
-  if (!book) {
-    return (
-      <Shell>
-        <div className={CARD}>
-          <p className="text-gray-700">That order no longer exists.</p>
-        </div>
-      </Shell>
-    );
-  }
+  if (!book) return <ReviewUnavailable />;
 
   const lifecycleStage = (book as Record<string, unknown>).lifecycle_stage as string | null ?? null;
-  const stageIsActionable = isActionable(lifecycleStage, book.status);
   const reviewVersionId =
     ((book as Record<string, unknown>).review_version_id as string | null) ??
     null;
-  const exactReviewBinding = Boolean(
-    resolved.versionId && resolved.versionId === reviewVersionId,
-  );
-  const actionable =
-    resolved.state === "valid" && stageIsActionable && exactReviewBinding;
-
-  // ── Resolve the exact version bound to this token ────────────────────────
-  // A mismatched/missing binding in an actionable stage is fail-closed.
-  const versionId =
-    stageIsActionable && !exactReviewBinding ? null : resolved.versionId;
+  const versionId = resolved.versionId as string;
 
   let version: BookVersionRow | null = null;
   let pages: VersionPage[] = [];
@@ -351,63 +341,44 @@ export default async function ReviewPage({
   let predImageUrls: (string | null)[] = [];
   let isSuccessor = false;
 
-  if (versionId) {
-    const { data: vRow } = await supabaseAdmin
-      .from("book_versions")
-      .select("id, version_number, predecessor_id, created_at")
-      .eq("id", versionId)
-      .maybeSingle();
-    version = vRow ? (vRow as unknown as BookVersionRow) : null;
+  const { data: vRow } = await supabaseAdmin
+    .from("book_versions")
+    .select("id, version_number, predecessor_id, created_at")
+    .eq("id", versionId)
+    .eq("book_id", book.id)
+    .maybeSingle();
+  version = vRow ? (vRow as unknown as BookVersionRow) : null;
 
-    pages = await fetchVersionPages(versionId);
-    pageImageUrls = await toViewableUrls(pages.map((p) => p.illustration_url));
-    versionFindings = await fetchVersionFindings(versionId);
-    for (const finding of versionFindings) {
-      if (finding.page_number === null || finding.page_number === undefined) continue;
-      const page = pages.find((item) => item.page_number === finding.page_number);
-      if (page) page.quality_findings.push(finding);
-    }
-
-    // Predecessor for before/after diff.
-    const predId = version?.predecessor_id ?? null;
-    if (predId) {
-      isSuccessor = true;
-      predecessorPages = await fetchVersionPages(predId);
-      predImageUrls = await toViewableUrls(predecessorPages.map((p) => p.illustration_url));
-    }
+  pages = await fetchVersionPages(versionId);
+  if (
+    !canRenderCanonicalReview({
+      tokenState: resolved.state,
+      bookId: resolved.bookId,
+      tokenVersionId: resolved.versionId,
+      lifecycleStage,
+      reviewVersionId,
+      versionExists: Boolean(version),
+      pageCount: pages.length,
+    })
+  ) {
+    return <ReviewUnavailable />;
   }
 
-  // ── Legacy fallback when no version rows exist ────────────────────────────
-  if (pages.length === 0) {
-    const rawIlls: string[] = Array.isArray(book.illustration_urls)
-      ? (book.illustration_urls as string[]).filter(Boolean)
-      : [];
-    const signedIlls = await toViewableUrls(rawIlls);
-
-    const storyStr =
-      typeof book.story_text === "string"
-        ? book.story_text
-        : book.story_text
-          ? JSON.stringify(book.story_text, null, 2)
-          : "";
-    const paragraphs = storyStr.split(/\n{2,}/).map((s: string) => s.trim()).filter(Boolean);
-    const len = Math.max(paragraphs.length, rawIlls.length);
-    for (let i = 0; i < len; i++) {
-      pages.push({
-        page_number: i + 1,
-        text_content: paragraphs[i] ?? null,
-        illustration_url: rawIlls[i] ?? null,
-        is_preview: false,
-        quality_findings: [],
-      });
-      pageImageUrls.push(signedIlls[i] ?? null);
-    }
+  pageImageUrls = await toViewableUrls(pages.map((p) => p.illustration_url));
+  versionFindings = await fetchVersionFindings(versionId);
+  for (const finding of versionFindings) {
+    if (finding.page_number === null || finding.page_number === undefined) continue;
+    const page = pages.find((item) => item.page_number === finding.page_number);
+    if (page) page.quality_findings.push(finding);
   }
 
-  // Legacy validation result.
-  const validation = book.validation_result as
-    | { ok?: boolean; failures?: Array<{ code: string; detail: string }> }
-    | null;
+  // Predecessor for before/after diff.
+  const predId = version?.predecessor_id ?? null;
+  if (predId) {
+    isSuccessor = true;
+    predecessorPages = await fetchVersionPages(predId);
+    predImageUrls = await toViewableUrls(predecessorPages.map((p) => p.illustration_url));
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -474,20 +445,10 @@ export default async function ReviewPage({
               <FindingBadge key={i} finding={f} />
             ))}
           </div>
-        ) : validation ? (
-          validation.ok ? (
-            <p className="mt-1 text-sm text-green-700">Passed all automated checks.</p>
-          ) : (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700">
-              {(validation.failures || []).map((f, i) => (
-                <li key={i}>
-                  <span className="font-mono text-xs">{f.code}</span> — {f.detail}
-                </li>
-              ))}
-            </ul>
-          )
         ) : (
-          <p className="mt-1 text-sm text-gray-500">Not run for this version.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            No findings recorded for this version.
+          </p>
         )}
         <p className="mt-3 text-xs text-gray-500">
           Automated checks never release anything. Your approval is what sends it to the customer.
@@ -521,28 +482,8 @@ export default async function ReviewPage({
         </div>
       ) : null}
 
-      {/* Decision forms or status notice */}
-      {!actionable ? (
-        <div className={CARD}>
-          <p className="text-sm font-medium text-gray-900">Already processed</p>
-          <p className="mt-1 text-sm text-gray-600">
-            This order is currently{" "}
-            <strong>{stageLabel(lifecycleStage, book.status)}</strong>
-            {book.reviewed_by ? <>, handled by {book.reviewed_by}</> : null}
-            {book.reviewed_at ? <> on {new Date(book.reviewed_at).toLocaleString()}</> : null}.
-          </p>
-          {book.rejection_reason ? (
-            <p className="mt-2 text-sm text-gray-600">Reason: {book.rejection_reason}</p>
-          ) : null}
-        </div>
-      ) : resolved.state !== "valid" ? (
-        <div className={CARD}>
-          <p className="text-sm text-gray-700">
-            This link is {resolved.state}. Ask for a fresh review link.
-          </p>
-        </div>
-      ) : (
-        <>
+      {/* Canonical decision forms. Invalid/stale links returned before content. */}
+      <>
           {/* Approve */}
           <form method="POST" action="/api/review/action" className={CARD + " space-y-3"}>
             <input type="hidden" name="token" value={token} />
@@ -651,8 +592,7 @@ export default async function ReviewPage({
               Reject and regenerate from scratch
             </button>
           </form>
-        </>
-      )}
+      </>
     </Shell>
   );
 }
