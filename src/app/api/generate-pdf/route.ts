@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Verify the user owns this book
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status, story_text")
+      .select("id, user_id, status, story_text, lifecycle_stage")
       .eq("id", bookId)
       .single();
 
@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
 
     if (book.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (book.lifecycle_stage) {
+      return NextResponse.json(
+        {
+          error:
+            "Canonical final PDFs are created only by the paid fulfilment workflow.",
+        },
+        { status: 409 },
+      );
     }
 
     // Must have story text to assemble PDF
@@ -59,16 +68,8 @@ export async function POST(request: NextRequest) {
     // Assemble the PDF (synchronous -- waits for result)
     const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
 
-    // Update the book record with PDF URLs
-    await supabaseAdmin
-      .from("books")
-      .update({
-        pdf_url: pdfUrl,
-        pdf_print_url: pdfPrintUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", bookId);
-
+    // These are bounded private links. Never persist an expiring signed URL as
+    // a durable book or artefact location.
     return NextResponse.json({ pdfUrl, pdfPrintUrl }, { status: 200 });
   } catch (error) {
     console.error("Generate PDF error:", error);

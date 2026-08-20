@@ -447,21 +447,71 @@ export async function POST(request: NextRequest) {
           .single();
       if (reservationError || !insertedOrder) {
         if (reservationError?.code === "23505") {
+          // A concurrent identical request may have won the reservation race.
+          // Recover only that exact operation identity; never attach this buyer
+          // to another pending checkout for the same version.
+          const { data: concurrentReservation } = await supabaseAdmin
+            .from("orders")
+            .select(
+              "id, amount_cents, stripe_checkout_session_id, checkout_reservation_expires_at, created_at, status",
+            )
+            .eq("book_id", bookId)
+            .eq("version_id", resolvedVersionId)
+            .eq("checkout_idempotency_key", idempotencyKey)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (
+            concurrentReservation &&
+            !concurrentReservation.stripe_checkout_session_id &&
+            shouldReuseUnboundCheckoutReservation({
+              status: concurrentReservation.status,
+              stripeSessionId:
+                concurrentReservation.stripe_checkout_session_id,
+              reservationExpiresAt:
+                concurrentReservation.checkout_reservation_expires_at,
+              createdAt: concurrentReservation.created_at,
+              nowMs: Date.now(),
+            })
+          ) {
+            reservedOrder = { id: concurrentReservation.id };
+            finalPrice = Number(concurrentReservation.amount_cents);
+          } else if (
+            concurrentReservation?.stripe_checkout_session_id
+          ) {
+            try {
+              const concurrentSession =
+                await stripe.checkout.sessions.retrieve(
+                  concurrentReservation.stripe_checkout_session_id,
+                );
+              if (concurrentSession.status === "open" && concurrentSession.url) {
+                return NextResponse.json({
+                  checkoutUrl: concurrentSession.url,
+                });
+              }
+            } catch {
+              // Fail closed below; a retry will reconcile the durable winner.
+            }
+          }
+          if (!reservedOrder) {
+            return NextResponse.json(
+              {
+                error:
+                  "A checkout is already active for this approved book version. Please use the original checkout or try again shortly.",
+              },
+              { status: 409 },
+            );
+          }
+        } else {
+          console.error("Failed to reserve checkout order:", reservationError);
           return NextResponse.json(
-            {
-              error:
-                "A checkout is already active for this approved book version. Please use the original checkout or try again shortly.",
-            },
-            { status: 409 },
+            { error: "Could not reserve checkout. Please try again." },
+            { status: 500 },
           );
         }
-        console.error("Failed to reserve checkout order:", reservationError);
-        return NextResponse.json(
-          { error: "Could not reserve checkout. Please try again." },
-          { status: 500 },
-        );
+      } else {
+        reservedOrder = insertedOrder;
       }
-      reservedOrder = insertedOrder;
     }
 
     // ------------------------------------------------------------------

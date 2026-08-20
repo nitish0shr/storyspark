@@ -161,11 +161,24 @@ create index if not exists idx_book_quality_findings_version
 create or replace function public.reject_version_mutation()
 returns trigger
 language plpgsql
+security definer
+set search_path = ''
 as $$
 begin
+  -- Preserve immutable records during direct UPDATE/DELETE, while allowing the
+  -- database's intended parent cascades (for example deleting a book/profile)
+  -- to remove their dependent versions and pages.
+  if TG_OP = 'DELETE' and pg_catalog.pg_trigger_depth() > 1 then
+    return OLD;
+  end if;
   raise exception 'Mutations to % are not permitted after insert (immutable record)', TG_TABLE_NAME;
 end;
 $$;
+
+alter function public.reject_version_mutation() owner to postgres;
+revoke execute on function public.reject_version_mutation()
+  from public, anon, authenticated;
+grant execute on function public.reject_version_mutation() to service_role;
 
 do $$
 begin
@@ -302,6 +315,32 @@ create index if not exists idx_product_artefacts_book
 
 create index if not exists idx_product_artefacts_version
   on public.product_artefacts(version_id) where version_id is not null;
+
+-- Final paid-book files are isolated from legacy/public media. There are no
+-- anon/authenticated object policies: the trusted server issues bounded signed
+-- URLs only after exact payment, version, and access authorisation.
+insert into storage.buckets (
+  id, name, public, file_size_limit, allowed_mime_types
+)
+values (
+  'final-books',
+  'final-books',
+  false,
+  52428800,
+  array['application/pdf', 'application/epub+zip']::text[]
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Service role manages private final books" on storage.objects;
+create policy "Service role manages private final books"
+  on storage.objects
+  for all
+  to service_role
+  using (bucket_id = 'final-books')
+  with check (bucket_id = 'final-books');
 
 -- ============================================================
 -- 13. orders: new columns
@@ -555,6 +594,7 @@ create table if not exists public.delivery_attempts (
   order_id              uuid        not null references public.orders(id) on delete cascade,
   book_id               uuid        not null references public.books(id) on delete cascade,
   version_id            uuid        references public.book_versions(id) on delete set null,
+  access_grant_id       uuid        references public.access_grants(id) on delete set null,
   attempt_number        integer     not null default 1,
   channel               text        not null default 'email'
                         check (channel in ('email', 'download', 'print', 'api')),
@@ -572,6 +612,10 @@ create table if not exists public.delivery_attempts (
   metadata              jsonb,
   created_at            timestamptz not null default now()
 );
+
+alter table public.delivery_attempts
+  add column if not exists access_grant_id uuid
+  references public.access_grants(id) on delete set null;
 
 create index if not exists idx_delivery_attempts_order
   on public.delivery_attempts(order_id, attempt_number);
@@ -596,6 +640,53 @@ create table if not exists public.operational_failures (
   resolved_at timestamptz,
   created_at  timestamptz not null default now()
 );
+
+-- Older deployments may already contain duplicate pending attempts. Keep one
+-- claim, fail the rest, and surface each ambiguity before enforcing the unique
+-- exact-order/version delivery claim.
+with ranked_pending_delivery as (
+  select
+    id,
+    pg_catalog.row_number() over (
+      partition by order_id, book_id, version_id, channel
+      order by created_at, id
+    ) as claim_rank
+  from public.delivery_attempts
+  where status = 'pending'
+),
+reconciled_pending_delivery as (
+  update public.delivery_attempts da
+  set
+    status = 'failed',
+    error_detail = coalesce(
+      da.error_detail,
+      'Duplicate pending delivery claim requires operator reconciliation'
+    ),
+    metadata = coalesce(da.metadata, '{}'::jsonb) ||
+      '{"reconciliation_required":true}'::jsonb
+  from ranked_pending_delivery ranked
+  where da.id = ranked.id
+    and ranked.claim_rank > 1
+  returning da.id, da.order_id, da.book_id, da.version_id
+)
+insert into public.operational_failures (
+  book_id, order_id, stage, error_code, error_detail, context
+)
+select
+  reconciled.book_id,
+  reconciled.order_id,
+  'Purchased',
+  'duplicate_pending_delivery_claim',
+  'Duplicate pending delivery claims were found; no delivery outcome was inferred.',
+  pg_catalog.jsonb_build_object(
+    'delivery_attempt_id', reconciled.id,
+    'version_id', reconciled.version_id
+  )
+from reconciled_pending_delivery reconciled;
+
+create unique index if not exists uq_delivery_attempts_pending_claim
+  on public.delivery_attempts(order_id, book_id, version_id, channel)
+  where status = 'pending';
 
 create index if not exists idx_operational_failures_book
   on public.operational_failures(book_id) where book_id is not null;
@@ -687,6 +778,7 @@ insert into public.book_versions (
   story_text,
   illustration_urls,
   input_snapshot,
+  content_hash,
   metadata,
   created_at
 )
@@ -698,10 +790,21 @@ select
   b.story_text,
   b.illustration_urls,
   jsonb_build_object('source', 'legacy_compatibility_backfill'),
+  pg_catalog.encode(
+    extensions.digest(
+      pg_catalog.convert_to(
+        b.story_text::text || E'\n' || b.illustration_urls::text,
+        'UTF8'
+      ),
+      'sha256'
+    ),
+    'hex'
+  ),
   jsonb_build_object(
     'compatibility_backfill', true,
     'legacy_status', b.status,
-    'conservative', true
+    'conservative', true,
+    'evidence', 'complete_ordered_immutable_page_set'
   ),
   coalesce(b.updated_at, b.created_at, now())
 from public.books b
@@ -711,8 +814,15 @@ where b.current_version_id is null
   and jsonb_array_length(b.story_text) > 0
   and jsonb_array_length(b.story_text) = jsonb_array_length(b.illustration_urls)
   and not exists (
-    select 1 from jsonb_array_elements(b.story_text) p
-    where nullif(btrim(p->>'text'), '') is null
+    select 1
+    from jsonb_array_elements(b.story_text) with ordinality as p(page, ordinal)
+    where jsonb_typeof(p.page) <> 'object'
+       or nullif(btrim(p.page->>'text'), '') is null
+       or case
+            when coalesce(p.page->>'pageNumber', '') ~ '^[1-9][0-9]*$'
+              then (p.page->>'pageNumber')::integer
+            else null
+          end is distinct from p.ordinal::integer
   )
   and not exists (
     select 1 from jsonb_array_elements(b.illustration_urls) as i(value)
@@ -755,6 +865,27 @@ from public.book_versions v
 where b.current_version_id is null
   and v.book_id = b.id
   and v.is_complete
+  and v.content_hash is not null
+  and coalesce((v.metadata->>'compatibility_backfill')::boolean, false)
+  and (
+    select count(*)
+    from public.book_version_pages vp
+    where vp.version_id = v.id
+      and vp.page_number between 1 and v.page_count
+      and nullif(btrim(vp.text_content), '') is not null
+      and nullif(btrim(vp.illustration_url), '') is not null
+  ) = v.page_count
+  and not exists (
+    select 1
+    from public.book_version_pages vp
+    where vp.version_id = v.id
+      and (
+        vp.page_number < 1
+        or vp.page_number > v.page_count
+        or nullif(btrim(vp.text_content), '') is null
+        or nullif(btrim(vp.illustration_url), '') is null
+      )
+  )
   and not exists (
     select 1
     from public.book_versions newer
@@ -763,18 +894,39 @@ where b.current_version_id is null
       and newer.version_number > v.version_number
   );
 
--- Bind historical paid orders to the one demonstrably complete compatibility
--- version, while retaining every financial row and amount.
+-- Bind a historical paid order only when there is exactly one financial row
+-- and it already contains explicit provider-verification evidence. A legacy
+-- payment_confirmed_at timestamp is not upgraded into payment_verified_at.
 update public.orders o
-set version_id = b.current_version_id,
-    payment_verified_at = coalesce(o.payment_verified_at, o.payment_confirmed_at)
+set version_id = b.current_version_id
 from public.books b
 where o.book_id = b.id
   and o.version_id is null
   and b.current_version_id is not null
   and o.status in ('paid', 'fulfilled')
   and o.stripe_payment_intent_id is not null
-  and coalesce(o.payment_verified_at, o.payment_confirmed_at) is not null;
+  and o.payment_verified_at is not null
+  and exists (
+    select 1
+    from public.book_versions exact_version
+    where exact_version.id = b.current_version_id
+      and exact_version.book_id = b.id
+      and coalesce(
+        (exact_version.metadata->>'compatibility_backfill')::boolean,
+        false
+      )
+  )
+  and (
+    select count(*)
+    from public.book_versions candidate_version
+    where candidate_version.book_id = b.id
+  ) = 1
+  and (
+    select count(*)
+    from public.orders financial_row
+    where financial_row.book_id = b.id
+      and financial_row.status in ('paid', 'fulfilled')
+  ) = 1;
 
 -- 21b. Purchased: exact paid order evidence, never a legacy book status.
 update public.books b
@@ -795,14 +947,19 @@ set lifecycle_stage     = 'Purchased',
     )
 where b.lifecycle_stage is null
   and b.current_version_id is not null
-  and exists (
-    select 1 from public.orders o
+  and (
+    select count(*) from public.orders o
     where o.book_id = b.id
       and o.version_id = b.current_version_id
       and o.status in ('paid', 'fulfilled')
       and o.stripe_payment_intent_id is not null
       and o.payment_verified_at is not null
-  );
+  ) = 1
+  and (
+    select count(*) from public.orders o
+    where o.book_id = b.id
+      and o.status in ('paid', 'fulfilled')
+  ) = 1;
 
 -- 21c. Approved: reviewed_at plus a complete immutable version, and not already
 -- mapped to Purchased above.
@@ -813,7 +970,15 @@ set lifecycle_stage  = 'Approved',
 where b.lifecycle_stage is null
   and b.status = 'approved'
   and b.reviewed_at is not null
-  and b.current_version_id is not null;
+  and b.current_version_id is not null
+  and exists (
+    select 1 from public.book_versions v
+    where v.id = b.current_version_id
+      and v.book_id = b.id
+      and v.is_complete
+      and v.content_hash is not null
+      and coalesce((v.metadata->>'compatibility_backfill')::boolean, false)
+  );
 
 -- 21d. Under Review: exact immutable version required.
 update public.books b
@@ -822,7 +987,15 @@ set lifecycle_stage = 'Under Review',
     stage_under_review_at = coalesce(b.stage_under_review_at, b.created_at)
 where b.lifecycle_stage is null
   and b.status = 'pending_review'
-  and b.current_version_id is not null;
+  and b.current_version_id is not null
+  and exists (
+    select 1 from public.book_versions v
+    where v.id = b.current_version_id
+      and v.book_id = b.id
+      and v.is_complete
+      and v.content_hash is not null
+      and coalesce((v.metadata->>'compatibility_backfill')::boolean, false)
+  );
 
 -- 21e. Generated: compatibility snapshot proves complete content.
 update public.books b
@@ -830,18 +1003,57 @@ set lifecycle_stage     = 'Generated',
     stage_generated_at  = coalesce(b.stage_generated_at, b.updated_at)
 where b.lifecycle_stage is null
   and b.current_version_id is not null
-  and b.status in ('complete', 'preview_ready');
-
--- 20e. Backfill remaining stage timestamps from existing columns where available
-update public.books
-set stage_delivered_at = coalesce(stage_delivered_at, delivered_at)
-where stage_delivered_at is null and delivered_at is not null;
+  and b.status in ('complete', 'preview_ready')
+  and exists (
+    select 1 from public.book_versions v
+    where v.id = b.current_version_id
+      and v.book_id = b.id
+      and v.is_complete
+      and v.content_hash is not null
+      and coalesce((v.metadata->>'compatibility_backfill')::boolean, false)
+  );
 
 update public.books
 set stage_approved_at = coalesce(stage_approved_at, reviewed_at)
 where stage_approved_at is null
   and reviewed_at is not null
-  and status in ('approved', 'delivered');
+  and lifecycle_stage in ('Approved', 'Purchased');
+
+-- Every legacy row that looks advanced but did not pass the conservative gates
+-- is explicitly surfaced for service-role operator reconciliation.
+insert into public.operational_failures (
+  book_id, stage, error_code, error_detail, context
+)
+select
+  b.id,
+  b.status,
+  'legacy_reconciliation_required',
+  'Legacy evidence was incomplete, ambiguous, or conflicting; no terminal stage was inferred.',
+  jsonb_build_object(
+    'has_immutable_version', b.current_version_id is not null,
+    'has_review_timestamp', b.reviewed_at is not null,
+    'advanced_financial_rows', (
+      select count(*) from public.orders o
+      where o.book_id = b.id and o.status in ('paid', 'fulfilled')
+    ),
+    'migration', '010'
+  )
+from public.books b
+where b.lifecycle_stage is null
+  and (
+    b.status in ('pending_review', 'approved', 'complete', 'preview_ready', 'delivered')
+    or exists (
+      select 1 from public.orders o
+      where o.book_id = b.id and o.status in ('paid', 'fulfilled')
+    )
+  )
+  and not exists (
+    select 1
+    from public.operational_failures existing
+    where existing.book_id = b.id
+      and existing.error_code = 'legacy_reconciliation_required'
+      and existing.resolved_at is null
+  );
 
 -- Append migration events once; ambiguous records remain lifecycle_stage NULL.
 insert into public.lifecycle_events (
@@ -880,40 +1092,102 @@ alter table public.operational_failures   enable row level security;
 -- 23. RLS policies (DO-guarded; CREATE POLICY IF NOT EXISTS unsupported)
 -- ============================================================
 
--- book_versions: owner read
-do $$ begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'book_versions'
-      and policyname = 'Owners read own book_versions'
-  ) then
-    create policy "Owners read own book_versions"
-      on public.book_versions for select
-      using (
-        exists (select 1 from public.books b
-                where b.id = book_versions.book_id and b.user_id = auth.uid())
-      );
-  end if;
-end; $$;
+-- A book owner does not automatically receive full immutable content. The
+-- full snapshot requires an exact-version, verified paid-order grant.
+drop policy if exists "Owners read own book_versions" on public.book_versions;
+drop policy if exists "Owners read purchased book_versions" on public.book_versions;
+create policy "Owners read purchased book_versions"
+  on public.book_versions for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.books b
+      join public.access_grants ag
+        on ag.book_id = b.id
+       and ag.version_id = book_versions.id
+      join public.orders o
+        on o.id = ag.order_id
+       and o.book_id = b.id
+       and o.version_id = book_versions.id
+      where b.id = book_versions.book_id
+        and b.user_id = auth.uid()
+        and b.approved_version_id = book_versions.id
+        and b.lifecycle_stage in ('Purchased', 'Delivered')
+        and ag.access_kind in ('full_book', 'download', 'gift')
+        and ag.revoked_at is null
+        and (ag.expires_at is null or ag.expires_at > pg_catalog.now())
+        and ag.verified_at is not null
+        and o.status in ('paid', 'fulfilled')
+        and o.stripe_payment_intent_id is not null
+        and o.payment_verified_at is not null
+    )
+  );
 
--- book_version_pages: owner read
-do $$ begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'book_version_pages'
-      and policyname = 'Owners read own book_version_pages'
-  ) then
-    create policy "Owners read own book_version_pages"
-      on public.book_version_pages for select
-      using (
-        exists (
-          select 1 from public.book_versions bv
-          join public.books b on b.id = bv.book_id
-          where bv.id = book_version_pages.version_id and b.user_id = auth.uid()
+-- Before purchase, only explicitly selected preview pages are visible and only
+-- through the usable grant linked to the confirmed invitation. Full pages use
+-- the exact paid-grant contract above.
+drop policy if exists "Owners read own book_version_pages" on public.book_version_pages;
+drop policy if exists "Owners read authorised book_version_pages" on public.book_version_pages;
+create policy "Owners read authorised book_version_pages"
+  on public.book_version_pages for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.book_versions bv
+      join public.books b on b.id = bv.book_id
+      where bv.id = book_version_pages.version_id
+        and b.user_id = auth.uid()
+        and b.approved_version_id = bv.id
+        and (
+          (
+            book_version_pages.is_preview
+            and b.lifecycle_stage in ('Approved', 'Ready for Purchase')
+            and exists (
+              select 1
+              from public.approval_invitation_attempts aia
+              join public.access_grants preview_grant
+                on preview_grant.id = aia.access_grant_id
+              where aia.book_id = b.id
+                and aia.version_id = bv.id
+                and aia.status = 'sent'
+                and aia.notification_sent_at is not null
+                and preview_grant.book_id = b.id
+                and preview_grant.version_id = bv.id
+                and preview_grant.access_kind = 'preview'
+                and nullif(pg_catalog.btrim(preview_grant.token_hash), '') is not null
+                and preview_grant.revoked_at is null
+                and (
+                  preview_grant.expires_at is null
+                  or preview_grant.expires_at > pg_catalog.now()
+                )
+            )
+          )
+          or exists (
+            select 1
+            from public.access_grants full_grant
+            join public.orders o
+              on o.id = full_grant.order_id
+             and o.book_id = b.id
+             and o.version_id = bv.id
+            where full_grant.book_id = b.id
+              and full_grant.version_id = bv.id
+              and full_grant.access_kind in ('full_book', 'download', 'gift')
+              and full_grant.revoked_at is null
+              and (
+                full_grant.expires_at is null
+                or full_grant.expires_at > pg_catalog.now()
+              )
+              and full_grant.verified_at is not null
+              and o.status in ('paid', 'fulfilled')
+              and o.stripe_payment_intent_id is not null
+              and o.payment_verified_at is not null
+              and b.lifecycle_stage in ('Purchased', 'Delivered')
+          )
         )
-      );
-  end if;
-end; $$;
+    )
+  );
 
 -- book_quality_findings: owner read
 do $$ begin
@@ -986,21 +1260,35 @@ do $$ begin
   end if;
 end; $$;
 
--- product_artefacts: owner read
-do $$ begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'product_artefacts'
-      and policyname = 'Owners read own product_artefacts'
-  ) then
-    create policy "Owners read own product_artefacts"
-      on public.product_artefacts for select
-      using (
-        exists (select 1 from public.books b
-                where b.id = product_artefacts.book_id and b.user_id = auth.uid())
-      );
-  end if;
-end; $$;
+drop policy if exists "Owners read own product_artefacts" on public.product_artefacts;
+drop policy if exists "Owners read purchased product_artefacts" on public.product_artefacts;
+create policy "Owners read purchased product_artefacts"
+  on public.product_artefacts for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.books b
+      join public.access_grants ag
+        on ag.book_id = b.id
+       and ag.version_id = product_artefacts.version_id
+      join public.orders o
+        on o.id = ag.order_id
+       and o.book_id = b.id
+       and o.version_id = product_artefacts.version_id
+      where b.id = product_artefacts.book_id
+        and b.user_id = auth.uid()
+        and b.approved_version_id = product_artefacts.version_id
+        and b.lifecycle_stage in ('Purchased', 'Delivered')
+        and ag.access_kind in ('full_book', 'download', 'gift')
+        and ag.revoked_at is null
+        and (ag.expires_at is null or ag.expires_at > pg_catalog.now())
+        and ag.verified_at is not null
+        and o.status in ('paid', 'fulfilled')
+        and o.stripe_payment_intent_id is not null
+        and o.payment_verified_at is not null
+    )
+  );
 
 -- delivery_attempts: owner read
 do $$ begin
@@ -1069,9 +1357,25 @@ begin
     return jsonb_build_object('ok', false, 'error', 'book_not_found');
   end if;
 
+  if p_predecessor_id is not null and not exists (
+    select 1
+    from public.book_versions predecessor
+    where predecessor.id = p_predecessor_id
+      and predecessor.book_id = p_book_id
+  ) then
+    return jsonb_build_object(
+      'ok', false,
+      'error', 'predecessor_book_mismatch',
+      'message', 'The predecessor must be an immutable version of the same book'
+    );
+  end if;
+
   if jsonb_typeof(p_pages) is distinct from 'array'
      or jsonb_array_length(p_pages) = 0 then
     return jsonb_build_object('ok', false, 'error', 'pages_required');
+  end if;
+  if nullif(btrim(p_content_hash), '') is null then
+    return jsonb_build_object('ok', false, 'error', 'content_hash_required');
   end if;
 
   if exists (
@@ -1108,6 +1412,20 @@ begin
     )
   ) <> jsonb_array_length(p_pages) then
     return jsonb_build_object('ok', false, 'error', 'duplicate_page_numbers');
+  end if;
+  if (
+    select min(p.page_number) <> 1
+      or max(p.page_number) <> jsonb_array_length(p_pages)
+    from jsonb_to_recordset(p_pages) as p(
+      page_number integer,
+      text_content text,
+      illustration_url text,
+      audio_url text,
+      is_preview boolean,
+      metadata jsonb
+    )
+  ) then
+    return jsonb_build_object('ok', false, 'error', 'non_contiguous_page_numbers');
   end if;
 
   -- Serialise version numbering per book while keeping the operation transactional.
@@ -1161,6 +1479,9 @@ begin
 end;
 $$;
 
+alter function public.create_book_version_snapshot(
+  uuid, uuid, text, jsonb, jsonb, jsonb, text, jsonb, jsonb
+) owner to postgres;
 revoke execute on function public.create_book_version_snapshot(
   uuid, uuid, text, jsonb, jsonb, jsonb, text, jsonb, jsonb
 ) from public, anon, authenticated;
@@ -1204,26 +1525,12 @@ declare
   v_order            record;
   v_from_stage       text;
   v_effective_vid    uuid;
-  v_now              timestamptz := now();
+  v_now              timestamptz := pg_catalog.now();
   v_stage_ts_col     text;
   v_update_sql       text;
-  v_existing_event   uuid;
+  v_existing_event   record;
+  v_inserted_event_id uuid;
 begin
-  -- ── 0. Idempotency: if this key already produced a committed event, replay it ─
-  if p_idempotency_key is not null then
-    select id into v_existing_event
-    from public.lifecycle_events
-    where idempotency_key = p_idempotency_key;
-
-    if found then
-      return jsonb_build_object(
-        'ok', true,
-        'idempotent_replay', true,
-        'event_id', v_existing_event
-      );
-    end if;
-  end if;
-
   -- ── 1. Lock the book row ──────────────────────────────────────────────────
   select * into v_book
   from public.books
@@ -1235,6 +1542,40 @@ begin
   end if;
 
   v_from_stage := v_book.lifecycle_stage;
+  v_effective_vid := coalesce(p_version_id, v_book.current_version_id);
+
+  -- An idempotency key is an operation identity, not merely a duplicate-row
+  -- suppressor. A replay is accepted only for the same book, source stage,
+  -- target stage, effective immutable version, and actor.
+  if p_idempotency_key is not null then
+    select * into v_existing_event
+    from public.lifecycle_events
+    where idempotency_key = p_idempotency_key;
+
+    if found then
+      if v_existing_event.book_id is distinct from p_book_id
+         or (
+           p_expected_stage is not null
+           and v_existing_event.from_stage is distinct from p_expected_stage
+         )
+         or v_existing_event.to_stage is distinct from p_to_stage
+         or v_existing_event.version_id is distinct from v_effective_vid
+         or v_existing_event.actor is distinct from p_actor
+      then
+        return jsonb_build_object(
+          'ok', false,
+          'error', 'idempotency_key_conflict',
+          'message', 'The idempotency key belongs to a different lifecycle operation'
+        );
+      end if;
+
+      return jsonb_build_object(
+        'ok', true,
+        'idempotent_replay', true,
+        'event_id', v_existing_event.id
+      );
+    end if;
+  end if;
 
   -- ── 2. Optimistic lock: stage ─────────────────────────────────────────────
   if p_expected_stage is not null and v_from_stage is distinct from p_expected_stage then
@@ -1281,8 +1622,6 @@ begin
   end if;
 
   -- ── 6. Resolve effective version ──────────────────────────────────────────
-  v_effective_vid := coalesce(p_version_id, v_book.current_version_id);
-
   -- ── 7. Version existence and completeness checks
   if p_to_stage in (
     'Generated', 'Under Review', 'Revised', 'Approved',
@@ -1314,13 +1653,17 @@ begin
       );
     end if;
 
-    if (
+    if v_version.content_hash is null or (
       select count(*) from public.book_version_pages
       where version_id = v_effective_vid
+        and page_number between 1 and v_version.page_count
     ) <> v_version.page_count or exists (
       select 1 from public.book_version_pages
       where version_id = v_effective_vid
         and (
+          page_number < 1
+          or page_number > v_version.page_count
+          or
           nullif(btrim(text_content), '') is null
           or nullif(btrim(illustration_url), '') is null
         )
@@ -1377,14 +1720,22 @@ begin
   end if;
 
   -- Ready for Purchase is only valid after the exact approved-version
-  -- invitation has been durably recorded as sent.
+  -- invitation and its usable restricted preview grant have both been
+  -- durably recorded.
   if p_to_stage = 'Ready for Purchase' and not exists (
     select 1
-    from public.approval_invitation_attempts
-    where book_id = p_book_id
-      and version_id = v_effective_vid
-      and status = 'sent'
-      and notification_sent_at is not null
+    from public.approval_invitation_attempts aia
+    join public.access_grants ag on ag.id = aia.access_grant_id
+    where aia.book_id = p_book_id
+      and aia.version_id = v_effective_vid
+      and aia.status = 'sent'
+      and aia.notification_sent_at is not null
+      and ag.book_id = p_book_id
+      and ag.version_id = v_effective_vid
+      and ag.access_kind = 'preview'
+      and nullif(pg_catalog.btrim(ag.token_hash), '') is not null
+      and ag.revoked_at is null
+      and (ag.expires_at is null or ag.expires_at > v_now)
   ) then
     return jsonb_build_object(
       'ok', false,
@@ -1417,6 +1768,32 @@ begin
   -- ── 10. Delivered: verified durable artefact + verified usable access grant
   --        + successful notification/access delivery attempt ──────────────────
   if p_to_stage = 'Delivered' then
+    -- Every delivery proof must converge on one and only one exact paid order.
+    if (
+      select pg_catalog.count(*)
+      from public.orders exact_order
+      where exact_order.book_id = p_book_id
+        and exact_order.version_id = v_effective_vid
+        and exact_order.status in ('paid', 'fulfilled')
+        and exact_order.stripe_payment_intent_id is not null
+        and exact_order.payment_verified_at is not null
+    ) <> 1 then
+      return jsonb_build_object(
+        'ok', false,
+        'error', 'exact_paid_order_required',
+        'message', 'Delivery requires exactly one verified paid order for the immutable version'
+      );
+    end if;
+
+    select * into v_order
+    from public.orders
+    where book_id = p_book_id
+      and version_id = v_effective_vid
+      and status in ('paid', 'fulfilled')
+      and stripe_payment_intent_id is not null
+      and payment_verified_at is not null
+    limit 1;
+
     -- 10a. Durable artefact: storage and its customer-facing access URL were
     -- both verified by actual responses.
     if not exists (
@@ -1425,6 +1802,10 @@ begin
         and version_id = v_effective_vid
         and kind in ('pdf_digital', 'epub')
         and nullif(btrim(storage_path), '') is not null
+        and storage_path like
+          'books/' || p_book_id::text || '/versions/' || v_effective_vid::text || '/%'
+        and metadata->>'storage_bucket' = 'final-books'
+        and nullif(pg_catalog.btrim(access_url), '') is not null
         and durable_verified_at is not null
         and access_verified_at is not null
     ) then
@@ -1434,12 +1815,22 @@ begin
       );
     end if;
 
-    -- 10b. Verified usable access grant (not revoked, not expired, verified_at set)
+    -- 10b. The successful notification must be linked to the very same usable
+    -- grant that was verified and sent, never merely to some other grant for
+    -- the order/version.
     if not exists (
       select 1
-      from public.access_grants ag
-      join public.orders o on o.id = ag.order_id
-      where ag.book_id = p_book_id
+      from public.delivery_attempts da
+      join public.access_grants ag on ag.id = da.access_grant_id
+      join public.orders o on o.id = da.order_id
+      where da.order_id = v_order.id
+        and da.book_id = p_book_id
+        and da.version_id = v_effective_vid
+        and da.status = 'sent'
+        and da.notification_sent_at is not null
+        and da.access_verified_at is not null
+        and ag.order_id = v_order.id
+        and ag.book_id = p_book_id
         and ag.version_id = v_effective_vid
         and ag.access_kind in ('full_book', 'download', 'gift')
         and ag.revoked_at is null
@@ -1448,36 +1839,16 @@ begin
         and o.book_id = p_book_id
         and o.version_id = v_effective_vid
         and o.status in ('paid', 'fulfilled')
-        and o.payment_verified_at is not null
-    ) then
-      return jsonb_build_object(
-        'ok', false, 'error', 'access_grant_not_verified',
-        'message', 'No verified usable access grant for this version'
-      );
-    end if;
-
-    -- 10c. Successful notification AND access delivery attempt
-    if not exists (
-      select 1
-      from public.delivery_attempts da
-      join public.orders o on o.id = da.order_id
-      where da.book_id = p_book_id
-        and da.version_id = v_effective_vid
-        and da.status = 'sent'
-        and da.notification_sent_at is not null
-        and da.access_verified_at is not null
-        and o.book_id = p_book_id
-        and o.version_id = v_effective_vid
-        and o.status in ('paid', 'fulfilled')
+        and o.stripe_payment_intent_id is not null
         and o.payment_verified_at is not null
     ) then
       return jsonb_build_object(
         'ok', false, 'error', 'delivery_not_confirmed',
-        'message', 'No delivery attempt with status=sent, notification_sent_at, and access_verified_at'
+        'message', 'No sent delivery attempt is linked to its exact verified usable access grant'
       );
     end if;
 
-    -- 10d. Exact approved version must match
+    -- 10c. Exact approved version must match
     if v_book.approved_version_id is not null
       and v_book.approved_version_id is distinct from v_effective_vid
     then
@@ -1488,6 +1859,43 @@ begin
         'delivering_version_id', v_effective_vid
       );
     end if;
+  end if;
+
+  -- Reserve the idempotency identity before changing any lifecycle state.
+  -- This closes the cross-book race where the same key could otherwise update
+  -- one book while losing the unique lifecycle_events insert to another.
+  insert into public.lifecycle_events
+    (book_id, version_id, from_stage, to_stage, actor, reason, idempotency_key, metadata, created_at)
+  values
+    (p_book_id, v_effective_vid, v_from_stage, p_to_stage,
+     p_actor, p_reason, p_idempotency_key, p_metadata, v_now)
+  on conflict (idempotency_key) do nothing
+  returning id into v_inserted_event_id;
+
+  if p_idempotency_key is not null and v_inserted_event_id is null then
+    select * into v_existing_event
+    from public.lifecycle_events
+    where idempotency_key = p_idempotency_key;
+
+    if not found
+       or v_existing_event.book_id is distinct from p_book_id
+       or v_existing_event.from_stage is distinct from v_from_stage
+       or v_existing_event.to_stage is distinct from p_to_stage
+       or v_existing_event.version_id is distinct from v_effective_vid
+       or v_existing_event.actor is distinct from p_actor
+    then
+      return jsonb_build_object(
+        'ok', false,
+        'error', 'idempotency_key_conflict',
+        'message', 'The idempotency key belongs to a different lifecycle operation'
+      );
+    end if;
+
+    return jsonb_build_object(
+      'ok', true,
+      'idempotent_replay', true,
+      'event_id', v_existing_event.id
+    );
   end if;
 
   -- ── 11. Update the book row ───────────────────────────────────────────────
@@ -1530,21 +1938,14 @@ begin
   );
   execute v_update_sql using p_to_stage, v_now, v_effective_vid, p_book_id;
 
-  -- ── 12. Append lifecycle event (idempotent via unique key) ────────────────
-  insert into public.lifecycle_events
-    (book_id, version_id, from_stage, to_stage, actor, reason, idempotency_key, metadata, created_at)
-  values
-    (p_book_id, v_effective_vid, v_from_stage, p_to_stage,
-     p_actor, p_reason, p_idempotency_key, p_metadata, v_now)
-  on conflict (idempotency_key) do nothing;
-
   -- ── 13. Order fulfilment: only on actual Delivered transition ─────────────
   -- Update fulfilled_at on the exact paid order (not just any order).
   if p_to_stage = 'Delivered' then
     update public.orders
     set status       = 'fulfilled',
         fulfilled_at = coalesce(fulfilled_at, v_now)
-    where book_id = p_book_id
+    where id = v_order.id
+      and book_id = p_book_id
       and version_id = v_effective_vid
       and status in ('paid', 'fulfilled')
       and stripe_payment_intent_id is not null
@@ -1562,6 +1963,9 @@ end;
 $$;
 
 -- Restrict to service_role only.
+alter function public.transition_book_lifecycle(
+  uuid, text, text, uuid, integer, text, text, text, jsonb
+) owner to postgres;
 revoke execute on function public.transition_book_lifecycle(
   uuid, text, text, uuid, integer, text, text, text, jsonb
 ) from public;
@@ -1658,13 +2062,13 @@ create or replace function public.record_verified_payment_and_purchase(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_order public.orders%rowtype;
   v_book public.books%rowtype;
   v_transition jsonb;
-  v_now timestamptz := now();
+  v_now timestamptz := pg_catalog.now();
 begin
   select * into v_order
   from public.orders
@@ -1676,7 +2080,7 @@ begin
   for update;
 
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'order_not_found');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'order_not_found');
   end if;
 
   select * into v_book
@@ -1685,30 +2089,40 @@ begin
   for update;
 
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'book_not_found');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'book_not_found');
   end if;
 
   if v_order.book_id is distinct from p_book_id
      or v_order.version_id is distinct from p_version_id
      or v_book.approved_version_id is distinct from p_version_id
   then
-    return jsonb_build_object('ok', false, 'error', 'exact_identity_mismatch');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'exact_identity_mismatch');
   end if;
 
   if v_order.amount_cents is distinct from p_amount_cents
-     or lower(v_order.currency) is distinct from lower(p_currency)
+     or pg_catalog.lower(v_order.currency) is distinct from pg_catalog.lower(p_currency)
   then
-    return jsonb_build_object('ok', false, 'error', 'payment_amount_mismatch');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'payment_amount_mismatch');
   end if;
 
-  if nullif(btrim(p_payment_intent_id), '') is null then
-    return jsonb_build_object('ok', false, 'error', 'payment_intent_required');
+  if nullif(pg_catalog.btrim(p_payment_intent_id), '') is null then
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'payment_intent_required');
   end if;
 
   if v_order.status in ('paid', 'fulfilled')
      and v_book.lifecycle_stage in ('Purchased', 'Delivered')
   then
-    return jsonb_build_object(
+    if v_order.stripe_payment_intent_id is distinct from p_payment_intent_id
+       or v_order.stripe_checkout_session_id is distinct from p_checkout_session_id
+    then
+      return pg_catalog.jsonb_build_object(
+        'ok', false,
+        'error', 'idempotency_key_conflict',
+        'message', 'The paid order belongs to a different provider operation'
+      );
+    end if;
+
+    return pg_catalog.jsonb_build_object(
       'ok', true,
       'idempotent_replay', true,
       'order_id', v_order.id,
@@ -1718,13 +2132,13 @@ begin
   end if;
 
   if v_order.status not in ('pending', 'paid', 'fulfilled') then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false, 'error', 'order_state_conflict', 'order_status', v_order.status
     );
   end if;
 
   if v_book.lifecycle_stage not in ('Ready for Purchase', 'Purchased') then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false, 'error', 'stage_conflict', 'current_stage', v_book.lifecycle_stage
     );
   end if;
@@ -1763,7 +2177,7 @@ begin
       end if;
     end if;
 
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', true,
       'order_id', v_order.id,
       'book_id', v_book.id,
@@ -1771,15 +2185,18 @@ begin
       'transition', v_transition
     );
   exception when sqlstate 'P0001' then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false,
-      'error', split_part(sqlerrm, ':', 2),
+      'error', pg_catalog.split_part(sqlerrm, ':', 2),
       'message', sqlerrm
     );
   end;
 end;
 $$;
 
+alter function public.record_verified_payment_and_purchase(
+  uuid, text, text, integer, text, uuid, uuid, text, text, jsonb
+) owner to postgres;
 revoke execute on function public.record_verified_payment_and_purchase(
   uuid, text, text, integer, text, uuid, uuid, text, text, jsonb
 ) from public, anon, authenticated;
@@ -1806,12 +2223,14 @@ create or replace function public.create_revision_request_and_transition(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_book public.books%rowtype;
-  v_request_id uuid := gen_random_uuid();
-  v_existing_request_id uuid;
+  v_request_id uuid := extensions.gen_random_uuid();
+  v_existing_request public.revision_requests%rowtype;
+  v_existing_items jsonb;
+  v_requested_items jsonb;
   v_transition jsonb;
 begin
   select * into v_book
@@ -1820,34 +2239,85 @@ begin
   for update;
 
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'book_not_found');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'book_not_found');
   end if;
 
   -- Idempotent replay must be checked before the stage guard because a
   -- successful first call has already moved the book to Changes Requested.
+  -- The key may replay only the same exact revision operation.
   if p_idempotency_key is not null then
-    select id into v_existing_request_id
+    select * into v_existing_request
     from public.revision_requests
     where book_id = p_book_id
       and idempotency_key = p_idempotency_key;
 
     if found then
-      return jsonb_build_object(
+      if pg_catalog.jsonb_typeof(p_items) is distinct from 'array' then
+        return pg_catalog.jsonb_build_object(
+          'ok', false,
+          'error', 'idempotency_key_conflict',
+          'message', 'The idempotency key replay has different revision items'
+        );
+      end if;
+
+      select pg_catalog.jsonb_agg(
+        pg_catalog.jsonb_build_object(
+          'page_number', item.page_number::text,
+          'scope', item.scope,
+          'description', item.description,
+          'before_value', item.before_value,
+          'after_value', item.after_value,
+          'severity', item.severity
+        )
+        order by item.page_number, item.scope, item.description
+      )
+      into v_existing_items
+      from public.revision_request_items item
+      where item.revision_request_id = v_existing_request.id;
+
+      select pg_catalog.jsonb_agg(
+        pg_catalog.jsonb_build_object(
+          'page_number', element->>'page_number',
+          'scope', element->>'scope',
+          'description', element->>'description',
+          'before_value', element->>'before_value',
+          'after_value', element->>'after_value',
+          'severity', coalesce(element->>'severity', 'major')
+        )
+        order by element->>'page_number', element->>'scope', element->>'description'
+      )
+      into v_requested_items
+      from pg_catalog.jsonb_array_elements(p_items) as elements(element);
+
+      if v_existing_request.version_id is distinct from p_version_id
+         or v_existing_request.requested_by is distinct from pg_catalog.btrim(p_requested_by)
+         or v_existing_request.decision is distinct from p_decision
+         or v_existing_request.feedback is distinct from pg_catalog.btrim(p_feedback)
+         or v_existing_items is distinct from v_requested_items
+      then
+        return pg_catalog.jsonb_build_object(
+          'ok', false,
+          'error', 'idempotency_key_conflict',
+          'message', 'The idempotency key belongs to a different revision operation'
+        );
+      end if;
+
+      return pg_catalog.jsonb_build_object(
         'ok', true,
         'idempotent_replay', true,
-        'request_id', v_existing_request_id
+        'request_id', v_existing_request.id
       );
     end if;
   end if;
 
   if v_book.lifecycle_stage not in ('Under Review', 'Revised') then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false, 'error', 'stage_conflict',
       'current_stage', v_book.lifecycle_stage
     );
   end if;
   if v_book.lifecycle_revision <> p_expected_revision then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false, 'error', 'stale_revision',
       'current_revision', v_book.lifecycle_revision
     );
@@ -1855,28 +2325,28 @@ begin
   if p_version_id is null
      or v_book.review_version_id is distinct from p_version_id
   then
-    return jsonb_build_object('ok', false, 'error', 'review_version_mismatch');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'review_version_mismatch');
   end if;
   if p_decision not in ('reject', 'request_changes') then
-    return jsonb_build_object('ok', false, 'error', 'invalid_decision');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'invalid_decision');
   end if;
-  if nullif(btrim(p_requested_by), '') is null
-     or nullif(btrim(p_feedback), '') is null
+  if nullif(pg_catalog.btrim(p_requested_by), '') is null
+     or nullif(pg_catalog.btrim(p_feedback), '') is null
   then
-    return jsonb_build_object('ok', false, 'error', 'feedback_required');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'feedback_required');
   end if;
   if p_items is null
-     or jsonb_typeof(p_items) <> 'array'
-     or jsonb_array_length(p_items) = 0
+     or pg_catalog.jsonb_typeof(p_items) <> 'array'
+     or pg_catalog.jsonb_array_length(p_items) = 0
   then
-    return jsonb_build_object('ok', false, 'error', 'items_required');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'items_required');
   end if;
   if exists (
     select 1
-    from jsonb_array_elements(p_items) as elements(item)
+    from pg_catalog.jsonb_array_elements(p_items) as elements(item)
     where coalesce((item->>'page_number')::integer, 0) <= 0
        or item->>'scope' not in ('text', 'illustration', 'both')
-       or nullif(btrim(item->>'description'), '') is null
+       or nullif(pg_catalog.btrim(item->>'description'), '') is null
        or not exists (
          select 1
          from public.book_version_pages page
@@ -1884,7 +2354,7 @@ begin
            and page.page_number = (item->>'page_number')::integer
        )
   ) then
-    return jsonb_build_object('ok', false, 'error', 'invalid_revision_item');
+    return pg_catalog.jsonb_build_object('ok', false, 'error', 'invalid_revision_item');
   end if;
 
   begin
@@ -1892,8 +2362,8 @@ begin
       id, book_id, version_id, requested_by, decision, feedback, reason, status,
       idempotency_key
     ) values (
-      v_request_id, p_book_id, p_version_id, btrim(p_requested_by),
-      p_decision, btrim(p_feedback), btrim(p_feedback), 'open',
+      v_request_id, p_book_id, p_version_id, pg_catalog.btrim(p_requested_by),
+      p_decision, pg_catalog.btrim(p_feedback), pg_catalog.btrim(p_feedback), 'open',
       p_idempotency_key
     );
 
@@ -1909,7 +2379,7 @@ begin
       item->>'before_value',
       item->>'after_value',
       coalesce(item->>'severity', 'major')
-    from jsonb_array_elements(p_items) as elements(item);
+    from pg_catalog.jsonb_array_elements(p_items) as elements(item);
 
     v_transition := public.transition_book_lifecycle(
       p_book_id,
@@ -1917,10 +2387,10 @@ begin
       'Changes Requested',
       p_version_id,
       p_expected_revision,
-      btrim(p_requested_by),
-      left(btrim(p_feedback), 2000),
+      pg_catalog.btrim(p_requested_by),
+      pg_catalog.left(pg_catalog.btrim(p_feedback), 2000),
       p_idempotency_key,
-      jsonb_build_object(
+      pg_catalog.jsonb_build_object(
         'decision', p_decision,
         'revision_request_id', v_request_id
       )
@@ -1932,21 +2402,24 @@ begin
           coalesce(v_transition->>'error', 'unknown');
     end if;
 
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', true,
       'request_id', v_request_id,
       'transition', v_transition
     );
   exception when sqlstate 'P0001' then
-    return jsonb_build_object(
+    return pg_catalog.jsonb_build_object(
       'ok', false,
-      'error', split_part(sqlerrm, ':', 2),
+      'error', pg_catalog.split_part(sqlerrm, ':', 2),
       'message', sqlerrm
     );
   end;
 end;
 $$;
 
+alter function public.create_revision_request_and_transition(
+  uuid, uuid, integer, text, text, text, jsonb, text
+) owner to postgres;
 revoke execute on function public.create_revision_request_and_transition(
   uuid, uuid, integer, text, text, text, jsonb, text
 ) from public, anon, authenticated;

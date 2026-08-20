@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   canExposeDeliveredArtefacts,
+  canIssueFinalBookSignedLink,
   decideBookAccess,
   isExactVerifiedPayment,
 } from "../src/lib/book-access";
@@ -115,6 +116,49 @@ describe("delivered artefact access", () => {
         hasExactVerifiedPayment: true,
       }),
       true,
+    );
+  });
+
+  test("signed final links require exact artefact identity and access authorisation", () => {
+    const valid = {
+      stage: "Delivered",
+      bookId: "book-a",
+      approvedVersionId: "version-a",
+      artefactVersionId: "version-a",
+      storagePath:
+        "books/book-a/versions/version-a/storyspark-book.pdf",
+      storageBucket: "final-books",
+      hasExactVerifiedPayment: true,
+      hasAccessAuthorisation: true,
+    };
+    assert.equal(canIssueFinalBookSignedLink(valid), true);
+    assert.equal(
+      canIssueFinalBookSignedLink({
+        ...valid,
+        hasAccessAuthorisation: false,
+      }),
+      false,
+    );
+    assert.equal(
+      canIssueFinalBookSignedLink({
+        ...valid,
+        artefactVersionId: "version-b",
+      }),
+      false,
+    );
+    assert.equal(
+      canIssueFinalBookSignedLink({
+        ...valid,
+        storagePath: "books/book-a/versions/version-b/book.pdf",
+      }),
+      false,
+    );
+    assert.equal(
+      canIssueFinalBookSignedLink({
+        ...valid,
+        storageBucket: "books",
+      }),
+      false,
     );
   });
 });

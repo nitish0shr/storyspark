@@ -50,7 +50,11 @@ describe("version-bound review token schema", () => {
     );
     assert.match(
       canonicalMigration,
-      /select id into v_existing_request_id\s+from public\.revision_requests\s+where book_id = p_book_id\s+and idempotency_key = p_idempotency_key/i,
+      /select \* into v_existing_request\s+from public\.revision_requests\s+where book_id = p_book_id\s+and idempotency_key = p_idempotency_key/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /v_existing_items is distinct from v_requested_items[\s\S]*idempotency_key_conflict/i,
     );
     assert.match(
       canonicalMigration,

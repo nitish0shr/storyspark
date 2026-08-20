@@ -32,6 +32,10 @@ import type { LifecycleStage } from "@/types/book";
 import { applyRevision } from "@/services/revision-engine";
 import { validateBook } from "@/lib/content-validation";
 import { resolveCreatureFromAnswers } from "@/data/animals";
+import {
+  createFinalBookSignedUrl,
+  FINAL_BOOK_BUCKET,
+} from "@/lib/storage-urls";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -744,7 +748,7 @@ async function verifyReachableUrl(url: string): Promise<boolean> {
     });
     return response.ok;
   } catch (error) {
-    console.error(`[pipeline] URL verification failed for ${url}:`, error);
+    console.error("[pipeline] Bounded URL verification failed:", error);
     return false;
   } finally {
     clearTimeout(timeout);
@@ -773,6 +777,12 @@ export async function finalisePurchasedBook(
    *  on completion. */
   orderId?: string | null,
 ): Promise<void> {
+  let claimedDeliveryAttempt: {
+    id: string;
+    attemptNumber: number;
+  } | null = null;
+  let providerCallStarted = false;
+
   // ── Idempotency: skip if order already fulfilled ───────────────────────────
   if (orderId) {
     const { data: ord } = await supabaseAdmin
@@ -824,12 +834,35 @@ export async function finalisePurchasedBook(
       .in("status", ["paid", "fulfilled"])
       .not("stripe_payment_intent_id", "is", null)
       .not("payment_verified_at", "is", null);
-    const { data: fulfilmentOrder, error: orderError } = orderId
-      ? await orderQuery.eq("id", orderId).maybeSingle()
-      : await orderQuery
-          .order("payment_verified_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    type FulfilmentOrder = {
+      id: string;
+      book_id: string;
+      version_id: string;
+      user_id: string | null;
+      purchaser_email: string | null;
+      status: string;
+      fulfilled_at: string | null;
+      stripe_payment_intent_id: string;
+      payment_verified_at: string;
+    };
+    let fulfilmentOrder: FulfilmentOrder | null = null;
+    let orderError: { message: string } | null = null;
+    if (orderId) {
+      const orderResult = await orderQuery.eq("id", orderId).maybeSingle();
+      fulfilmentOrder = orderResult.data as FulfilmentOrder | null;
+      orderError = orderResult.error;
+    } else {
+      const orderResult = await orderQuery.limit(2);
+      orderError = orderResult.error;
+      if ((orderResult.data?.length ?? 0) === 1) {
+        fulfilmentOrder = orderResult.data![0] as FulfilmentOrder;
+      } else if (!orderError) {
+        orderError = {
+          message:
+            "expected exactly one verified paid order; explicit operator reconciliation is required",
+        };
+      }
+    }
     if (orderError || !fulfilmentOrder) {
       throw new Error(
         `finalisePurchasedBook: no verified paid order for exact version ${approvedVersionId}: ${orderError?.message ?? "not found"}`,
@@ -873,7 +906,9 @@ export async function finalisePurchasedBook(
     // ── Idempotency: reuse an existing verified PDF artefact if present ─────
     const { data: existingArtefact } = await supabaseAdmin
       .from("product_artefacts")
-      .select("id, storage_path, url, access_url, durable_verified_at, access_verified_at")
+      .select(
+        "id, storage_path, access_url, metadata, durable_verified_at, access_verified_at",
+      )
       .eq("book_id", bookId)
       .eq("version_id", approvedVersionId)
       .eq("kind", "pdf_digital")
@@ -884,29 +919,30 @@ export async function finalisePurchasedBook(
 
     let pdfUrl: string;
     let pdfPrintUrl: string | null = null;
+    let digitalArtefactId: string | null = null;
 
-    const existingStorageReachable = Boolean(
+    const existingMetadata =
+      (existingArtefact?.metadata as Record<string, unknown> | null) ?? null;
+    const existingSignedUrl =
       existingArtefact?.storage_path &&
-        existingArtefact.url &&
-        (await verifyReachableUrl(existingArtefact.url as string)),
-    );
-    const existingAccessReachable = Boolean(
-      existingArtefact?.access_url &&
-        (await verifyReachableUrl(existingArtefact.access_url as string)),
+      existingMetadata?.storage_bucket === FINAL_BOOK_BUCKET
+        ? await createFinalBookSignedUrl(existingArtefact.storage_path as string)
+        : null;
+    const existingStorageReachable = Boolean(
+      existingSignedUrl && (await verifyReachableUrl(existingSignedUrl)),
     );
     if (
       existingArtefact &&
-      existingArtefact.url &&
       existingStorageReachable &&
-      existingAccessReachable
+      existingSignedUrl
     ) {
-      pdfUrl = existingArtefact.url as string;
+      digitalArtefactId = existingArtefact.id as string;
+      pdfUrl = existingSignedUrl;
       const verifiedAt = new Date().toISOString();
       const { error: verifyArtefactError } = await supabaseAdmin
         .from("product_artefacts")
         .update({
           durable_verified_at: verifiedAt,
-          access_verified_at: verifiedAt,
         })
         .eq("id", existingArtefact.id);
       if (verifyArtefactError) {
@@ -941,7 +977,9 @@ export async function finalisePurchasedBook(
       }
 
       // ── Assemble the durable PDF artefact ────────────────────────────────
-      const assembled = await assemblePdf(bookId);
+      const assembled = await assemblePdf(bookId, {
+        versionId: approvedVersionId,
+      });
       if (!assembled.pdfUrl) {
         throw new Error(
           "PDF assembly failed — pdfUrl is empty. Cannot finalise."
@@ -964,11 +1002,15 @@ export async function finalisePurchasedBook(
           version_id: approvedVersionId,
           kind: "pdf_digital",
           storage_path: assembled.storagePath,
-          url: pdfUrl,
-          access_url: pdfUrl,
+          url: `private://${FINAL_BOOK_BUCKET}/${assembled.storagePath}`,
+          access_url: null,
           durable_verified_at: nowIso,
-          access_verified_at: nowIso,
-          metadata: { assembledBy: "finalisePurchasedBook" },
+          access_verified_at: null,
+          metadata: {
+            assembledBy: "finalisePurchasedBook",
+            storage_bucket: FINAL_BOOK_BUCKET,
+            signed_url_ttl_seconds: 15 * 60,
+          },
         },
       ];
       if (pdfPrintUrl) {
@@ -977,26 +1019,38 @@ export async function finalisePurchasedBook(
           version_id: approvedVersionId,
           kind: "pdf_print",
           storage_path: assembled.printStoragePath,
-          url: pdfPrintUrl,
-          access_url: pdfPrintUrl,
+          url: `private://${FINAL_BOOK_BUCKET}/${assembled.printStoragePath}`,
+          access_url: null,
           durable_verified_at: null,
           access_verified_at: null,
-          metadata: { assembledBy: "finalisePurchasedBook" },
+          metadata: {
+            assembledBy: "finalisePurchasedBook",
+            storage_bucket: FINAL_BOOK_BUCKET,
+            signed_url_ttl_seconds: 15 * 60,
+          },
         });
       }
-      const { error: artefactErr } = await supabaseAdmin
+      const { data: insertedArtefacts, error: artefactErr } = await supabaseAdmin
         .from("product_artefacts")
-        .insert(artefactRows);
+        .insert(artefactRows)
+        .select("id, kind");
       if (artefactErr) {
         throw new Error(
           `Failed to record durable product_artefacts for book ${bookId}: ${artefactErr.message}`
         );
       }
+      digitalArtefactId =
+        (insertedArtefacts?.find((row) => row.kind === "pdf_digital")?.id as
+          | string
+          | undefined) ?? null;
+      if (!digitalArtefactId) {
+        throw new Error(
+          `Failed to resolve the durable digital artefact for book ${bookId}`,
+        );
+      }
 
       // Legacy status columns (best-effort; not the source of truth).
       await updateBookStatus(bookId, "complete", {
-        pdf_url: pdfUrl,
-        pdf_print_url: pdfPrintUrl,
         illustration_urls: allIllustrationUrls,
         audio_status: audioStatus,
       });
@@ -1031,6 +1085,61 @@ export async function finalisePurchasedBook(
       await setOperationalState(bookId, "idle");
       return;
     }
+
+    const email =
+      fulfilmentOrder.purchaser_email ??
+      (await fetchBookEmail(bookId));
+    if (!email) {
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "delivery_no_recipient",
+        errorDetail: "No captured email address to deliver the book to.",
+      });
+      await recordDeliveryAttempt({
+        orderId: orderIdForGrant,
+        bookId,
+        versionId: approvedVersionId,
+        status: "failed",
+        errorDetail: "No recipient email",
+      });
+      await setOperationalState(bookId, "awaiting_delivery");
+      throw new Error(
+        `finalisePurchasedBook: book ${bookId} has no recipient email — remaining Purchased`
+      );
+    }
+
+    // Claim this exact order/version before revoking or minting any capability.
+    // The migration's partial unique index ensures only one worker can hold a
+    // pending delivery claim, even when its preliminary read raced.
+    const { data: ambiguousAttempt, error: ambiguousAttemptError } =
+      await supabaseAdmin
+        .from("delivery_attempts")
+        .select("id, attempt_number, created_at")
+        .eq("order_id", orderIdForGrant)
+        .eq("book_id", bookId)
+        .eq("version_id", approvedVersionId)
+        .eq("channel", "email")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (ambiguousAttemptError) {
+      throw new Error(
+        `Could not check pending delivery attempts: ${ambiguousAttemptError.message}`,
+      );
+    }
+    if (ambiguousAttempt) {
+      throw new Error(
+        `Ambiguous pending delivery attempt ${ambiguousAttempt.id}; reconcile provider status before retrying`,
+      );
+    }
+    claimedDeliveryAttempt = await beginDeliveryAttempt({
+      orderId: orderIdForGrant,
+      bookId,
+      versionId: approvedVersionId,
+    });
 
     // A hash-only grant cannot recover the raw URL token on retry. Revoke any
     // unsent prior grant and mint a fresh exact-version token for this attempt.
@@ -1096,66 +1205,61 @@ export async function finalisePurchasedBook(
     if (verifyGrantError) {
       throw new Error(`Failed to record verified access grant: ${verifyGrantError.message}`);
     }
-
-    // ── Send the delivery email and CONFIRM it was actually sent ────────────
-    const email =
-      fulfilmentOrder.purchaser_email ??
-      (await fetchBookEmail(bookId));
-    if (!email) {
-      // No recipient captured — cannot confirm delivery. Remain Purchased.
-      await recordOperationalFailure({
-        bookId,
-        orderId: orderIdForGrant,
-        stage: "Purchased",
-        errorCode: "delivery_no_recipient",
-        errorDetail: "No captured email address to deliver the book to.",
-      });
-      await recordDeliveryAttempt({
-        orderId: orderIdForGrant,
-        bookId,
-        versionId: approvedVersionId,
-        status: "failed",
-        errorDetail: "No recipient email",
-      });
-      await setOperationalState(bookId, "awaiting_delivery");
-      throw new Error(
-        `finalisePurchasedBook: book ${bookId} has no recipient email — remaining Purchased`
-      );
-    }
-
-    // A pending attempt means a provider call may already have succeeded while
-    // our acknowledgement write failed. Do not automatically resend and risk a
-    // duplicate notification; leave an explicit reconciliation case instead.
-    const { data: ambiguousAttempt, error: ambiguousAttemptError } =
+    const { error: linkGrantError, count: linkedGrantCount } =
       await supabaseAdmin
         .from("delivery_attempts")
-        .select("id, attempt_number, created_at")
+        .update(
+          {
+            access_grant_id: createdGrant.id,
+            access_verified_at: accessVerifiedAt,
+          },
+          { count: "exact" },
+        )
+        .eq("id", claimedDeliveryAttempt.id)
         .eq("order_id", orderIdForGrant)
+        .eq("version_id", approvedVersionId)
+        .eq("status", "pending")
+        .is("access_grant_id", null);
+    if (linkGrantError || (linkedGrantCount ?? 0) !== 1) {
+      throw new Error(
+        `Failed to bind delivery attempt to its verified access grant: ${
+          linkGrantError?.message ?? "delivery claim was lost"
+        }`,
+      );
+    }
+    if (!digitalArtefactId) {
+      throw new Error(
+        `Cannot record customer access for book ${bookId}: digital artefact identity is missing`,
+      );
+    }
+    const { error: verifyArtefactAccessError, count: verifiedArtefactCount } =
+      await supabaseAdmin
+        .from("product_artefacts")
+        .update(
+          {
+            access_url: bookAccessUrl,
+            access_verified_at: accessVerifiedAt,
+          },
+          { count: "exact" },
+        )
+        .eq("id", digitalArtefactId)
         .eq("book_id", bookId)
         .eq("version_id", approvedVersionId)
-        .eq("channel", "email")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-    if (ambiguousAttemptError) {
+        .eq("kind", "pdf_digital")
+        .not("durable_verified_at", "is", null);
+    if (
+      verifyArtefactAccessError ||
+      (verifiedArtefactCount ?? 0) !== 1
+    ) {
       throw new Error(
-        `Could not check pending delivery attempts: ${ambiguousAttemptError.message}`,
-      );
-    }
-    if (ambiguousAttempt) {
-      throw new Error(
-        `Ambiguous pending delivery attempt ${ambiguousAttempt.id}; reconcile provider status before retrying`,
+        `Failed to record verified customer artefact access: ${
+          verifyArtefactAccessError?.message ?? "artefact was not durable"
+        }`,
       );
     }
 
-    const deliveryAttempt = await beginDeliveryAttempt({
-      orderId: orderIdForGrant,
-      bookId,
-      versionId: approvedVersionId,
-      accessVerifiedAt,
-    });
-
+    // ── Send the delivery email and CONFIRM it was actually sent ────────────
+    providerCallStarted = true;
     const sendResult = await sendDeliveryEmail({
       email,
       recipientName:
@@ -1177,10 +1281,11 @@ export async function finalisePurchasedBook(
         errorDetail: sendResult.reason ?? "Email provider did not confirm send",
       });
       await finishDeliveryAttempt({
-        attemptId: deliveryAttempt.id,
+        attemptId: claimedDeliveryAttempt.id,
         status: "failed",
         errorDetail: sendResult.reason ?? "not_sent",
       });
+      claimedDeliveryAttempt = null;
       await setOperationalState(bookId, "awaiting_delivery");
       throw new Error(
         `finalisePurchasedBook: delivery email for book ${bookId} was not sent (${sendResult.reason ?? "unknown"}) — remaining Purchased`
@@ -1191,7 +1296,7 @@ export async function finalisePurchasedBook(
     // attempt. If this write fails, the pending row deliberately blocks an
     // automatic resend until an operator reconciles provider status.
     const deliveryRecorded = await finishDeliveryAttempt({
-      attemptId: deliveryAttempt.id,
+      attemptId: claimedDeliveryAttempt.id,
       status: "sent",
       notificationSentAt: new Date().toISOString(),
       providerMessageId:
@@ -1202,6 +1307,7 @@ export async function finalisePurchasedBook(
         `Delivery notification was accepted but its durable attempt record failed for order ${orderIdForGrant}`,
       );
     }
+    claimedDeliveryAttempt = null;
 
     // ── Transition Purchased -> Delivered (only after all of the above) ─────
     const deliverTransition = await transitionStage(
@@ -1220,6 +1326,18 @@ export async function finalisePurchasedBook(
     await setOperationalState(bookId, "idle");
     console.log(`[pipeline] Book ${bookId} finalised and delivered.`);
   } catch (error) {
+    // Deterministic pre-provider failures are safe to release for retry.
+    // Once a provider call starts, an unfinished pending row is intentionally
+    // ambiguous and must be reconciled instead of automatically resent.
+    if (claimedDeliveryAttempt && !providerCallStarted) {
+      await finishDeliveryAttempt({
+        attemptId: claimedDeliveryAttempt.id,
+        status: "failed",
+        errorDetail:
+          error instanceof Error ? error.message : "pre-provider finalisation failed",
+      });
+      claimedDeliveryAttempt = null;
+    }
     // Never fulfil on failure. Remain Purchased (do NOT set status=failed here,
     // which would obscure the lifecycle stage) and record a retryable failure.
     console.error(`Full book finalisation failed for book ${bookId}:`, error);
@@ -1240,7 +1358,6 @@ async function beginDeliveryAttempt(params: {
   orderId: string;
   bookId: string;
   versionId: string;
-  accessVerifiedAt: string;
 }): Promise<{ id: string; attemptNumber: number }> {
   const { data: prior, error: priorError } = await supabaseAdmin
     .from("delivery_attempts")
@@ -1270,7 +1387,8 @@ async function beginDeliveryAttempt(params: {
       channel: "email",
       status: "pending",
       idempotency_key: idempotencyKey,
-      access_verified_at: params.accessVerifiedAt,
+      access_grant_id: null,
+      access_verified_at: null,
       metadata: { retryable: true, awaiting_provider_result: true },
     })
     .select("id")

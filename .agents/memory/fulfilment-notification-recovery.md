@@ -16,4 +16,7 @@ unsafe.
 but unrecorded attempts remain pending for manual reconciliation, and operator
 retry actions re-authenticate and reuse exact-version/idempotent services without
 replaying payment. Approved invitation failures must remain visible and
-retryable even after review tokens are consumed.
+retryable even after review tokens are consumed. A final delivery attempt must
+claim the operation before replacing customer capabilities and must prove the
+exact still-usable capability actually sent; separate “some attempt” and “some
+grant” evidence is not sufficient.

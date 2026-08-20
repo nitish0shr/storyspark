@@ -193,6 +193,23 @@ export async function createBookVersion(
       error: "Every page requires non-empty text and an illustration before versioning",
     };
   }
+  const pageNumbers = storyPages
+    .map((page) => page.pageNumber)
+    .sort((a, b) => a - b);
+  if (
+    pageNumbers.some(
+      (pageNumber, index) =>
+        !Number.isInteger(pageNumber) || pageNumber !== index + 1,
+    )
+  ) {
+    return {
+      ok: false,
+      versionId: null,
+      versionNumber: null,
+      contentHash: null,
+      error: "Version pages must be numbered contiguously from 1",
+    };
+  }
 
   // Compute content hash for duplicate detection
   const pageHashInputs = storyPages.map((p, i) => ({

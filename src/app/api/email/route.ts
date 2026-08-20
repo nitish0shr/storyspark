@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resend, RESEND_FROM_EMAIL, isResendConfigured } from "@/lib/resend";
+import { sendEmail } from "@/lib/email-provider";
 import { getAppUrl } from "@/lib/utils";
 
 type EmailType = "order_confirmation" | "gift_notification" | "preview_reminder";
@@ -34,7 +34,13 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
     const expectedToken = process.env.INTERNAL_API_SECRET;
 
-    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+    if (!expectedToken) {
+      return NextResponse.json(
+        { error: "Internal email endpoint is not configured" },
+        { status: 503 },
+      );
+    }
+    if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -45,13 +51,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "type and data are required" },
         { status: 400 }
-      );
-    }
-
-    if (!isResendConfigured()) {
-      return NextResponse.json(
-        { error: "Email service not configured. Set RESEND_API_KEY to enable emails." },
-        { status: 503 }
       );
     }
 
@@ -67,10 +66,9 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const bookUrl = d.pdfUrl || `${appUrl}/checkout/success?book_id=${d.bookId}`;
+        const bookUrl = `${appUrl}/checkout/success?book_id=${d.bookId}`;
 
-        await resend.emails.send({
-          from: RESEND_FROM_EMAIL,
+        const result = await sendEmail({
           to: d.buyerEmail,
           subject: `${d.childName}'s Starmee book is ready!`,
           html: buildOrderConfirmation({
@@ -78,12 +76,12 @@ export async function POST(request: NextRequest) {
             childName: d.childName,
             tier: d.tier || "base",
             bookUrl,
-            pdfUrl: d.pdfUrl || null,
+            pdfUrl: null,
             dashboardUrl: `${appUrl}/dashboard`,
           }),
         });
 
-        return NextResponse.json({ sent: true });
+        return emailResultResponse(result);
       }
 
       case "gift_notification": {
@@ -95,8 +93,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await resend.emails.send({
-          from: RESEND_FROM_EMAIL,
+        const result = await sendEmail({
           to: d.recipientEmail,
           subject: `You've received a Starmee book!`,
           html: buildGiftNotification({
@@ -109,7 +106,7 @@ export async function POST(request: NextRequest) {
           }),
         });
 
-        return NextResponse.json({ sent: true });
+        return emailResultResponse(result);
       }
 
       case "preview_reminder": {
@@ -121,8 +118,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await resend.emails.send({
-          from: RESEND_FROM_EMAIL,
+        const result = await sendEmail({
           to: d.email,
           subject: `${d.childName}'s adventure is waiting!`,
           html: buildPreviewReminder({
@@ -132,7 +128,7 @@ export async function POST(request: NextRequest) {
           }),
         });
 
-        return NextResponse.json({ sent: true });
+        return emailResultResponse(result);
       }
 
       default:
@@ -148,6 +144,17 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function emailResultResponse(result: Awaited<ReturnType<typeof sendEmail>>) {
+  return NextResponse.json(
+    {
+      sent: result.sent,
+      reason: result.reason ?? null,
+      providerMessageId: result.providerMessageId ?? null,
+    },
+    { status: result.sent ? 200 : 202 },
+  );
 }
 
 // ---------------------------------------------------------------------------

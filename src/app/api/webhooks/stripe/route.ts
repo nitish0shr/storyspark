@@ -9,7 +9,7 @@ import {
   verifySessionPayment,
   verifyExactIdentity,
 } from "@/lib/webhook-idempotency";
-import { isResendConfigured, resend, RESEND_FROM_EMAIL } from "@/lib/resend";
+import { sendEmail } from "@/lib/email-provider";
 import { getAppUrl } from "@/lib/utils";
 import { getNextThemeForSubscriber } from "@/services/theme-rotation";
 import { shouldApplyCheckoutExpiry } from "@/lib/checkout-recovery";
@@ -547,7 +547,7 @@ async function handleCheckoutCompleted(
   //   so we keep it ahead of the throwing finalisation call. (The book is
   //   already Purchased at this point.)
 
-  if (isGift && giftRecipientEmail && isResendConfigured()) {
+  if (isGift && giftRecipientEmail) {
     try {
       const { data: orderWithGift } = await supabaseAdmin
         .from("orders")
@@ -555,8 +555,7 @@ async function handleCheckoutCompleted(
         .eq("stripe_checkout_session_id", session.id)
         .single();
 
-      await resend.emails.send({
-        from: RESEND_FROM_EMAIL,
+      const giftResult = await sendEmail({
         to: giftRecipientEmail,
         subject: `You've received a Starmee storybook!`,
         html: buildGiftNotificationEmail({
@@ -568,6 +567,11 @@ async function handleCheckoutCompleted(
           appUrl,
         }),
       });
+      if (!giftResult.sent) {
+        console.info(
+          `[stripe] Gift notification remained unsent: ${giftResult.reason ?? "unknown"}`,
+        );
+      }
     } catch (emailErr) {
       console.error("[stripe] Failed to send gift notification email:", emailErr);
     }
@@ -964,10 +968,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     .eq("id", subChildId)
     .single();
 
-  if (profile?.email && isResendConfigured()) {
+  if (profile?.email) {
     try {
-      await resend.emails.send({
-        from: RESEND_FROM_EMAIL,
+      const renewalResult = await sendEmail({
         to: profile.email,
         subject: `${child?.name || "Your child"}'s new monthly Starmee book is being created!`,
         html: `<!DOCTYPE html>
@@ -997,6 +1000,11 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 </body>
 </html>`,
       });
+      if (!renewalResult.sent) {
+        console.info(
+          `[stripe] Subscription renewal notification remained unsent: ${renewalResult.reason ?? "unknown"}`,
+        );
+      }
     } catch (emailErr) {
       console.error("Failed to send subscription renewal email:", emailErr);
     }
