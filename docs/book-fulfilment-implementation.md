@@ -371,7 +371,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 256 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 257 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit --incremental false -p tsconfig.json` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop/mobile | **Passed**: homepage, retired admin GET routes, invalid review token, invalid preview fail-closed |

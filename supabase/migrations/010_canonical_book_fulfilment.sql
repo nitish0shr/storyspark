@@ -1336,11 +1336,17 @@ begin
   end if;
 
   -- ── 8. Approved: bind to the version being approved ───────────────────────
-  -- review_version_id must match what is under review (if set).
+  -- A missing review pointer is a reconciliation failure, never permission to
+  -- substitute current_version_id.
   if p_to_stage = 'Approved' then
-    if v_book.review_version_id is not null
-      and v_book.review_version_id is distinct from v_effective_vid
-    then
+    if v_book.review_version_id is null then
+      return jsonb_build_object(
+        'ok', false, 'error', 'review_version_missing',
+        'message', 'Cannot approve until the immutable review version is reconciled'
+      );
+    end if;
+
+    if v_book.review_version_id is distinct from v_effective_vid then
       return jsonb_build_object(
         'ok', false, 'error', 'version_mismatch',
         'message', 'Approving a different version than the one under review',

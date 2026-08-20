@@ -27,6 +27,17 @@ describe("version-bound review token schema", () => {
       /create index if not exists idx_book_review_tokens_version/i,
     );
   });
+
+  test("lifecycle RPC rejects approval when the review pointer is missing", () => {
+    assert.match(
+      canonicalMigration,
+      /if p_to_stage = 'Approved' then\s+if v_book\.review_version_id is null then\s+return jsonb_build_object\(\s*'ok', false, 'error', 'review_version_missing'/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /if v_book\.review_version_id is distinct from v_effective_vid then\s+return jsonb_build_object\(\s*'ok', false, 'error', 'version_mismatch'/i,
+    );
+  });
 });
 
 describe("canonical review token persistence", () => {
