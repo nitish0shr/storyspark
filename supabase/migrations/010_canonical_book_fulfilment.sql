@@ -296,7 +296,8 @@ create table if not exists public.product_artefacts (
                      check (kind in ('pdf_digital', 'pdf_print', 'epub', 'audio', 'other')),
   -- storage_path: path within the storage bucket (durable, provider-independent)
   storage_path       text,
-  -- url: signed/public URL (may expire)
+  -- url: durable private object identity (private://bucket/path), never a
+  -- signed/public bearer URL.
   url                text        not null,
   -- durable_verified_at: when the artefact was last confirmed present in storage
   durable_verified_at timestamptz,
@@ -317,12 +318,59 @@ create index if not exists idx_product_artefacts_book
 create index if not exists idx_product_artefacts_version
   on public.product_artefacts(version_id) where version_id is not null;
 
--- Repair older pending-migration runs that stored a raw customer bearer URL.
--- The delivery attempt points to the hash-only grant identity instead.
+-- Repair older pending-migration runs that stored raw signed/public bearer
+-- URLs. The delivery attempt points to the hash-only grant identity instead.
 update public.product_artefacts
-set access_url = null
-where kind in ('pdf_digital', 'pdf_print', 'epub')
-  and access_url is not null;
+set
+  access_url = null,
+  url =
+    'private://' ||
+    coalesce(nullif(metadata->>'storage_bucket', ''), 'legacy-unresolved') ||
+    '/' ||
+    coalesce(
+      nullif(ltrim(storage_path, '/'), ''),
+      'product-artefacts/' || id::text
+    ),
+  durable_verified_at = case
+    when metadata->>'storage_bucket' = 'final-books'
+      and nullif(btrim(storage_path), '') is not null
+    then durable_verified_at
+    else null
+  end,
+  access_verified_at = case
+    when metadata->>'storage_bucket' = 'final-books'
+      and nullif(btrim(storage_path), '') is not null
+    then access_verified_at
+    else null
+  end,
+  metadata = coalesce(metadata, '{}'::jsonb) ||
+    jsonb_build_object('legacy_bearer_urls_scrubbed', true)
+where access_url is not null
+   or url not like 'private://%';
+
+-- Legacy book/version PDF columns cannot encode private object identity and
+-- therefore must never retain signed/public URLs.
+update public.books
+set pdf_url = null,
+    pdf_print_url = null
+where pdf_url is not null
+   or pdf_print_url is not null;
+
+update public.book_versions
+set pdf_url = null,
+    pdf_print_url = null
+where pdf_url is not null
+   or pdf_print_url is not null;
+
+-- Legacy narration used public object URLs. Paid audio remains disabled until
+-- it has an exact-payment private delivery route equivalent to final PDFs.
+update public.book_pages
+set audio_url = null
+where audio_url is not null;
+
+update public.book_version_pages
+set audio_url = null
+where audio_url is not null;
 
 -- Final paid-book files are isolated from legacy/public media. There are no
 -- anon/authenticated object policies: the trusted server issues bounded signed

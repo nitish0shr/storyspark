@@ -111,8 +111,25 @@ describe("private final-book storage contract", () => {
     assert.doesNotMatch(pipeline, /access_url:\s*bookAccessUrl/i);
     assert.match(
       migration,
-      /update public\.product_artefacts[\s\S]*set access_url = null[\s\S]*kind in \('pdf_digital', 'pdf_print', 'epub'\)/i,
+      /update public\.product_artefacts[\s\S]*access_url = null[\s\S]*url =[\s\S]*'private:\/\/'[\s\S]*url not like 'private:\/\/%'/i,
     );
+    assert.match(
+      migration,
+      /update public\.books[\s\S]*set pdf_url = null,[\s\S]*pdf_print_url = null/i,
+    );
+    assert.match(
+      migration,
+      /update public\.book_versions[\s\S]*set pdf_url = null,[\s\S]*pdf_print_url = null/i,
+    );
+    assert.match(
+      migration,
+      /update public\.book_pages[\s\S]*set audio_url = null/i,
+    );
+    assert.match(
+      migration,
+      /update public\.book_version_pages[\s\S]*set audio_url = null/i,
+    );
+    assert.doesNotMatch(pipeline, /generateNarration\(/);
   });
 
   test("owner RLS never exposes full versions or artefacts without exact paid grants", () => {

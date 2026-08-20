@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, test } from "node:test";
 import {
   CANONICAL_RECOVERY_PAGE_COUNT,
+  canInvokeCanonicalFullBook,
   evaluateLegacyRecoveryEligibility,
   legacyRecoveryConfirmation,
   type LegacyRecoveryEvidence,
@@ -41,6 +42,34 @@ const checkout = fs.readFileSync(
 );
 const publicPreviewRoute = fs.readFileSync(
   path.resolve(process.cwd(), "src/app/api/generate-preview/route.ts"),
+  "utf8",
+);
+const publicFullBookRoute = fs.readFileSync(
+  path.resolve(process.cwd(), "src/app/api/generate-book/route.ts"),
+  "utf8",
+);
+const subscriptionGeneration = fs.readFileSync(
+  path.resolve(process.cwd(), "src/app/api/subscription/generate/route.ts"),
+  "utf8",
+);
+const stripeWebhook = fs.readFileSync(
+  path.resolve(process.cwd(), "src/app/api/webhooks/stripe/route.ts"),
+  "utf8",
+);
+const versionService = fs.readFileSync(
+  path.resolve(process.cwd(), "src/lib/book-versions.ts"),
+  "utf8",
+);
+const directPdfRoute = fs.readFileSync(
+  path.resolve(process.cwd(), "src/app/api/generate-pdf/route.ts"),
+  "utf8",
+);
+const directAudioRoute = fs.readFileSync(
+  path.resolve(process.cwd(), "src/app/api/generate-audio/route.ts"),
+  "utf8",
+);
+const pdfAssembly = fs.readFileSync(
+  path.resolve(process.cwd(), "src/services/pdf-assembly.tsx"),
   "utf8",
 );
 
@@ -104,6 +133,21 @@ describe("controlled legacy recovery eligibility", () => {
       legacyRecoveryConfirmation("12345678-abcd-1234-abcd-1234567890ab"),
       "REGENERATE 12345678",
     );
+  });
+
+  test("full-book generation is canonical Purchased-only", () => {
+    assert.equal(canInvokeCanonicalFullBook("Purchased"), true);
+    for (const stage of [
+      null,
+      undefined,
+      "Generated",
+      "Under Review",
+      "Approved",
+      "Ready for Purchase",
+      "Delivered",
+    ]) {
+      assert.equal(canInvokeCanonicalFullBook(stage), false);
+    }
   });
 });
 
@@ -180,6 +224,64 @@ describe("explicit recovery action", () => {
       'await setOperationalState(bookId, "generating_preview"',
     );
     assert.ok(proof >= 0 && stateMutation > proof);
+  });
+
+  test("cannot be bypassed through legacy full-book or subscription paths", () => {
+    assert.match(
+      publicFullBookRoute,
+      /\.select\("id, user_id, status, lifecycle_stage"\)/,
+    );
+    assert.match(
+      publicFullBookRoute,
+      /if \(!canInvokeCanonicalFullBook\(book\.lifecycle_stage\)\)/,
+    );
+    assert.match(publicFullBookRoute, /await generateFullBook\(bookId\)/);
+    assert.doesNotMatch(
+      publicFullBookRoute,
+      /generateFullBook\(bookId\)\.catch/,
+    );
+    assert.match(
+      pipeline,
+      /lifecycle-null legacy generation is disabled/,
+    );
+    assert.doesNotMatch(pipeline, /Legacy path \(backward compatibility\)/);
+    assert.doesNotMatch(subscriptionGeneration, /generateFullBook/);
+    assert.doesNotMatch(
+      stripeWebhook,
+      /generateFullBook:\s*genFull|await genFull\(/,
+    );
+    assert.match(
+      stripeWebhook,
+      /const \{ generatePreview: genPreview \} =[\s\S]*genPreview\(book\.id\)[\s\S]*\.catch/,
+    );
+  });
+
+  test("raw PDF URL compatibility writes fail closed", () => {
+    assert.match(versionService, /Refusing to persist raw PDF URLs/);
+    assert.doesNotMatch(versionService, /url:\s*pdfUrl/);
+    assert.doesNotMatch(versionService, /url:\s*pdfPrintUrl/);
+  });
+
+  test("direct PDF and audio routes cannot generate legacy output", () => {
+    assert.match(directPdfRoute, /Direct PDF generation is disabled/);
+    assert.doesNotMatch(directPdfRoute, /assemblePdf/);
+    assert.match(directAudioRoute, /Direct audio generation is disabled/);
+    assert.doesNotMatch(directAudioRoute, /generateNarration/);
+  });
+
+  test("PDF assembly independently requires exact canonical payment and version evidence", () => {
+    assert.match(
+      pdfAssembly,
+      /book\.lifecycle_stage !== "Purchased"/,
+    );
+    assert.match(
+      pdfAssembly,
+      /book\.approved_version_id !== options\.versionId/,
+    );
+    assert.match(pdfAssembly, /\.eq\("version_id", options\.versionId\)/);
+    assert.match(pdfAssembly, /\.not\("payment_verified_at", "is", null\)/);
+    assert.match(pdfAssembly, /paidOrders\?\.length !== 1/);
+    assert.doesNotMatch(pdfAssembly, /versionId \?\? "legacy"/);
   });
 });
 

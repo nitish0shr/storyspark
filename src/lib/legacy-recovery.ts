@@ -1,6 +1,12 @@
 export const CANONICAL_RECOVERY_PAGE_COUNT = 12;
 export const LEGACY_RECOVERY_CONFIRM_PREFIX = "REGENERATE";
 
+export function canInvokeCanonicalFullBook(
+  lifecycleStage: string | null | undefined,
+): boolean {
+  return lifecycleStage === "Purchased";
+}
+
 const RECOVERABLE_LEGACY_STATUSES = new Set([
   "preview_ready",
   "pending_review",

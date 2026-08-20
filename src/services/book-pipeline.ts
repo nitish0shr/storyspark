@@ -10,10 +10,8 @@ import {
   IllustrationChild,
 } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
-import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
 import {
-  sendBookReadyEmail,
   sendDeliveryEmail,
 } from "@/lib/email-notifications";
 import { getAppUrl } from "@/lib/utils";
@@ -40,6 +38,7 @@ import {
   isUsableLinkedDeliveryGrant,
   type LinkedDeliveryGrantEvidence,
 } from "@/lib/delivery-recovery";
+import { canInvokeCanonicalFullBook } from "@/lib/legacy-recovery";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -1030,24 +1029,9 @@ export async function finalisePurchasedBook(
       // ── Populate legacy book_pages + audio so PDF assembly reads real content
       await upsertBookPages(bookId, storyPages, allIllustrationUrls);
 
-      let audioStatus: "complete" | "failed" | "skipped" = "skipped";
-      if (isOpenAIConfigured()) {
-        try {
-          console.log(`Generating audio narration for book ${bookId}...`);
-          const pagesForAudio = storyPages.map((page) => ({
-            pageNumber: page.pageNumber,
-            text: page.text,
-          }));
-          await generateNarration(bookId, pagesForAudio);
-          audioStatus = "complete";
-        } catch (audioError) {
-          audioStatus = "failed";
-          console.error(
-            `Audio narration failed for book ${bookId} (continuing to PDF):`,
-            audioError
-          );
-        }
-      }
+      // Legacy narration stored public bearer URLs. Keep it disabled until
+      // audio has the same private, exact-payment access path as final PDFs.
+      const audioStatus = "skipped";
 
       // ── Assemble the durable PDF artefact ────────────────────────────────
       const assembled = await assemblePdf(bookId, {
@@ -1633,146 +1617,19 @@ async function recordDeliveryAttempt(params: {
   return true;
 }
 
-/**
- * Compatibility alias: generateFullBook now delegates to finalisePurchasedBook
- * but only for books that are in the "Purchased" stage. For legacy books that
- * are still using the old status system, the full generation is performed directly.
- */
+/** Canonical compatibility alias. Legacy status-based generation is forbidden. */
 export async function generateFullBook(bookId: string): Promise<void> {
-  // Check current lifecycle stage
-  const { data: book } = await supabaseAdmin
+  const { data: book, error } = await supabaseAdmin
     .from("books")
-    .select("lifecycle_stage, status, story_text, illustration_urls")
+    .select("lifecycle_stage")
     .eq("id", bookId)
     .maybeSingle();
 
-  const lifecycleStage = book?.lifecycle_stage as LifecycleStage | null;
-
-  if (lifecycleStage === "Purchased") {
-    // Use the new finalisation path for books in the canonical lifecycle
-    return finalisePurchasedBook(bookId);
-  }
-
-  // Any OTHER canonical lifecycle stage is not a valid target for full
-  // generation — only 'Purchased' books may be fulfilled. Reject rather than
-  // silently running the legacy path against a canonical book.
-  if (lifecycleStage !== null && lifecycleStage !== undefined) {
+  const lifecycleStage = book?.lifecycle_stage as LifecycleStage | null | undefined;
+  if (error || !book || !canInvokeCanonicalFullBook(lifecycleStage)) {
     throw new Error(
-      `generateFullBook: book ${bookId} is in lifecycle stage '${lifecycleStage}'; only 'Purchased' books can be fulfilled`
+      `generateFullBook: book ${bookId} must be an existing canonical Purchased book; lifecycle-null legacy generation is disabled`,
     );
   }
-
-  // ── Legacy path (backward compatibility) ──────────────────────────────────
-  // Reached ONLY when lifecycle_stage is null (pre-canonical books). We do not
-  // invent a lifecycle for these; the old status-based flow runs unchanged.
-  try {
-    await updateBookStatus(bookId, "generating");
-
-    const { book: fullBook, child, secondChild } = await fetchBookWithChildren(bookId);
-
-    if (!fullBook.story_text || !Array.isArray(fullBook.story_text)) {
-      throw new Error("Book has no story text. Generate a preview first.");
-    }
-
-    const storyPages: BookPage[] = fullBook.story_text as BookPage[];
-    const existingUrls: (string | null)[] = (fullBook.illustration_urls as (string | null)[]) || [];
-
-    const remainingPageNumbers: number[] = [];
-    storyPages.forEach((page, idx) => {
-      if (!existingUrls[idx]) {
-        remainingPageNumbers.push(page.pageNumber);
-      }
-    });
-
-    let allIllustrationUrls = [...existingUrls];
-
-    if (remainingPageNumbers.length > 0) {
-      const skeleton = storySkeletons[fullBook.theme_id];
-      const hasTwoChildren = !!secondChild;
-      const sceneDescriptions = skeleton
-        ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
-        : [];
-
-      const descriptions = extractAppearanceDescriptions(fullBook.contextual_answers);
-      const illustrationChildren = await prepareIllustrationChildren(
-        child,
-        secondChild,
-        descriptions
-      );
-
-      const newUrls = await generateIllustrations({
-        bookId,
-        storyPages,
-        themeId: fullBook.theme_id,
-        sceneDescriptions,
-        pageNumbers: remainingPageNumbers,
-        children: illustrationChildren,
-        contextualAnswers: fullBook.contextual_answers as Record<string, unknown> | null,
-      });
-
-      let newUrlIdx = 0;
-      allIllustrationUrls = storyPages.map((page, idx) => {
-        if (!existingUrls[idx] && newUrlIdx < newUrls.length) {
-          return newUrls[newUrlIdx++];
-        }
-        return existingUrls[idx] || null;
-      });
-    }
-
-    await updateBookStatus(bookId, "generating", {
-      illustration_urls: allIllustrationUrls,
-    });
-
-    await upsertBookPages(bookId, storyPages, allIllustrationUrls);
-
-    let audioStatus: "complete" | "failed" | "skipped" = "skipped";
-    if (isOpenAIConfigured()) {
-      try {
-        console.log(`Generating audio narration for book ${bookId}...`);
-        const pagesForAudio = storyPages.map((page) => ({
-          pageNumber: page.pageNumber,
-          text: page.text,
-        }));
-        await generateNarration(bookId, pagesForAudio);
-        audioStatus = "complete";
-        console.log(`Audio narration complete for book ${bookId}`);
-      } catch (audioError) {
-        audioStatus = "failed";
-        console.error(
-          `Audio narration failed for book ${bookId} (continuing to PDF):`,
-          audioError
-        );
-      }
-    }
-
-    const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
-
-    await updateBookStatus(bookId, "complete", {
-      pdf_url: pdfUrl,
-      pdf_print_url: pdfPrintUrl,
-      audio_status: audioStatus,
-    });
-
-    fetchBookEmail(bookId)
-      .then((email) => {
-        if (email) {
-          return sendBookReadyEmail({
-            email,
-            childName: child.name,
-            bookId,
-            pdfUrl,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error(
-          `Failed to send book-ready email for book ${bookId}:`,
-          err
-        );
-      });
-  } catch (error) {
-    console.error(`Full book generation failed for book ${bookId}:`, error);
-    await updateBookStatus(bookId, "failed");
-    throw error;
-  }
+  return finalisePurchasedBook(bookId);
 }

@@ -18,7 +18,7 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 312 passed, 0 failed.
+- `npm test`: 317 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
 - Safe desktop browser smoke: passed for the homepage, invalid preview
@@ -178,6 +178,13 @@ provider setup. Unchecked items below must not be interpreted as passed.
   attempt, grant metadata, and logs for the raw customer token.
   **Expect:** the raw bearer URL/token is absent; only its hash and linked grant
   identity are durable.
+- [ ] After migration, inspect all `product_artefacts.url`/`access_url` values
+  and `books`/`book_versions` PDF URL columns, plus both page-table audio URL
+  columns.
+  **Expect:** every artefact URL is a non-secret `private://` identity,
+  `access_url` is null, and both legacy PDF URL columns are null. Rows without
+  provable `final-books` identity have verification timestamps cleared. Legacy
+  public audio URLs are null and paid finalisation reports narration skipped.
 - [ ] Read the `final-books` bucket configuration and attempt direct client
   object access as anon and authenticated roles.
   **Expect:** bucket `public = false`; both direct reads fail. Service-role
@@ -270,6 +277,21 @@ provider setup. Unchecked items below must not be interpreted as passed.
   same lifecycle-null book to `/api/generate-preview`.
   **Expect:** `409`; only a brand-new `draft` may use the public generation
   endpoint, and the service records no attempt or status mutation.
+- [ ] As the authenticated owner of a lifecycle-null `preview_ready` legacy
+  row, POST its id to `/api/generate-book`, and separately invoke
+  `generateFullBook` in a controlled test harness.
+  **Expect:** both reject before status mutation, illustration/PDF/audio work,
+  email, or URL persistence. The endpoint/service accept only canonical
+  Purchased finalisation.
+- [ ] As the same owner, POST the lifecycle-null book to `/api/generate-pdf`
+  and `/api/generate-audio`.
+  **Expect:** both return `409`; neither PDF assembly, narration, storage writes,
+  signed links, nor email occur.
+- [ ] Invoke `assemblePdf` directly in a controlled test with lifecycle null,
+  the wrong approved version, no verified payment, two qualifying payments, or
+  an incomplete immutable page set.
+  **Expect:** every case rejects before rendering/upload. Only canonical
+  Purchased plus the exact approved version and one verified paid order passes.
 - [ ] Attempt controlled regeneration for the false legacy `delivered` row, a
   row with payment evidence, or a row with a complete immutable version.
   **Expect:** blocked for reconciliation; no AI work and no lifecycle promotion.
@@ -293,7 +315,7 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 312/312 |
+| Automated tests | **Pass** | 317/317 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
 | Safe browser smoke | **Pass** | Desktop |

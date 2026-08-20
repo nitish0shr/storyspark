@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { isOpenAIConfigured } from "@/lib/openai";
-import { generateNarration } from "@/services/tts-narration";
 
 export async function POST(request: NextRequest) {
   try {
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
         { error: "Database not configured." },
-        { status: 503 }
-      );
-    }
-
-    if (!isOpenAIConfigured()) {
-      return NextResponse.json(
-        { error: "OpenAI not configured." },
         { status: 503 }
       );
     }
@@ -42,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status, is_purchased")
+      .select("id, user_id")
       .eq("id", bookId)
       .single();
 
@@ -54,57 +45,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (!book.is_purchased) {
-      return NextResponse.json(
-        { error: "Audio narration is only available for purchased books" },
-        { status: 403 }
-      );
-    }
-
-    const eligibleStatuses = ["generating", "complete", "completed"];
-    if (!eligibleStatuses.includes(book.status)) {
-      return NextResponse.json(
-        { error: "Book is not ready for audio generation" },
-        { status: 409 }
-      );
-    }
-
-    const { data: pages, error: pagesError } = await supabaseAdmin
-      .from("book_pages")
-      .select("page_number, text, audio_url")
-      .eq("book_id", bookId)
-      .order("page_number");
-
-    if (pagesError || !pages || pages.length === 0) {
-      return NextResponse.json(
-        { error: "No pages found for this book" },
-        { status: 409 }
-      );
-    }
-
-    const pagesNeedingAudio = pages.filter(
-      (p) => !p.audio_url && p.text && p.text.trim().length > 0
+    return NextResponse.json(
+      {
+        error:
+          "Direct audio generation is disabled. Narration is created only inside verified paid fulfilment.",
+      },
+      { status: 409 },
     );
-
-    if (pagesNeedingAudio.length === 0) {
-      const audioUrls = pages
-        .filter((p) => p.audio_url)
-        .map((p) => ({
-          pageNumber: p.page_number,
-          audioUrl: p.audio_url,
-        }));
-      return NextResponse.json({ audioUrls, alreadyGenerated: true });
-    }
-
-    const audioUrls = await generateNarration(
-      bookId,
-      pagesNeedingAudio.map((p) => ({
-        pageNumber: p.page_number,
-        text: p.text,
-      }))
-    );
-
-    return NextResponse.json({ audioUrls }, { status: 200 });
   } catch (error) {
     console.error("Generate audio error:", error);
     return NextResponse.json(

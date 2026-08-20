@@ -909,35 +909,12 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     })
     .eq("id", subId_);
 
-  // Subscription books are NOT canonical purchases: they must never route
-  // through the purchase-fulfilment path (finalisePurchasedBook) or the
-  // lifecycle RPC. They are freshly-inserted drafts (status='draft', no
-  // lifecycle_stage), so they run the legacy preview→full generation pipeline
-  // directly. We import ONLY the legacy generation entrypoints and guard
-  // against ever invoking full generation on a Purchased book.
-  const { generatePreview: genPreview, generateFullBook: genFull } =
+  // Subscription books are fresh drafts, not canonical purchases. Generate
+  // their preview only; full artefacts require the canonical paid lifecycle.
+  const { generatePreview: genPreview } =
     await import("@/services/book-pipeline");
 
   genPreview(book.id)
-    .then(async () => {
-      // Defensive guard: never run full generation on a Purchased book from
-      // the subscription path (that is reserved for the checkout webhook).
-      const { data: freshBook } = await supabaseAdmin
-        .from("books")
-        .select("lifecycle_stage")
-        .eq("id", book.id)
-        .maybeSingle();
-
-      if (freshBook?.lifecycle_stage === "Purchased") {
-        console.warn(
-          `[stripe] Subscription book ${book.id} unexpectedly in Purchased ` +
-            `stage — skipping legacy full generation.`
-        );
-        return;
-      }
-
-      await genFull(book.id);
-    })
     .catch(async (err: Error) => {
       console.error(
         `Subscription book generation failed for ${book.id}:`,

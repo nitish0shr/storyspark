@@ -454,43 +454,9 @@ export async function updateVersionPdfUrls(
   pdfUrl: string | null,
   pdfPrintUrl: string | null,
 ): Promise<void> {
-  const { data: version, error: versionError } = await supabaseAdmin
-    .from("book_versions")
-    .select("book_id")
-    .eq("id", versionId)
-    .maybeSingle();
-  if (versionError || !version) {
-    console.error(
-      `[book-versions] Cannot attach artefacts to missing version ${versionId}:`,
-      versionError?.message,
+  if (pdfUrl || pdfPrintUrl) {
+    throw new Error(
+      `Refusing to persist raw PDF URLs for immutable version ${versionId}; record private storage identity in product_artefacts instead`,
     );
-    return;
-  }
-  const rows = [
-    pdfUrl
-      ? {
-          book_id: version.book_id,
-          version_id: versionId,
-          kind: "pdf_digital",
-          url: pdfUrl,
-          metadata: { source: "compatibility-helper", verification_required: true },
-        }
-      : null,
-    pdfPrintUrl
-      ? {
-          book_id: version.book_id,
-          version_id: versionId,
-          kind: "pdf_print",
-          url: pdfPrintUrl,
-          metadata: { source: "compatibility-helper", verification_required: true },
-        }
-      : null,
-  ].filter(Boolean);
-  if (rows.length === 0) return;
-
-  const { error } = await supabaseAdmin.from("product_artefacts").insert(rows);
-
-  if (error) {
-    console.error(`[book-versions] Failed to update PDF URLs for version ${versionId}:`, error.message);
   }
 }

@@ -400,7 +400,7 @@ function BookPdfDocument({
 
 export async function assemblePdf(
   bookId: string,
-  options: { versionId?: string | null } = {},
+  options: { versionId: string },
 ): Promise<{
   pdfUrl: string;
   pdfPrintUrl: string;
@@ -415,6 +415,29 @@ export async function assemblePdf(
 
   if (bookError || !book) {
     throw new Error(`Failed to fetch book ${bookId}: ${bookError?.message}`);
+  }
+  if (
+    book.lifecycle_stage !== "Purchased" ||
+    !book.approved_version_id ||
+    book.approved_version_id !== options.versionId
+  ) {
+    throw new Error(
+      `Cannot assemble final PDF: book ${bookId} is not canonical Purchased for exact approved version ${options.versionId}`,
+    );
+  }
+  const { data: paidOrders, error: paidOrderError } = await supabaseAdmin
+    .from("orders")
+    .select("id")
+    .eq("book_id", bookId)
+    .eq("version_id", options.versionId)
+    .in("status", ["paid", "fulfilled"])
+    .not("stripe_payment_intent_id", "is", null)
+    .not("payment_verified_at", "is", null)
+    .limit(2);
+  if (paidOrderError || paidOrders?.length !== 1) {
+    throw new Error(
+      `Cannot assemble final PDF: exact verified payment evidence is missing or ambiguous for ${bookId}/${options.versionId}`,
+    );
   }
 
   const { data: child, error: childError } = await supabaseAdmin
@@ -441,46 +464,44 @@ export async function assemblePdf(
     }
   }
 
-  let storyPages: BookPage[] = book.story_text || [];
-  let illustrationUrls: (string | null)[] = book.illustration_urls || [];
-  if (options.versionId) {
-    const { data: version, error: versionError } = await supabaseAdmin
-      .from("book_versions")
-      .select("id, book_id, page_count, is_complete")
-      .eq("id", options.versionId)
-      .eq("book_id", bookId)
-      .maybeSingle();
-    if (versionError || !version || !version.is_complete) {
-      throw new Error(
-        `Cannot assemble PDF: immutable version ${options.versionId} is missing or incomplete`,
-      );
-    }
-    const { data: versionPages, error: pageError } = await supabaseAdmin
-      .from("book_version_pages")
-      .select("page_number, text_content, illustration_url")
-      .eq("version_id", options.versionId)
-      .order("page_number", { ascending: true });
-    if (
-      pageError ||
-      !versionPages ||
-      versionPages.length !== version.page_count ||
-      versionPages.some(
-        (page, index) =>
-          page.page_number !== index + 1 ||
-          !page.text_content?.trim() ||
-          !page.illustration_url?.trim(),
-      )
-    ) {
-      throw new Error(
-        `Cannot assemble PDF: immutable version ${options.versionId} does not have a complete ordered page set`,
-      );
-    }
-    storyPages = versionPages.map((page) => ({
-      pageNumber: page.page_number,
-      text: page.text_content,
-    }));
-    illustrationUrls = versionPages.map((page) => page.illustration_url);
+  const { data: version, error: versionError } = await supabaseAdmin
+    .from("book_versions")
+    .select("id, book_id, page_count, is_complete")
+    .eq("id", options.versionId)
+    .eq("book_id", bookId)
+    .maybeSingle();
+  if (versionError || !version || !version.is_complete) {
+    throw new Error(
+      `Cannot assemble PDF: immutable version ${options.versionId} is missing or incomplete`,
+    );
   }
+  const { data: versionPages, error: pageError } = await supabaseAdmin
+    .from("book_version_pages")
+    .select("page_number, text_content, illustration_url")
+    .eq("version_id", options.versionId)
+    .order("page_number", { ascending: true });
+  if (
+    pageError ||
+    !versionPages ||
+    versionPages.length !== version.page_count ||
+    versionPages.some(
+      (page, index) =>
+        page.page_number !== index + 1 ||
+        !page.text_content?.trim() ||
+        !page.illustration_url?.trim(),
+    )
+  ) {
+    throw new Error(
+      `Cannot assemble PDF: immutable version ${options.versionId} does not have a complete ordered page set`,
+    );
+  }
+  const storyPages: BookPage[] = versionPages.map((page) => ({
+    pageNumber: page.page_number,
+    text: page.text_content,
+  }));
+  const illustrationUrls: (string | null)[] = versionPages.map(
+    (page) => page.illustration_url,
+  );
   const theme = getThemeById(book.theme_id);
   const themeName = theme?.name || "Adventure";
 
@@ -502,7 +523,7 @@ export async function assemblePdf(
   const pdfBuffer = await renderToBuffer(pdfElement as any);
 
   // Upload to Supabase Storage
-  const versionSegment = options.versionId ?? "legacy";
+  const versionSegment = options.versionId;
   const storagePath = `books/${bookId}/versions/${versionSegment}/storyspark-book.pdf`;
   const printPath = `books/${bookId}/versions/${versionSegment}/storyspark-book-print.pdf`;
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getNextThemeForSubscriber } from "@/services/theme-rotation";
-import { generatePreview, generateFullBook } from "@/services/book-pipeline";
+import { generatePreview } from "@/services/book-pipeline";
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,9 +81,7 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", sub.id);
 
-    generatePreview(book.id).then(() => {
-      return generateFullBook(book.id);
-    }).catch((err: Error) => {
+    generatePreview(book.id).catch((err: Error) => {
       console.error(`Subscription book generation failed for ${book.id}:`, err);
       supabaseAdmin
         .from("books")

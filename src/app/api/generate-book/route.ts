@@ -3,6 +3,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generateFullBook } from "@/services/book-pipeline";
 import { isOpenAIConfigured } from "@/lib/openai";
+import { canInvokeCanonicalFullBook } from "@/lib/legacy-recovery";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Verify the user owns this book
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status")
+      .select("id, user_id, status, lifecycle_stage")
       .eq("id", bookId)
       .single();
 
@@ -55,27 +56,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Must have preview_ready status before generating full book
-    if (book.status !== "preview_ready") {
+    // Legacy lifecycle-null rows must use the privileged, confirmed recovery
+    // flow. This endpoint can only replay canonical paid-book finalisation.
+    if (!canInvokeCanonicalFullBook(book.lifecycle_stage)) {
       return NextResponse.json(
         {
-          error: `Cannot generate full book from status "${book.status}". Expected "preview_ready".`,
+          error:
+            "Full-book generation is available only for a canonical Purchased book. Legacy recovery requires an administrator.",
         },
         { status: 409 }
       );
     }
 
-    // Start full book generation (fire-and-forget)
-    generateFullBook(bookId).catch((err) => {
-      console.error(
-        `Background full book generation failed for ${bookId}:`,
-        err
-      );
-    });
+    await generateFullBook(bookId);
 
     return NextResponse.json(
-      { status: "generating", bookId },
-      { status: 202 }
+      { status: "finalised", bookId },
+      { status: 200 }
     );
   } catch (error) {
     console.error("Generate book error:", error);

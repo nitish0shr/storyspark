@@ -348,6 +348,19 @@ double-generates, or double-fulfils.
   or anonymous requests cannot bypass the admin claim and cost controls. The
   authenticated POST awaits the single generation attempt and reports its
   result; it never detaches expensive work into an untracked request promise.
+- **Legacy full-book generation is disabled**: `/api/generate-book` and
+  `generateFullBook` accept only a canonical Purchased book and await the
+  idempotent finaliser. Lifecycle-null `preview_ready` rows receive no
+  illustration/PDF/email work through that path, and subscription preview
+  generation no longer chains into full fulfilment.
+- **Direct output endpoints are retired**: owner calls to `/api/generate-pdf`
+  and `/api/generate-audio` return a fail-closed conflict without invoking
+  assembly or narration. `assemblePdf` independently requires canonical
+  Purchased, the exact `approved_version_id`, exactly one verified paid order,
+  and a complete immutable page set before it writes to `final-books`.
+  Legacy narration is also disabled because it stored public audio URLs;
+  migration 010 clears those page-level URLs. Narration must not be restored
+  until it has an equivalent private, exact-payment access path.
 - **Revision** (`revision-engine.applyRevision`): bounded to
   `MAX_REVISION_ATTEMPTS = 2` via the durable successor count; duplicate/
   near-duplicate output (content hash + text similarity ≥ 0.95) is rejected and
@@ -374,6 +387,11 @@ double-generates, or double-fulfils.
   bucket/object identity and verification timestamps; their `access_url` is
   explicitly null, so the raw customer capability exists only long enough to
   verify and send it. The immutable version row is never mutated.
+  Migration 010 also rewrites every pre-existing non-private
+  `product_artefacts.url` to a non-secret `private://` storage identity (or an
+  unresolved private marker), clears every `access_url`, and clears legacy
+  `books`/`book_versions` PDF URL columns. Evidence timestamps are retained only
+  when exact `final-books` storage identity is present.
 - **Access** grants: full-book grants are minted per attempt with a fresh raw
   token, and the customer route/authorisation is verified deterministically
   before `verified_at` is set; stale unsent grants are revoked before reminting.
@@ -485,6 +503,12 @@ where b.lifecycle_stage = 'Delivered';
 
 - Legacy webhook writes for `pending_approval` are removed; the canonical
   webhook only advances via `record_verified_payment_and_purchase`.
+- The status-based `/api/generate-book` path and lifecycle-null branch of
+  `generateFullBook` are removed. Full fulfilment is canonical Purchased-only;
+  incomplete legacy rows can be generated only by the confirmed admin recovery.
+- Direct `/api/generate-pdf` and `/api/generate-audio` output generation is
+  retired. Final PDF creation is internal to verified paid fulfilment; customer
+  signed links are issued only by the authorised status/download path.
 - Old GET approval/rejection routes no longer mutate records; all lifecycle
   changes go through `transition_book_lifecycle`.
 - Legacy `books.status`/`orders.status` columns remain for read compatibility
@@ -497,7 +521,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 312 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 317 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop | **Passed**: homepage rendered; fake preview returned the safe not-found UI; unauthorised book-status/generate-PDF requests returned safe 4xx responses without private paths |
