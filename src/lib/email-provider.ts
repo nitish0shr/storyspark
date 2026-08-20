@@ -22,6 +22,7 @@ export interface SendResult {
   sent: boolean;
   reason?: string;
   provider?: string;
+  providerMessageId?: string;
 }
 
 function fromAddress(): string {
@@ -61,7 +62,13 @@ async function sendViaSendGrid(msg: EmailMessage): Promise<SendResult> {
     }),
   });
 
-  if (res.ok) return { sent: true, provider: "sendgrid" };
+  if (res.ok) {
+    return {
+      sent: true,
+      provider: "sendgrid",
+      providerMessageId: res.headers.get("x-message-id") ?? undefined,
+    };
+  }
   const body = await res.text().catch(() => "");
   return {
     sent: false,

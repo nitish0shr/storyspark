@@ -1,0 +1,102 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, test } from "node:test";
+import {
+  createReviewToken,
+  persistReviewTokenRecord,
+  type ReviewTokenRecord,
+} from "../src/lib/review-tokens";
+
+const canonicalMigration = readFileSync(
+  "supabase/migrations/010_canonical_book_fulfilment.sql",
+  "utf8",
+);
+
+describe("version-bound review token schema", () => {
+  test("migration adds the version column, foreign key and lookup index", () => {
+    assert.match(
+      canonicalMigration,
+      /alter table public\.book_review_tokens\s+add column if not exists version_id uuid;/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /foreign key \(version_id\)\s+references public\.book_versions\(id\)/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /create index if not exists idx_book_review_tokens_version/i,
+    );
+  });
+
+  test("lifecycle RPC rejects approval when the review pointer is missing", () => {
+    assert.match(
+      canonicalMigration,
+      /if p_to_stage = 'Approved' then\s+if v_book\.review_version_id is null then\s+return jsonb_build_object\(\s*'ok', false, 'error', 'review_version_missing'/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /if v_book\.review_version_id is distinct from v_effective_vid then\s+return jsonb_build_object\(\s*'ok', false, 'error', 'version_mismatch'/i,
+    );
+  });
+
+  test("re-review RPC accepts one idempotent decision from Revised", () => {
+    assert.match(
+      canonicalMigration,
+      /v_from_stage = 'Revised'\s+and p_to_stage in \('Changes Requested', 'Approved'\)/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /if v_book\.lifecycle_stage not in \('Under Review', 'Revised'\) then/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /select id into v_existing_request_id\s+from public\.revision_requests\s+where book_id = p_book_id\s+and idempotency_key = p_idempotency_key/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /create unique index if not exists uq_revision_requests_idempotency/i,
+    );
+    assert.match(
+      canonicalMigration,
+      /public\.transition_book_lifecycle\(\s*p_book_id,\s*v_book\.lifecycle_stage,\s*'Changes Requested'/i,
+    );
+  });
+});
+
+describe("canonical review token persistence", () => {
+  const record: ReviewTokenRecord = {
+    book_id: "book-1",
+    token_hash: "hash",
+    expires_at: "2026-08-27T12:00:00Z",
+    version_id: "version-1",
+  };
+
+  test("persists the exact version in the only insert attempt", async () => {
+    const inserted: ReviewTokenRecord[] = [];
+    await persistReviewTokenRecord(record, async (value) => {
+      inserted.push(value);
+      return { error: null };
+    });
+    assert.deepEqual(inserted, [record]);
+  });
+
+  test("fails hard instead of retrying without version_id", async () => {
+    let attempts = 0;
+    await assert.rejects(
+      persistReviewTokenRecord(record, async (value) => {
+        attempts += 1;
+        assert.equal(value.version_id, "version-1");
+        return { error: { message: "version column unavailable" } };
+      }),
+      /Could not create review token: version column unavailable/,
+    );
+    assert.equal(attempts, 1);
+  });
+
+  test("refuses to mint any token without an exact version", async () => {
+    await assert.rejects(
+      createReviewToken("book-1", ""),
+      /an exact version_id is required/,
+    );
+  });
+});

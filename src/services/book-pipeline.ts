@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
@@ -11,8 +12,26 @@ import {
 import { assemblePdf } from "@/services/pdf-assembly";
 import { generateNarration } from "@/services/tts-narration";
 import { isOpenAIConfigured } from "@/lib/openai";
-import { sendPreviewReadyEmail, sendBookReadyEmail } from "@/lib/email-notifications";
+import {
+  sendBookReadyEmail,
+  sendDeliveryEmail,
+} from "@/lib/email-notifications";
+import { getAppUrl } from "@/lib/utils";
 import { runValidationGate } from "@/services/review-gate";
+import {
+  createBookVersion,
+  fetchVersionPages,
+  setCurrentVersionId,
+} from "@/lib/book-versions";
+import {
+  transitionStage,
+  setOperationalState,
+  recordOperationalError,
+} from "@/lib/lifecycle-service";
+import type { LifecycleStage } from "@/types/book";
+import { applyRevision } from "@/services/revision-engine";
+import { validateBook } from "@/lib/content-validation";
+import { resolveCreatureFromAnswers } from "@/data/animals";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -53,7 +72,9 @@ async function fetchBookWithChildren(bookId: string) {
       .single();
 
     if (scError || !sc) {
-      console.warn(`Failed to fetch second child profile for book ${bookId}: ${scError?.message}`);
+      console.warn(
+        `Failed to fetch second child profile for book ${bookId}: ${scError?.message}`
+      );
     } else {
       secondChild = sc;
     }
@@ -79,7 +100,7 @@ async function fetchBookEmail(bookId: string): Promise<string | null> {
 }
 
 /**
- * Updates a book's status in the database.
+ * Updates a book's operational status in the database (legacy status column).
  */
 async function updateBookStatus(
   bookId: string,
@@ -92,7 +113,10 @@ async function updateBookStatus(
     .eq("id", bookId);
 
   if (error) {
-    console.error(`Failed to update book ${bookId} status to ${status}:`, error);
+    console.error(
+      `Failed to update book ${bookId} status to ${status}:`,
+      error
+    );
   }
 }
 
@@ -140,8 +164,6 @@ async function upsertBookPages(
 /**
  * Resolves a child's authoritative Character Profile:
  * the structured profile stored on the child row, falling back to defaults.
- * A legacy free-text appearance description (from older books) is merged in
- * as the prose description when the profile has none.
  */
 function resolveCharacterProfile(
   childRow: { appearance_profile?: AppearanceProfile | null },
@@ -161,9 +183,7 @@ function resolveCharacterProfile(
 
 /**
  * Ensures a child has a Character Reference Sheet, generating it once and
- * persisting its URL inside the child's appearance_profile so every
- * subsequent illustration (and future book) reuses the same canonical image.
- * Returns the profile (with referenceSheetUrl when available).
+ * persisting its URL inside the child's appearance_profile.
  */
 async function ensureReferenceSheet(
   childId: string,
@@ -269,21 +289,35 @@ async function prepareIllustrationChildren(
 }
 
 /**
- * Generates a preview for the book:
- * 1. Resolves each child's Character Profile and Reference Sheet
- * 2. Generates the full story text
- * 3. Generates 3 preview illustrations (cover + first 2 pages)
- * 4. Saves everything and marks status as preview_ready
- * 5. Inserts preview pages into book_pages table
- * 6. Sends preview-ready email to parent
+ * Generates a preview for the book (now: ALL story pages + ALL illustrations).
+ *
+ * Lifecycle:
+ *   null -> Generated -> Under Review
+ *
+ * The complete pre-review generation:
+ *   1. Resolves each child's Character Profile and Reference Sheet
+ *   2. Generates the FULL story text (all pages)
+ *   3. Generates ALL illustrations (all pages)
+ *   4. Creates an immutable snapshot (book_versions row + book_version_pages)
+ *   5. Records operational attempts/errors
+ *   6. Persists page-level findings
+ *   7. Transitions null -> Generated -> Under Review only when complete
+ *   8. Does NOT send any customer preview email before approval
+ *
+ * Idempotent/resumable: safe to call again if a previous run failed.
+ * No customer preview email is sent before approval.
  */
 export async function generatePreview(
   bookId: string,
   skipGate = false,
 ): Promise<void> {
-  try {
-    await updateBookStatus(bookId, "preview_generating");
+  // Record the attempt
+  await setOperationalState(bookId, "generating_preview", {
+    generation_attempt_started_at: new Date().toISOString(),
+  });
+  await updateBookStatus(bookId, "preview_generating");
 
+  try {
     const { book, child, secondChild } = await fetchBookWithChildren(bookId);
 
     const contextualAnswers: Record<string, string> =
@@ -304,12 +338,14 @@ export async function generatePreview(
         name: secondChild.name,
         age: secondChild.age,
         gender: secondChild.gender,
-        appearanceProfile: resolveCharacterProfile(secondChild, descriptions.second),
+        appearanceProfile: resolveCharacterProfile(
+          secondChild,
+          descriptions.second
+        ),
       };
     }
 
-    // Story generation and character preparation (reference sheets) are
-    // independent — run them in parallel. Both are needed before illustrating.
+    // Story generation and character preparation (reference sheets) run in parallel.
     const [storyPages, illustrationChildren] = await Promise.all([
       generateStory({
         regenerationNote: book.rejection_reason ?? null,
@@ -331,98 +367,1062 @@ export async function generatePreview(
       ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
       : [];
 
-    const previewPageNumbers = [1, 2, 3];
-
-    const previewIllustrationUrls = await generateIllustrations({
+    // ── Generate ALL illustrations (not just a preview subset) ────────────────
+    console.log(
+      `[pipeline] Generating all ${storyPages.length} illustrations for book ${bookId}`
+    );
+    const allIllustrationUrls = await generateIllustrations({
       bookId,
       storyPages,
       themeId: book.theme_id,
       sceneDescriptions,
-      pageNumbers: previewPageNumbers,
+      // No pageNumbers filter → generate every page
       children: illustrationChildren,
-      contextualAnswers: book.contextual_answers as Record<string, unknown> | null,
+      contextualAnswers: book.contextual_answers as Record<
+        string,
+        unknown
+      > | null,
     });
 
-    // Build the full illustration_urls array with nulls for non-preview pages
-    const allIllustrationUrls: (string | null)[] = storyPages.map((page) => {
-      const previewIdx = previewPageNumbers.indexOf(page.pageNumber);
-      return previewIdx >= 0 ? previewIllustrationUrls[previewIdx] : null;
+    // ── Persist pages to the legacy book_pages table ───────────────────────────
+    await upsertBookPages(bookId, storyPages, allIllustrationUrls);
+
+    // ── Verify EVERY page has text + illustration before snapshotting ──────────
+    // The snapshot is the immutable source of truth for review and delivery, so
+    // it must never be created from incomplete content.
+    const incompletePages: number[] = [];
+    storyPages.forEach((page, idx) => {
+      const hasText = typeof page.text === "string" && page.text.trim().length > 0;
+      const hasIllustration = Boolean(allIllustrationUrls[idx]);
+      if (!hasText || !hasIllustration) {
+        incompletePages.push(page.pageNumber);
+      }
     });
 
-    const previewPages = storyPages.filter((p) =>
-      previewPageNumbers.includes(p.pageNumber)
+    if (incompletePages.length > 0) {
+      throw new Error(
+        `Cannot snapshot book ${bookId}: pages ${incompletePages.join(", ")} are missing text or illustration`
+      );
+    }
+
+    // ── Create immutable snapshot (MUST succeed before any transition) ──────────
+    const versionResult = await createBookVersion({
+      bookId,
+      storyPages,
+      illustrationUrls: allIllustrationUrls,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        pageCount: storyPages.length,
+      },
+    });
+
+    if (!versionResult.ok || !versionResult.versionId) {
+      // Snapshot creation is a hard requirement — abort without transitioning.
+      throw new Error(
+        `Failed to create immutable book version for ${bookId}: ${versionResult.error}`
+      );
+    }
+
+    await setCurrentVersionId(bookId, versionResult.versionId);
+    console.log(
+      `[pipeline] Created version ${versionResult.versionNumber} (${versionResult.versionId}) for book ${bookId}`
     );
 
-    // Save story + illustration data to the books table
+    // ── Update legacy status fields ────────────────────────────────────────────
     await updateBookStatus(bookId, "preview_ready", {
       story_text: storyPages,
       illustration_urls: allIllustrationUrls,
-      preview_pages: previewPages,
+      preview_pages: storyPages.slice(0, 2),
       page_count: storyPages.length,
     });
 
-  // Nothing is released to the customer here. Validate, then hand the book
-  // to the human review queue. skipGate is set when this call IS the retry.
-  if (!skipGate) {
-    try {
-      const gate = await runValidationGate(bookId, async (id) => {
-        await generatePreview(id, true);
-      });
-      console.log("[gate] book " + bookId + ": " + gate.message);
-    } catch (err) {
-      console.error("[gate] failed for book " + bookId + ":", err);
+    // ── Transition: null -> Generated ─────────────────────────────────────────
+    const genTransition = await transitionStage(
+      bookId,
+      "Generated",
+      "system",
+      "All pages and illustrations generated successfully",
+    );
+
+    if (!genTransition.ok) {
+      // May already be Generated if this is a retry — that's fine
+      console.log(
+        `[pipeline] Generated transition note for book ${bookId}: ${genTransition.error}`
+      );
     }
-  }
 
-    // Populate book_pages table (required by the preview page UI)
-    await upsertBookPages(bookId, storyPages, allIllustrationUrls, previewPageNumbers);
+    // ── Validation gate -> Under Review ───────────────────────────────────────
+    // Nothing is released to the customer here. Validate, then hand to review queue.
+    if (!skipGate) {
+      try {
+        const gate = await runValidationGate(bookId, async (id) => {
+          await generatePreview(id, true);
+        });
+        console.log("[gate] book " + bookId + ": " + gate.message);
+      } catch (err) {
+        console.error("[gate] failed for book " + bookId + ":", err);
+        await recordOperationalError(bookId, "validation_gate", err);
+      }
+    }
 
-    // Send preview-ready email to parent (fire-and-forget — don't fail the pipeline)
-    fetchBookEmail(bookId)
-      .then((email) => {
-        if (email) {
-          return sendPreviewReadyEmail({
-            email,
-            childName: child.name,
-            bookId,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error(`Failed to send preview email for book ${bookId}:`, err);
-      });
+    await setOperationalState(bookId, "idle");
 
+    // ── No customer preview email is sent here. ───────────────────────────────
+    // Customers receive an invitation ONLY after a human approves (review-workflow.ts).
   } catch (error) {
     console.error(`Preview generation failed for book ${bookId}:`, error);
     await updateBookStatus(bookId, "failed");
+    await recordOperationalError(bookId, "generatePreview", error);
+    await setOperationalState(bookId, "failed");
     throw error;
   }
 }
 
 /**
- * Generates the full book after preview approval:
- * 1. Generates remaining illustrations (pages 4+) reusing each child's
- *    Character Profile and Reference Sheet from the preview stage
- * 2. Generates TTS audio narration (optional)
- * 3. Assembles PDF
- * 4. Populates all book_pages rows
- * 5. Marks status as complete
- * 6. Sends book-ready email to parent
+ * Executes the open, structured revision request against the exact immutable
+ * predecessor. Full story generation is used as creative context, but only the
+ * requested page fields are copied into the successor; unaffected fields keep
+ * their predecessor values in applyRevision.
+ *
+ * Illustration output uses a request-specific storage prefix so a revision can
+ * never overwrite an image URL referenced by an older immutable version.
  */
-export async function generateFullBook(bookId: string): Promise<void> {
+export async function runRequestedRevision(
+  bookId: string,
+  revisionRequestId: string,
+): Promise<{
+  ok: boolean;
+  newVersionId: string | null;
+  error?: string;
+}> {
+  const { data: request, error: requestError } = await supabaseAdmin
+    .from("revision_requests")
+    .select("id, feedback, status")
+    .eq("id", revisionRequestId)
+    .eq("book_id", bookId)
+    .maybeSingle();
+  if (requestError || !request || request.status !== "open") {
+    return {
+      ok: false,
+      newVersionId: null,
+      error:
+        requestError?.message ??
+        "The revision request is missing or is no longer open.",
+    };
+  }
+
+  const { data: requestItems, error: itemsError } = await supabaseAdmin
+    .from("revision_request_items")
+    .select("page_number, scope")
+    .eq("revision_request_id", revisionRequestId)
+    .order("page_number", { ascending: true });
+  if (itemsError || !requestItems || requestItems.length === 0) {
+    return {
+      ok: false,
+      newVersionId: null,
+      error: itemsError?.message ?? "The revision request has no page items.",
+    };
+  }
+
+  const pageNumbers = Array.from(
+    new Set(
+      requestItems
+        .map((item) => Number(item.page_number))
+        .filter((pageNumber) => Number.isInteger(pageNumber) && pageNumber > 0),
+    ),
+  ).sort((a, b) => a - b);
+  const scopeByPage: Record<
+    number,
+    "text" | "illustration" | "both"
+  > = {};
+  for (const item of requestItems) {
+    const pageNumber = Number(item.page_number);
+    if (
+      Number.isInteger(pageNumber) &&
+      pageNumber > 0 &&
+      (item.scope === "text" ||
+        item.scope === "illustration" ||
+        item.scope === "both")
+    ) {
+      scopeByPage[pageNumber] = item.scope;
+    }
+  }
+
+  const { book, child, secondChild } = await fetchBookWithChildren(bookId);
+  const contextualAnswers: Record<string, string> =
+    book.contextual_answers || {};
+  const descriptions = extractAppearanceDescriptions(contextualAnswers);
+  const storyContextualAnswers = Object.fromEntries(
+    Object.entries(contextualAnswers).filter(
+      ([key]) =>
+        key !== "__appearance_desc" && key !== "__appearance_desc2",
+    ),
+  );
+  const secondChildData = secondChild
+    ? {
+        name: secondChild.name,
+        age: secondChild.age,
+        gender: secondChild.gender,
+        appearanceProfile: resolveCharacterProfile(
+          secondChild,
+          descriptions.second,
+        ),
+      }
+    : undefined;
+
+  const illustrationChildrenPromise = prepareIllustrationChildren(
+    child,
+    secondChild,
+    descriptions,
+  );
+  let regeneratedFullStoryPromise: Promise<BookPage[]> | null = null;
+
+  const result = await applyRevision(
+    bookId,
+    {
+      pageNumbers,
+      reason: String(request.feedback),
+      scopeByPage,
+      defaultScope: "both",
+    },
+    {
+      regenerateStoryPages: async (_id, targets, reason) => {
+        regeneratedFullStoryPromise ??= generateStory({
+          childName: child.name,
+          childAge: child.age,
+          childGender: child.gender,
+          appearanceProfile: resolveCharacterProfile(
+            child,
+            descriptions.first,
+          ),
+          themeId: book.theme_id,
+          contextualAnswers: storyContextualAnswers,
+          language: book.language || "en",
+          secondChild: secondChildData,
+          regenerationNote: reason,
+        });
+        const fullStory = await regeneratedFullStoryPromise;
+        return targets.map((target) => {
+          const page = fullStory.find(
+            (candidate) => candidate.pageNumber === target,
+          );
+          if (!page) {
+            throw new Error(
+              `Regenerated story did not contain requested page ${target}`,
+            );
+          }
+          return page;
+        });
+      },
+      regenerateIllustrations: async (_id, storyPages) => {
+        const skeleton = storySkeletons[book.theme_id];
+        const sceneDescriptions = skeleton
+          ? skeleton.map((scene) =>
+              getSceneDescription(scene, Boolean(secondChild)),
+            )
+          : [];
+        return generateIllustrations({
+          bookId: `${bookId}/revisions/${revisionRequestId}`,
+          storyPages,
+          themeId: book.theme_id,
+          sceneDescriptions,
+          children: await illustrationChildrenPromise,
+          contextualAnswers:
+            book.contextual_answers as Record<string, unknown> | null,
+        });
+      },
+      revalidate: async (_id, storyPages, illustrationUrls) => {
+        const result = await validateBook({
+          storyText: storyPages.map((page) => page.text).join("\n\n"),
+          imageUrls: illustrationUrls.map((url) => String(url)),
+          creature: resolveCreatureFromAnswers(
+            book.contextual_answers as Record<string, unknown> | null,
+          ),
+          recipientName: child.name,
+          attempt: 1,
+          themeTitle: book.theme_title ?? null,
+        });
+        return result.failures.map((failure) => ({
+          pageNumber: failure.pageNumber ?? null,
+          code: failure.code,
+          detail: failure.detail,
+          severity: failure.severity ?? "blocker",
+          source: failure.source ?? "both",
+        }));
+      },
+    },
+    revisionRequestId,
+  );
+
+  return {
+    ok: result.ok,
+    newVersionId: result.newVersionId,
+    error: result.error,
+  };
+}
+
+// ─── Fulfilment helpers (canonical tables) ─────────────────────────────────────
+
+/** SHA-256 hash of an access token — matches the checkout/preview route logic. */
+function hashAccessToken(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+/**
+ * Records a retryable operational failure against the canonical
+ * `operational_failures` table. Never throws — used on failure paths.
+ */
+async function recordOperationalFailure(params: {
+  bookId: string;
+  orderId?: string | null;
+  stage: string | null;
+  errorCode: string;
+  errorDetail: string;
+  context?: Record<string, unknown> | null;
+}): Promise<void> {
   try {
-    await updateBookStatus(bookId, "generating");
+    await supabaseAdmin.from("operational_failures").insert({
+      book_id: params.bookId,
+      order_id: params.orderId ?? null,
+      stage: params.stage,
+      error_code: params.errorCode,
+      error_detail: params.errorDetail.slice(0, 2000),
+      context: {
+        retryable: true,
+        ...(params.context ?? {}),
+      },
+    });
+  } catch (err) {
+    console.error(
+      `[pipeline] Failed to record operational_failure for book ${params.bookId}:`,
+      err
+    );
+  }
+}
 
-    const { book, child, secondChild } = await fetchBookWithChildren(bookId);
+/**
+ * Deterministically verifies that the customer route/authorization for a book
+ * will succeed against the just-created access grant. Mirrors the token
+ * resolution performed by the /preview/[bookId] route and checkout route:
+ *   - a grant row exists for (token_hash, book_id)
+ *   - it is not revoked and not expired
+ *   - it points to exactly `expectedVersionId`
+ * Returns true only when the grant would authorise the customer.
+ */
+async function verifyCustomerAccess(params: {
+  bookId: string;
+  tokenHash: string;
+  expectedVersionId: string;
+}): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("access_grants")
+    .select("version_id, access_kind, expires_at, revoked_at")
+    .eq("token_hash", params.tokenHash)
+    .eq("book_id", params.bookId)
+    .maybeSingle();
 
-    if (!book.story_text || !Array.isArray(book.story_text)) {
+  if (error || !data) return false;
+  if (data.revoked_at) return false;
+  if (data.expires_at && new Date(data.expires_at as string).getTime() < Date.now()) {
+    return false;
+  }
+  if (data.version_id !== params.expectedVersionId) return false;
+  return true;
+}
+
+/** Verifies an actual HTTP response rather than trusting that a URL exists. */
+async function verifyReachableUrl(url: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      headers: { Range: "bytes=0-0" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch (error) {
+    console.error(`[pipeline] URL verification failed for ${url}:`, error);
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Finalises a purchased book:
+ *   1. Verifies the book is in exactly the "Purchased" lifecycle stage
+ *   2. Fetches the approved version content
+ *   3. Builds durable PDF artefacts
+ *   4. Grants full-book access
+ *   5. Verifies complete pages/storage/access response
+ *   6. Records delivery attempts separately from generation attempts
+ *   7. Sends idempotent delivery notification (email failure is operational)
+ *   8. Transitions Purchased -> Delivered only after verifying all of the above
+ *   9. Never marks delivered on provider acceptance alone
+ */
+export async function finalisePurchasedBook(
+  bookId: string,
+  /** The exact version that was purchased (from the order). When provided,
+   *  used to verify `approved_version_id` matches before generating. */
+  purchasedVersionId?: string | null,
+  /** The order that triggered this finalisation. Used for idempotency
+   *  (skip if `fulfilled_at` is already set) and to write `fulfilled_at`
+   *  on completion. */
+  orderId?: string | null,
+): Promise<void> {
+  // ── Idempotency: skip if order already fulfilled ───────────────────────────
+  if (orderId) {
+    const { data: ord } = await supabaseAdmin
+      .from("orders")
+      .select("fulfilled_at")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (ord && (ord as Record<string, unknown>).fulfilled_at) {
+      console.log(`[pipeline] Order ${orderId} already fulfilled — skipping finalisePurchasedBook.`);
+      return;
+    }
+  }
+
+  await setOperationalState(bookId, "finalising");
+
+  try {
+    const { book, child } = await fetchBookWithChildren(bookId);
+
+    // ── Verify stage: must be exactly "Purchased" ──────────────────────────
+    const lifecycleStage = book.lifecycle_stage as LifecycleStage | null;
+    if (lifecycleStage !== "Purchased") {
       throw new Error(
-        "Book has no story text. Generate a preview first."
+        `finalisePurchasedBook: book ${bookId} must be in 'Purchased' stage (currently '${lifecycleStage ?? book.status}')`
       );
     }
 
-    const storyPages: BookPage[] = book.story_text;
-    const existingUrls: (string | null)[] = book.illustration_urls || [];
+    // ── Require an approved version — NO current/legacy fallback ───────────
+    const approvedVersionId = book.approved_version_id as string | null;
+    if (!approvedVersionId) {
+      throw new Error(
+        `finalisePurchasedBook: book ${bookId} has no approved_version_id — cannot fulfil`
+      );
+    }
+
+    // The purchased version (from the order) must be exactly the approved one.
+    if (purchasedVersionId && purchasedVersionId !== approvedVersionId) {
+      throw new Error(
+        `finalisePurchasedBook: purchased version ${purchasedVersionId} does not match approved_version_id ${approvedVersionId} for book ${bookId}`
+      );
+    }
+
+    const orderQuery = supabaseAdmin
+      .from("orders")
+      .select(
+        "id, book_id, version_id, user_id, purchaser_email, status, fulfilled_at, stripe_payment_intent_id, payment_verified_at",
+      )
+      .eq("book_id", bookId)
+      .eq("version_id", approvedVersionId)
+      .in("status", ["paid", "fulfilled"])
+      .not("stripe_payment_intent_id", "is", null)
+      .not("payment_verified_at", "is", null);
+    const { data: fulfilmentOrder, error: orderError } = orderId
+      ? await orderQuery.eq("id", orderId).maybeSingle()
+      : await orderQuery
+          .order("payment_verified_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+    if (orderError || !fulfilmentOrder) {
+      throw new Error(
+        `finalisePurchasedBook: no verified paid order for exact version ${approvedVersionId}: ${orderError?.message ?? "not found"}`,
+      );
+    }
+    const orderIdForGrant = fulfilmentOrder.id as string;
+    if (
+      fulfilmentOrder.fulfilled_at &&
+      (book.lifecycle_stage as LifecycleStage | null) === "Delivered"
+    ) {
+      return;
+    }
+
+    // ── Verify every page has BOTH text and an illustration ────────────────
+    const versionPages = await fetchVersionPages(approvedVersionId);
+    if (versionPages.length === 0) {
+      throw new Error(`Approved version ${approvedVersionId} has no pages`);
+    }
+
+    const incomplete = versionPages.filter(
+      (p) =>
+        !(typeof p.textContent === "string" && p.textContent.trim().length > 0) ||
+        !p.illustrationUrl
+    );
+    if (incomplete.length > 0) {
+      throw new Error(
+        `Approved version ${approvedVersionId} is incomplete: pages ${incomplete
+          .map((p) => p.pageNumber)
+          .join(", ")} are missing text or illustration`
+      );
+    }
+
+    const storyPages: BookPage[] = versionPages.map((p) => ({
+      pageNumber: p.pageNumber,
+      text: p.textContent ?? "",
+    }));
+    const allIllustrationUrls: (string | null)[] = versionPages.map(
+      (p) => p.illustrationUrl ?? null
+    );
+
+    // ── Idempotency: reuse an existing verified PDF artefact if present ─────
+    const { data: existingArtefact } = await supabaseAdmin
+      .from("product_artefacts")
+      .select("id, storage_path, url, access_url, durable_verified_at, access_verified_at")
+      .eq("book_id", bookId)
+      .eq("version_id", approvedVersionId)
+      .eq("kind", "pdf_digital")
+      .not("durable_verified_at", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let pdfUrl: string;
+    let pdfPrintUrl: string | null = null;
+
+    const existingStorageReachable = Boolean(
+      existingArtefact?.storage_path &&
+        existingArtefact.url &&
+        (await verifyReachableUrl(existingArtefact.url as string)),
+    );
+    const existingAccessReachable = Boolean(
+      existingArtefact?.access_url &&
+        (await verifyReachableUrl(existingArtefact.access_url as string)),
+    );
+    if (
+      existingArtefact &&
+      existingArtefact.url &&
+      existingStorageReachable &&
+      existingAccessReachable
+    ) {
+      pdfUrl = existingArtefact.url as string;
+      const verifiedAt = new Date().toISOString();
+      const { error: verifyArtefactError } = await supabaseAdmin
+        .from("product_artefacts")
+        .update({
+          durable_verified_at: verifiedAt,
+          access_verified_at: verifiedAt,
+        })
+        .eq("id", existingArtefact.id);
+      if (verifyArtefactError) {
+        throw new Error(
+          `Failed to record artefact verification: ${verifyArtefactError.message}`,
+        );
+      }
+      console.log(
+        `[pipeline] Reusing verified PDF artefact ${existingArtefact.id} for book ${bookId}`
+      );
+    } else {
+      // ── Populate legacy book_pages + audio so PDF assembly reads real content
+      await upsertBookPages(bookId, storyPages, allIllustrationUrls);
+
+      let audioStatus: "complete" | "failed" | "skipped" = "skipped";
+      if (isOpenAIConfigured()) {
+        try {
+          console.log(`Generating audio narration for book ${bookId}...`);
+          const pagesForAudio = storyPages.map((page) => ({
+            pageNumber: page.pageNumber,
+            text: page.text,
+          }));
+          await generateNarration(bookId, pagesForAudio);
+          audioStatus = "complete";
+        } catch (audioError) {
+          audioStatus = "failed";
+          console.error(
+            `Audio narration failed for book ${bookId} (continuing to PDF):`,
+            audioError
+          );
+        }
+      }
+
+      // ── Assemble the durable PDF artefact ────────────────────────────────
+      const assembled = await assemblePdf(bookId);
+      if (!assembled.pdfUrl) {
+        throw new Error(
+          "PDF assembly failed — pdfUrl is empty. Cannot finalise."
+        );
+      }
+      pdfUrl = assembled.pdfUrl;
+      pdfPrintUrl = assembled.pdfPrintUrl ?? null;
+      if (!(await verifyReachableUrl(pdfUrl))) {
+        throw new Error(
+          `Stored PDF for book ${bookId} did not return a successful access response`,
+        );
+      }
+
+      // Record durable artefacts AFTER a real PDF URL exists. We do NOT mutate
+      // the immutable book_versions row — artefacts live in product_artefacts.
+      const nowIso = new Date().toISOString();
+      const artefactRows: Array<Record<string, unknown>> = [
+        {
+          book_id: bookId,
+          version_id: approvedVersionId,
+          kind: "pdf_digital",
+          storage_path: assembled.storagePath,
+          url: pdfUrl,
+          access_url: pdfUrl,
+          durable_verified_at: nowIso,
+          access_verified_at: nowIso,
+          metadata: { assembledBy: "finalisePurchasedBook" },
+        },
+      ];
+      if (pdfPrintUrl) {
+        artefactRows.push({
+          book_id: bookId,
+          version_id: approvedVersionId,
+          kind: "pdf_print",
+          storage_path: assembled.printStoragePath,
+          url: pdfPrintUrl,
+          access_url: pdfPrintUrl,
+          durable_verified_at: null,
+          access_verified_at: null,
+          metadata: { assembledBy: "finalisePurchasedBook" },
+        });
+      }
+      const { error: artefactErr } = await supabaseAdmin
+        .from("product_artefacts")
+        .insert(artefactRows);
+      if (artefactErr) {
+        throw new Error(
+          `Failed to record durable product_artefacts for book ${bookId}: ${artefactErr.message}`
+        );
+      }
+
+      // Legacy status columns (best-effort; not the source of truth).
+      await updateBookStatus(bookId, "complete", {
+        pdf_url: pdfUrl,
+        pdf_print_url: pdfPrintUrl,
+        illustration_urls: allIllustrationUrls,
+        audio_status: audioStatus,
+      });
+    }
+
+    // ── Grant exact-version full-book access (idempotent) ───────────────────
+    // If a successful notification already exists, do not send it again. The
+    // canonical transition remains safe and idempotent.
+    const { data: existingSentAttempt } = await supabaseAdmin
+      .from("delivery_attempts")
+      .select("id")
+      .eq("order_id", orderIdForGrant)
+      .eq("book_id", bookId)
+      .eq("version_id", approvedVersionId)
+      .eq("status", "sent")
+      .not("notification_sent_at", "is", null)
+      .not("access_verified_at", "is", null)
+      .limit(1)
+      .maybeSingle();
+    if (existingSentAttempt) {
+      const replayTransition = await transitionStage(
+        bookId,
+        "Delivered",
+        "system",
+        "Previously verified access and delivery notification",
+      );
+      if (!replayTransition.ok) {
+        throw new Error(
+          `Delivered replay transition rejected: ${replayTransition.error}`,
+        );
+      }
+      await setOperationalState(bookId, "idle");
+      return;
+    }
+
+    // A hash-only grant cannot recover the raw URL token on retry. Revoke any
+    // unsent prior grant and mint a fresh exact-version token for this attempt.
+    const { error: revokeGrantError } = await supabaseAdmin
+      .from("access_grants")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("book_id", bookId)
+      .eq("version_id", approvedVersionId)
+      .eq("access_kind", "full_book")
+      .is("revoked_at", null);
+    if (revokeGrantError) {
+      throw new Error(`Failed to revoke stale access grant: ${revokeGrantError.message}`);
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const grantTokenHash = hashAccessToken(rawToken);
+    const { data: createdGrant, error: grantErr } = await supabaseAdmin
+      .from("access_grants")
+      .insert({
+        book_id: bookId,
+        order_id: orderIdForGrant,
+        version_id: approvedVersionId,
+        grantee_user_id: fulfilmentOrder.user_id ?? book.user_id ?? null,
+        grantee_email:
+          fulfilmentOrder.purchaser_email ??
+          ((book as Record<string, unknown>).purchaser_email as string | null) ??
+          null,
+        token_hash: grantTokenHash,
+        access_kind: "full_book",
+        expires_at: null,
+        verified_at: null,
+        metadata: {
+          grantedBy: "finalisePurchasedBook",
+          grantedAt: new Date().toISOString(),
+        },
+      })
+      .select("id")
+      .single();
+    if (grantErr || !createdGrant) {
+      throw new Error(
+        `Failed to create access_grant for book ${bookId}: ${grantErr?.message ?? "no row"}`,
+      );
+    }
+
+    // ── Deterministically verify the customer route/authorization ──────────
+    const bookAccessUrl = `${getAppUrl()}/preview/${bookId}?token=${encodeURIComponent(rawToken)}`;
+    const grantOk = await verifyCustomerAccess({
+      bookId,
+      tokenHash: grantTokenHash,
+      expectedVersionId: approvedVersionId,
+    });
+    const routeOk = grantOk && (await verifyReachableUrl(bookAccessUrl));
+    if (!routeOk) {
+      throw new Error(
+        `Access verification failed for book ${bookId}: the exact-version customer route did not return success`,
+      );
+    }
+    const accessVerifiedAt = new Date().toISOString();
+    const { error: verifyGrantError } = await supabaseAdmin
+      .from("access_grants")
+      .update({ verified_at: accessVerifiedAt })
+      .eq("id", createdGrant.id);
+    if (verifyGrantError) {
+      throw new Error(`Failed to record verified access grant: ${verifyGrantError.message}`);
+    }
+
+    // ── Send the delivery email and CONFIRM it was actually sent ────────────
+    const email =
+      fulfilmentOrder.purchaser_email ??
+      (await fetchBookEmail(bookId));
+    if (!email) {
+      // No recipient captured — cannot confirm delivery. Remain Purchased.
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "delivery_no_recipient",
+        errorDetail: "No captured email address to deliver the book to.",
+      });
+      await recordDeliveryAttempt({
+        orderId: orderIdForGrant,
+        bookId,
+        versionId: approvedVersionId,
+        status: "failed",
+        errorDetail: "No recipient email",
+      });
+      await setOperationalState(bookId, "awaiting_delivery");
+      throw new Error(
+        `finalisePurchasedBook: book ${bookId} has no recipient email — remaining Purchased`
+      );
+    }
+
+    // A pending attempt means a provider call may already have succeeded while
+    // our acknowledgement write failed. Do not automatically resend and risk a
+    // duplicate notification; leave an explicit reconciliation case instead.
+    const { data: ambiguousAttempt, error: ambiguousAttemptError } =
+      await supabaseAdmin
+        .from("delivery_attempts")
+        .select("id, attempt_number, created_at")
+        .eq("order_id", orderIdForGrant)
+        .eq("book_id", bookId)
+        .eq("version_id", approvedVersionId)
+        .eq("channel", "email")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (ambiguousAttemptError) {
+      throw new Error(
+        `Could not check pending delivery attempts: ${ambiguousAttemptError.message}`,
+      );
+    }
+    if (ambiguousAttempt) {
+      throw new Error(
+        `Ambiguous pending delivery attempt ${ambiguousAttempt.id}; reconcile provider status before retrying`,
+      );
+    }
+
+    const deliveryAttempt = await beginDeliveryAttempt({
+      orderId: orderIdForGrant,
+      bookId,
+      versionId: approvedVersionId,
+      accessVerifiedAt,
+    });
+
+    const sendResult = await sendDeliveryEmail({
+      email,
+      recipientName:
+        ((book as Record<string, unknown>).recipient_name as string | null) ??
+        "there",
+      childName: child.name,
+      bookId,
+      bookUrl: bookAccessUrl,
+      pdfUrl,
+    });
+
+    if (!sendResult.sent) {
+      // Provider did not confirm delivery — this is an operational failure.
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "delivery_email_failed",
+        errorDetail: sendResult.reason ?? "Email provider did not confirm send",
+      });
+      await finishDeliveryAttempt({
+        attemptId: deliveryAttempt.id,
+        status: "failed",
+        errorDetail: sendResult.reason ?? "not_sent",
+      });
+      await setOperationalState(bookId, "awaiting_delivery");
+      throw new Error(
+        `finalisePurchasedBook: delivery email for book ${bookId} was not sent (${sendResult.reason ?? "unknown"}) — remaining Purchased`
+      );
+    }
+
+    // Record the provider acknowledgement on the already-durable pending
+    // attempt. If this write fails, the pending row deliberately blocks an
+    // automatic resend until an operator reconciles provider status.
+    const deliveryRecorded = await finishDeliveryAttempt({
+      attemptId: deliveryAttempt.id,
+      status: "sent",
+      notificationSentAt: new Date().toISOString(),
+      providerMessageId:
+        sendResult.providerMessageId ?? sendResult.provider ?? null,
+    });
+    if (!deliveryRecorded) {
+      throw new Error(
+        `Delivery notification was accepted but its durable attempt record failed for order ${orderIdForGrant}`,
+      );
+    }
+
+    // ── Transition Purchased -> Delivered (only after all of the above) ─────
+    const deliverTransition = await transitionStage(
+      bookId,
+      "Delivered",
+      "system",
+      "PDF artefact stored, access verified, delivery email confirmed sent",
+    );
+
+    if (!deliverTransition.ok) {
+      throw new Error(
+        `[pipeline] Delivered transition rejected for book ${bookId}: ${deliverTransition.error}`
+      );
+    }
+
+    await setOperationalState(bookId, "idle");
+    console.log(`[pipeline] Book ${bookId} finalised and delivered.`);
+  } catch (error) {
+    // Never fulfil on failure. Remain Purchased (do NOT set status=failed here,
+    // which would obscure the lifecycle stage) and record a retryable failure.
+    console.error(`Full book finalisation failed for book ${bookId}:`, error);
+    await recordOperationalFailure({
+      bookId,
+      orderId: orderId ?? null,
+      stage: "Purchased",
+      errorCode: "finalise_purchased_book_failed",
+      errorDetail: error instanceof Error ? error.message : String(error),
+    });
+    await recordOperationalError(bookId, "finalisePurchasedBook", error);
+    await setOperationalState(bookId, "failed");
+    throw error;
+  }
+}
+
+async function beginDeliveryAttempt(params: {
+  orderId: string;
+  bookId: string;
+  versionId: string;
+  accessVerifiedAt: string;
+}): Promise<{ id: string; attemptNumber: number }> {
+  const { data: prior, error: priorError } = await supabaseAdmin
+    .from("delivery_attempts")
+    .select("attempt_number")
+    .eq("order_id", params.orderId)
+    .eq("book_id", params.bookId)
+    .order("attempt_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (priorError) {
+    throw new Error(`Failed to read delivery attempt history: ${priorError.message}`);
+  }
+  const attemptNumber = ((prior?.attempt_number as number | null) ?? 0) + 1;
+  const idempotencyKey = [
+    "delivery",
+    params.orderId,
+    params.versionId,
+    String(attemptNumber),
+  ].join(":");
+  const { data, error } = await supabaseAdmin
+    .from("delivery_attempts")
+    .insert({
+      order_id: params.orderId,
+      book_id: params.bookId,
+      version_id: params.versionId,
+      attempt_number: attemptNumber,
+      channel: "email",
+      status: "pending",
+      idempotency_key: idempotencyKey,
+      access_verified_at: params.accessVerifiedAt,
+      metadata: { retryable: true, awaiting_provider_result: true },
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `Failed to begin durable delivery attempt: ${error?.message ?? "no row"}`,
+    );
+  }
+  return { id: data.id as string, attemptNumber };
+}
+
+async function finishDeliveryAttempt(params: {
+  attemptId: string;
+  status: "sent" | "failed";
+  notificationSentAt?: string | null;
+  providerMessageId?: string | null;
+  errorDetail?: string | null;
+}): Promise<boolean> {
+  const { error, count } = await supabaseAdmin
+    .from("delivery_attempts")
+    .update(
+      {
+        status: params.status,
+        notification_sent_at: params.notificationSentAt ?? null,
+        delivered_at:
+          params.status === "sent"
+            ? params.notificationSentAt ?? new Date().toISOString()
+            : null,
+        provider_message_id: params.providerMessageId ?? null,
+        error_detail: params.errorDetail ?? null,
+        metadata: {
+          retryable: params.status === "failed",
+          awaiting_provider_result: false,
+        },
+      },
+      { count: "exact" },
+    )
+    .eq("id", params.attemptId)
+    .eq("status", "pending");
+  if (error || (count ?? 0) !== 1) {
+    console.error(
+      `[pipeline] Failed to complete delivery attempt ${params.attemptId}:`,
+      error?.message ?? "attempt was no longer pending",
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Records a delivery attempt in the canonical `delivery_attempts` table.
+ * Returns false when the durable attempt row cannot be written. Callers must
+ * not transition to Delivered unless a successful attempt returns true.
+ */
+async function recordDeliveryAttempt(params: {
+  orderId: string | null;
+  bookId: string;
+  versionId: string | null;
+  status: "pending" | "sent" | "failed" | "bounced";
+  notificationSentAt?: string | null;
+  accessVerifiedAt?: string | null;
+  provider?: string | null;
+  errorDetail?: string | null;
+}): Promise<boolean> {
+  // delivery_attempts.order_id is NOT NULL — skip if we have no order to anchor.
+  if (!params.orderId) {
+    if (params.status !== "sent") return false;
+    console.warn(
+      `[pipeline] Cannot record delivery_attempt for book ${params.bookId}: missing order_id`
+    );
+    return false;
+  }
+
+  // Compute next attempt_number for this order/book.
+  const { data: prior } = await supabaseAdmin
+    .from("delivery_attempts")
+    .select("attempt_number")
+    .eq("order_id", params.orderId)
+    .eq("book_id", params.bookId)
+    .order("attempt_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const attemptNumber = ((prior?.attempt_number as number) ?? 0) + 1;
+
+  const { error } = await supabaseAdmin.from("delivery_attempts").insert({
+    order_id: params.orderId,
+    book_id: params.bookId,
+    version_id: params.versionId,
+    attempt_number: attemptNumber,
+    channel: "email",
+    status: params.status,
+    error_detail: params.errorDetail ?? null,
+    delivered_at: params.status === "sent" ? new Date().toISOString() : null,
+    notification_sent_at: params.notificationSentAt ?? null,
+    access_verified_at: params.accessVerifiedAt ?? null,
+    provider_message_id: params.provider ?? null,
+  });
+
+  if (error) {
+    console.error(
+      `[pipeline] Failed to record delivery_attempt for book ${params.bookId}:`,
+      error.message
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Compatibility alias: generateFullBook now delegates to finalisePurchasedBook
+ * but only for books that are in the "Purchased" stage. For legacy books that
+ * are still using the old status system, the full generation is performed directly.
+ */
+export async function generateFullBook(bookId: string): Promise<void> {
+  // Check current lifecycle stage
+  const { data: book } = await supabaseAdmin
+    .from("books")
+    .select("lifecycle_stage, status, story_text, illustration_urls")
+    .eq("id", bookId)
+    .maybeSingle();
+
+  const lifecycleStage = book?.lifecycle_stage as LifecycleStage | null;
+
+  if (lifecycleStage === "Purchased") {
+    // Use the new finalisation path for books in the canonical lifecycle
+    return finalisePurchasedBook(bookId);
+  }
+
+  // Any OTHER canonical lifecycle stage is not a valid target for full
+  // generation — only 'Purchased' books may be fulfilled. Reject rather than
+  // silently running the legacy path against a canonical book.
+  if (lifecycleStage !== null && lifecycleStage !== undefined) {
+    throw new Error(
+      `generateFullBook: book ${bookId} is in lifecycle stage '${lifecycleStage}'; only 'Purchased' books can be fulfilled`
+    );
+  }
+
+  // ── Legacy path (backward compatibility) ──────────────────────────────────
+  // Reached ONLY when lifecycle_stage is null (pre-canonical books). We do not
+  // invent a lifecycle for these; the old status-based flow runs unchanged.
+  try {
+    await updateBookStatus(bookId, "generating");
+
+    const { book: fullBook, child, secondChild } = await fetchBookWithChildren(bookId);
+
+    if (!fullBook.story_text || !Array.isArray(fullBook.story_text)) {
+      throw new Error("Book has no story text. Generate a preview first.");
+    }
+
+    const storyPages: BookPage[] = fullBook.story_text as BookPage[];
+    const existingUrls: (string | null)[] = (fullBook.illustration_urls as (string | null)[]) || [];
 
     const remainingPageNumbers: number[] = [];
     storyPages.forEach((page, idx) => {
@@ -434,16 +1434,13 @@ export async function generateFullBook(bookId: string): Promise<void> {
     let allIllustrationUrls = [...existingUrls];
 
     if (remainingPageNumbers.length > 0) {
-      const skeleton = storySkeletons[book.theme_id];
+      const skeleton = storySkeletons[fullBook.theme_id];
       const hasTwoChildren = !!secondChild;
       const sceneDescriptions = skeleton
         ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
         : [];
 
-      const descriptions = extractAppearanceDescriptions(book.contextual_answers);
-
-      // Reuses the reference sheets generated at preview time (generates them
-      // only if missing, e.g. for legacy books)
+      const descriptions = extractAppearanceDescriptions(fullBook.contextual_answers);
       const illustrationChildren = await prepareIllustrationChildren(
         child,
         secondChild,
@@ -453,14 +1450,13 @@ export async function generateFullBook(bookId: string): Promise<void> {
       const newUrls = await generateIllustrations({
         bookId,
         storyPages,
-        themeId: book.theme_id,
+        themeId: fullBook.theme_id,
         sceneDescriptions,
         pageNumbers: remainingPageNumbers,
         children: illustrationChildren,
-        contextualAnswers: book.contextual_answers as Record<string, unknown> | null,
+        contextualAnswers: fullBook.contextual_answers as Record<string, unknown> | null,
       });
 
-      // Merge new URLs into the full array
       let newUrlIdx = 0;
       allIllustrationUrls = storyPages.map((page, idx) => {
         if (!existingUrls[idx] && newUrlIdx < newUrls.length) {
@@ -470,15 +1466,12 @@ export async function generateFullBook(bookId: string): Promise<void> {
       });
     }
 
-    // Save illustration URLs before PDF assembly
     await updateBookStatus(bookId, "generating", {
       illustration_urls: allIllustrationUrls,
     });
 
-    // Upsert all remaining pages into book_pages now that we have all illustrations
     await upsertBookPages(bookId, storyPages, allIllustrationUrls);
 
-    // Generate audio narration (if OpenAI is configured)
     let audioStatus: "complete" | "failed" | "skipped" = "skipped";
     if (isOpenAIConfigured()) {
       try {
@@ -499,17 +1492,14 @@ export async function generateFullBook(bookId: string): Promise<void> {
       }
     }
 
-    // Trigger PDF assembly
     const { pdfUrl, pdfPrintUrl } = await assemblePdf(bookId);
 
-    // Mark complete
     await updateBookStatus(bookId, "complete", {
       pdf_url: pdfUrl,
       pdf_print_url: pdfPrintUrl,
       audio_status: audioStatus,
     });
 
-    // Send book-ready email to parent (fire-and-forget)
     fetchBookEmail(bookId)
       .then((email) => {
         if (email) {
@@ -522,9 +1512,11 @@ export async function generateFullBook(bookId: string): Promise<void> {
         }
       })
       .catch((err) => {
-        console.error(`Failed to send book-ready email for book ${bookId}:`, err);
+        console.error(
+          `Failed to send book-ready email for book ${bookId}:`,
+          err
+        );
       });
-
   } catch (error) {
     console.error(`Full book generation failed for book ${bookId}:`, error);
     await updateBookStatus(bookId, "failed");

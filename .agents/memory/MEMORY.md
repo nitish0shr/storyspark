@@ -2,3 +2,5 @@
 - [Character identity pipeline](character-identity-pipeline.md) — photo analysed once then deleted; ref sheet reused via gpt-image-1 images.edit input_fidelity high; never blend two children; referenceSheetUrl is server-side only.
 - Next.js `allowedDevOrigins` wildcards match one label only — `*.replit.dev` does NOT cover `x.riker.replit.dev`; include `process.env.REPLIT_DEV_DOMAIN` dynamically.
 - Runtime E2E of AI generation may be impossible when the OpenAI account is over quota (429 insufficient_quota) — verify via `npm run build` + code review instead; after a prod build, `rm -rf .next` before restarting the dev workflow.
+- [Immutable review identity](immutable-review-identity.md) — once review starts, missing review-version identity requires reconciliation; never substitute the latest/current version.
+- [Fulfilment notification recovery](fulfilment-notification-recovery.md) — non-essential notices must not strand paid work; provider ambiguity stays pending and operator retries remain idempotent.

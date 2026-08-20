@@ -159,3 +159,78 @@ describe("advisory vs blocking failures", () => {
     assert.equal(prompt.includes("could not download"), false);
   });
 });
+
+// ─── ValidationFailure shape ──────────────────────────────────────────────────
+
+describe("ValidationFailure shape", () => {
+  test("all known failure codes are accepted by the type", () => {
+    const codes: Array<import("@/lib/content-validation").ValidationFailure["code"]> = [
+      "animal_missing",
+      "animal_conflict",
+      "monster_present",
+      "name_missing",
+      "name_wrong",
+      "theme_mismatch",
+      "unsafe_content",
+      "text_image_mismatch",
+      "empty_story",
+      "vision_unavailable",
+    ];
+    // If this compiles, the type union is correct.
+    assert.ok(codes.length === 10);
+  });
+
+  test("a passing validateStoryText result has zero failures", () => {
+    const f = validateStoryText({
+      storyText: "Prisha splashed in the waves with a friendly dolphin.",
+      creature: dolphin,
+      recipientName: "Prisha",
+    });
+    assert.equal(f.length, 0);
+  });
+
+  test("multiple independent failures are all returned", () => {
+    // Missing name, missing animal, unsafe content
+    const f = validateStoryText({
+      storyText: "The sea creature killed the fish.",
+      creature: dolphin,
+      recipientName: "Prisha",
+    });
+    // Should have at least: name_missing, animal_missing, unsafe_content
+    const codeSet = new Set(f.map((x) => x.code));
+    assert.ok(codeSet.has("name_missing"), "Should flag missing name");
+    assert.ok(codeSet.has("animal_missing"), "Should flag missing animal");
+    assert.ok(codeSet.has("unsafe_content"), "Should flag unsafe content");
+  });
+});
+
+// ─── Page-level finding integration ──────────────────────────────────────────
+
+describe("page-level findings (integration contract)", () => {
+  test("validateStoryText returns findings with code and detail", () => {
+    const findings = validateStoryText({
+      storyText: "A monster appeared and killed everyone.",
+      creature: dolphin,
+      recipientName: "Prisha",
+    });
+
+    for (const finding of findings) {
+      assert.ok(typeof finding.code === "string", "code must be a string");
+      assert.ok(typeof finding.detail === "string", "detail must be a string");
+      assert.ok(finding.detail.length > 0, "detail must be non-empty");
+    }
+  });
+
+  test("findings can be serialised to JSON (for DB storage)", () => {
+    const findings = validateStoryText({
+      storyText: "   ",
+      creature: null,
+      recipientName: "",
+    });
+
+    const json = JSON.stringify(findings);
+    const parsed = JSON.parse(json);
+    assert.ok(Array.isArray(parsed));
+    assert.equal(parsed[0].code, "empty_story");
+  });
+});

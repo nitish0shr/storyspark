@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ArrowLeft,
 } from "lucide-react";
+import { isAdminEmail } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,22 +19,6 @@ const navItems = [
   { href: "/admin/books", label: "Books", icon: BookOpen },
   { href: "/admin/failed", label: "Failed Jobs", icon: AlertTriangle },
 ];
-
-function isAdmin(email: string | undefined): boolean {
-  if (!email) return false;
-  const configured = process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "";
-  const adminEmails = configured
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (adminEmails.length === 0) {
-    // Fail closed. The previous behaviour returned true here, which let ANY
-    // signed-in customer reach /admin whenever the allow-list was unset.
-    console.error("[admin] ADMIN_EMAILS is not configured - denying admin access.");
-    return false;
-  }
-  return adminEmails.includes(email.toLowerCase());
-}
 
 export default async function AdminLayout({
   children,
@@ -49,7 +34,7 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !isAdminEmail(user.email)) {
     redirect("/");
   }
 

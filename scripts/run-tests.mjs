@@ -19,6 +19,10 @@ const ROOT = process.cwd();
 const OUT = path.join(ROOT, ".test-build");
 
 fs.rmSync(OUT, { recursive: true, force: true });
+// Remove incremental build caches so stale compiled output never masks source changes.
+for (const cache of ["tsconfig.tsbuildinfo", "tsconfig.test.tsbuildinfo"]) {
+  fs.rmSync(path.join(ROOT, cache), { force: true });
+}
 
 console.log("[tests] compiling...");
 try {
