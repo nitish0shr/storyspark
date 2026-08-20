@@ -12,13 +12,25 @@ const statusColor: Record<string, string> = {
   failed: "bg-red-100 text-red-700",
 };
 
+// Exact canonical lifecycle stages.
+const stageColor: Record<string, string> = {
+  Generated: "bg-gray-100 text-gray-700",
+  "Under Review": "bg-amber-100 text-amber-700",
+  "Changes Requested": "bg-orange-100 text-orange-700",
+  Revised: "bg-blue-100 text-blue-700",
+  Approved: "bg-emerald-100 text-emerald-700",
+  "Ready for Purchase": "bg-violet-100 text-violet-700",
+  Purchased: "bg-indigo-100 text-indigo-700",
+  Delivered: "bg-green-100 text-green-700",
+};
+
 async function getBooks() {
   const supabase = createAdminClient();
 
   const { data: books } = await supabase
     .from("books")
     .select(
-      "id, user_id, child_name, theme_id, theme_title, status, is_purchased, page_count, pdf_url, created_at, updated_at"
+      "id, user_id, child_name, theme_id, theme_title, status, lifecycle_stage, is_purchased, page_count, pdf_url, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -37,12 +49,27 @@ async function getBooks() {
   return { books: books ?? [], statusCounts };
 }
 
-export default async function AdminBooksPage() {
+export default async function AdminBooksPage({
+  searchParams,
+}: {
+  searchParams?: { notice?: string; error?: string };
+}) {
   const { books, statusCounts } = await getBooks();
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Books</h1>
+
+      {searchParams?.notice ? (
+        <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {searchParams.notice}
+        </p>
+      ) : null}
+      {searchParams?.error ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {searchParams.error}
+        </p>
+      ) : null}
 
       {/* Status distribution */}
       <div className="flex flex-wrap gap-2">
@@ -72,6 +99,9 @@ export default async function AdminBooksPage() {
                   Theme
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">
+                  Stage
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">
                   Status
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">
@@ -92,7 +122,7 @@ export default async function AdminBooksPage() {
               {books.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-gray-400"
                   >
                     No books yet.
@@ -109,6 +139,17 @@ export default async function AdminBooksPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {book.theme_title || book.theme_id}
+                    </td>
+                    <td className="px-4 py-3">
+                      {book.lifecycle_stage ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${stageColor[book.lifecycle_stage] ?? "bg-gray-100 text-gray-600"}`}
+                        >
+                          {book.lifecycle_stage}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -138,12 +179,43 @@ export default async function AdminBooksPage() {
                       {new Date(book.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/preview/${book.id}`}
-                        className="text-xs text-violet-600 hover:underline"
-                      >
-                        View
-                      </Link>
+                      <div className="flex flex-col items-start gap-1">
+                        <Link
+                          href={`/preview/${book.id}`}
+                          className="text-xs text-violet-600 hover:underline"
+                        >
+                          View
+                        </Link>
+                        {book.lifecycle_stage === "Approved" ? (
+                          <form
+                            action="/api/admin/retry-approval-invitation"
+                            method="post"
+                          >
+                            <input type="hidden" name="bookId" value={book.id} />
+                            <button
+                              type="submit"
+                              className="text-left text-xs font-medium text-amber-700 hover:underline"
+                            >
+                              Retry invitation
+                            </button>
+                          </form>
+                        ) : null}
+                        {book.lifecycle_stage === "Purchased" ||
+                        book.lifecycle_stage === "Delivered" ? (
+                          <form
+                            action="/api/admin/retry-purchase-confirmation"
+                            method="post"
+                          >
+                            <input type="hidden" name="bookId" value={book.id} />
+                            <button
+                              type="submit"
+                              className="text-left text-xs font-medium text-indigo-700 hover:underline"
+                            >
+                              Retry purchase email
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))

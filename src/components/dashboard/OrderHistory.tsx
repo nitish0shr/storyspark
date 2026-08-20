@@ -22,12 +22,28 @@ interface OrderHistoryProps {
   themes: Theme[];
 }
 
-function statusConfig(status: Order["status"]) {
+/**
+ * An order is only "fulfilled" when it is truly fulfilled/delivered — i.e. the
+ * status is "fulfilled" AND we have an exact fulfilled timestamp. A "paid"
+ * order is confirmed but not yet fulfilled, so it must never be shown as
+ * fulfilled.
+ */
+function isTrulyFulfilled(order: Order): boolean {
+  return order.status === "fulfilled" && Boolean(order.fulfilledAt);
+}
+
+function statusConfig(order: Order) {
+  const status = order.status;
   switch (status) {
-    case "paid":
     case "fulfilled":
       return {
-        label: status === "paid" ? "Paid" : "Fulfilled",
+        label: isTrulyFulfilled(order) ? "Fulfilled" : "Paid",
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: CheckCircle2,
+      };
+    case "paid":
+      return {
+        label: "Paid",
         className: "bg-emerald-100 text-emerald-700 border-emerald-200",
         icon: CheckCircle2,
       };
@@ -112,8 +128,11 @@ export default function OrderHistory({
       </div>
 
       {orders.map((order) => {
-        const config = statusConfig(order.status);
+        const config = statusConfig(order);
         const StatusIcon = config.icon;
+        // A download is only offered once payment is confirmed. Paid and truly
+        // fulfilled orders both qualify (the deliverable exists).
+        const canDownload = isTrulyFulfilled(order);
         const title = getBookTitle(books, childProfiles, themes, order.bookId);
         const pdfUrl = getBookPdfUrl(books, order.bookId);
         const date = new Date(order.createdAt).toLocaleDateString("en-US", {
@@ -144,7 +163,7 @@ export default function OrderHistory({
                   <StatusIcon className="h-3 w-3 mr-1" />
                   {config.label}
                 </Badge>
-                {pdfUrl && (order.status === "paid" || order.status === "fulfilled") && (
+                {pdfUrl && canDownload && (
                   <a
                     href={pdfUrl}
                     target="_blank"
@@ -186,7 +205,7 @@ export default function OrderHistory({
                 </Badge>
               </div>
               <div className="col-span-2 text-right">
-                {pdfUrl && (order.status === "paid" || order.status === "fulfilled") ? (
+                {pdfUrl && canDownload ? (
                   <a
                     href={pdfUrl}
                     target="_blank"

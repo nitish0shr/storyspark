@@ -1,8 +1,25 @@
-# Starmee status workflows
+# Starmee status workflows (legacy / compatibility-only)
 
-There are **two independent state machines**: one on `books` (the creative
-pipeline) and one on `orders` (the payment pipeline). They are linked only by
-`orders.book_id`. This document is the source of truth for both.
+> **⚠️ Not canonical.** The authoritative fulfilment lifecycle is the
+> eight-stage `books.lifecycle_stage` model documented in
+> **[book-fulfilment-implementation.md](./book-fulfilment-implementation.md)**,
+> which is the single source of truth. Where anything in this file conflicts
+> with that report, **the report wins.**
+>
+> The `books.status` and `orders.status` columns described below are **retained
+> for backward-compatibility only**. They are no longer the source of truth for
+> the customer lifecycle and must not be used to drive approval, payment, access,
+> or delivery decisions. `books.status` is mapped to a canonical stage **only**
+> when `lifecycle_stage` is NULL (legacy rows), via `LEGACY_STATUS_TO_STAGE` in
+> `src/lib/book-lifecycle.ts`. Canonical rules — atomic, version-bound
+> transitions, verified payment, and verified delivery — are enforced by the
+> `transition_book_lifecycle` / `record_verified_payment_and_purchase` RPCs and
+> migration 010, **not** by the tables below.
+
+Historically there were **two independent state machines**: one on `books` (the
+creative pipeline) and one on `orders` (the payment pipeline), linked only by
+`orders.book_id`. They are documented here for reference and legacy-row
+interpretation.
 
 > Naming note: an earlier brief referred to `pending_generation` and
 > `awaiting_approval`. **Those strings do not exist in this codebase.** The real
@@ -10,7 +27,7 @@ pipeline) and one on `orders` (the payment pipeline). They are linked only by
 
 ---
 
-## books.status
+## books.status (legacy / compatibility-only)
 
 Enforced by the `books_status_check` constraint (migration 008).
 
@@ -59,7 +76,12 @@ approved
 
 ---
 
-## orders.status
+## orders.status (legacy / compatibility-only)
+
+> The canonical order outcome is derived from the lifecycle: an order becomes
+> `fulfilled` (with `fulfilled_at`) only on the verified `Purchased → Delivered`
+> transition. See the canonical report for the authoritative payment/delivery
+> rules. The table below documents the legacy column values only.
 
 | Status | Meaning | Set by |
 |---|---|---|
@@ -95,7 +117,13 @@ record, so no extra table is required.
 
 ---
 
-## How the two machines meet
+## How the two machines met (legacy view)
+
+> **Superseded.** The diagram below describes the pre-canonical flow and is kept
+> only to interpret legacy rows. The authoritative flow — generate a complete
+> immutable version → review/revise the exact version → approve → invite to
+> preview & purchase → verified payment → verified delivery — is defined in
+> **[book-fulfilment-implementation.md](./book-fulfilment-implementation.md)**.
 
 ```
 customer submits form
@@ -109,5 +137,5 @@ customer submits form
   -> orders: paid -> fulfilled
 ```
 
-Today the free-preview half runs in production. Everything from the `orders`
-row onward is implemented but unproven, because Stripe credentials are absent.
+This legacy shape does not enforce immutable version binding or verified
+delivery. Do not rely on it for new work.

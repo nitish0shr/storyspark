@@ -52,6 +52,23 @@ export default async function DashboardPage() {
     language: row.language ?? "en", status: row.status, contextualAnswers: row.contextual_answers,
     storyText: row.story_text, illustrationUrls: row.illustration_urls, previewPages: row.preview_pages,
     pdfUrl: row.pdf_url, pdfPrintUrl: row.pdf_print_url, pageCount: row.page_count,
+    lifecycleStage: row.lifecycle_stage ?? null,
+    operationalState: row.operational_state ?? null,
+    operationalError: row.operational_error ?? null,
+    currentVersionId: row.current_version_id ?? null,
+    reviewVersionId: row.review_version_id ?? null,
+    approvedVersionId: row.approved_version_id ?? null,
+    lifecycleRevision: row.lifecycle_revision ?? 0,
+    stageTimestamps: {
+      generatedAt: row.stage_generated_at ?? null,
+      underReviewAt: row.stage_under_review_at ?? null,
+      changesRequestedAt: row.stage_changes_requested_at ?? null,
+      revisedAt: row.stage_revised_at ?? null,
+      approvedAt: row.stage_approved_at ?? null,
+      readyForPurchaseAt: row.stage_ready_for_purchase_at ?? null,
+      purchasedAt: row.stage_purchased_at ?? null,
+      deliveredAt: row.stage_delivered_at ?? null,
+    },
     createdAt: row.created_at, updatedAt: row.updated_at,
   }));
 
@@ -69,6 +86,15 @@ export default async function DashboardPage() {
     tier: row.tier, isGift: row.is_gift, giftRecipientName: row.gift_recipient_name,
     giftRecipientEmail: row.gift_recipient_email, giftMessage: row.gift_message,
     emailDelivered: row.email_delivered, createdAt: row.created_at,
+    versionId: row.version_id ?? null,
+    checkoutIdempotencyKey: row.checkout_idempotency_key ?? null,
+    paymentVerifiedAt: row.payment_verified_at ?? null,
+    purchaseConfirmationSentAt: row.purchase_confirmation_sent_at ?? null,
+    fulfilledAt: row.fulfilled_at ?? null,
+    idempotencyKey: row.idempotency_key ?? null,
+    paymentConfirmedAt: row.payment_confirmed_at ?? null,
+    paymentMethod: row.payment_method ?? null,
+    paymentMetadata: row.payment_metadata ?? null,
   }));
   const activeSubscription = (subscriptionsRes.data ?? [])[0] ?? null;
   /* eslint-enable @typescript-eslint/no-explicit-any */

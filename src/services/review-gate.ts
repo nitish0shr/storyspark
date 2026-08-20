@@ -7,6 +7,9 @@
  *
  * Regeneration is bounded by MAX_GENERATION_ATTEMPTS so a bad prompt can
  * never loop forever.
+ *
+ * On success: transitions Generated -> Under Review.
+ * On failure: routes to human review regardless (needs_regeneration legacy).
  */
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -17,6 +20,7 @@ import {
   MAX_GENERATION_ATTEMPTS,
 } from "@/lib/content-validation";
 import { submitForReview, logReviewEvent } from "@/lib/review-workflow";
+import { replaceVersionFindings } from "@/lib/book-versions";
 
 export interface GateResult {
   ok: boolean;
@@ -48,12 +52,13 @@ export async function runValidationGate(
     const { data: book } = await supabaseAdmin
       .from("books")
       .select(
-        "id, story_text, illustration_urls, contextual_answers, recipient_name, child_name, generation_attempts, theme_title",
+        "id, story_text, illustration_urls, contextual_answers, recipient_name, child_name, generation_attempts, theme_title, lifecycle_stage, current_version_id",
       )
       .eq("id", bookId)
       .maybeSingle();
 
-    if (!book) return { ok: false, attempt: 0, status: "failed", message: "Book not found." };
+    if (!book)
+      return { ok: false, attempt: 0, status: "failed", message: "Book not found." };
 
     const attempt = (book.generation_attempts ?? 0) + 1;
     const creature = resolveCreatureFromAnswers(
@@ -72,6 +77,19 @@ export async function runValidationGate(
       themeTitle: book.theme_title ?? null,
     });
 
+    if (!book.current_version_id) {
+      return {
+        ok: false,
+        attempt,
+        status: "failed",
+        message: "Validation cannot be bound to an immutable book version.",
+      };
+    }
+    await replaceVersionFindings(
+      book.current_version_id as string,
+      result.failures,
+    );
+
     await supabaseAdmin
       .from("books")
       .update({
@@ -82,11 +100,12 @@ export async function runValidationGate(
       .eq("id", bookId);
 
     if (result.ok) {
+      // Transition Generated -> Under Review
       const sub = await submitForReview(bookId);
       return {
         ok: true,
         attempt,
-        status: "pending_review",
+        status: "Under Review",
         message: "Passed automated checks. " + sub.message,
       };
     }
@@ -95,14 +114,23 @@ export async function runValidationGate(
       bookId,
       action: "validation_failed",
       attempt,
-      notes: result.failures.map((f) => f.code + ": " + f.detail).join(" | ").slice(0, 2000),
+      notes: result.failures
+        .map((f) => f.code + ": " + f.detail)
+        .join(" | ")
+        .slice(0, 2000),
     });
 
-    const canRetry = attempt < MAX_GENERATION_ATTEMPTS && typeof regenerate === "function";
+    const canRetry =
+      attempt < MAX_GENERATION_ATTEMPTS && typeof regenerate === "function";
     if (!canRetry) break;
 
     const corrective = buildCorrectivePrompt(result.failures, creature);
-    await logReviewEvent({ bookId, action: "regenerated", attempt, notes: corrective.slice(0, 2000) });
+    await logReviewEvent({
+      bookId,
+      action: "regenerated",
+      attempt,
+      notes: corrective.slice(0, 2000),
+    });
     try {
       await regenerate!(bookId, corrective);
     } catch (err) {
@@ -114,7 +142,10 @@ export async function runValidationGate(
   // Out of automatic attempts: a human decides what happens next.
   await supabaseAdmin
     .from("books")
-    .update({ status: "needs_regeneration", updated_at: new Date().toISOString() })
+    .update({
+      status: "needs_regeneration",
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", bookId);
 
   const sub = await submitForReview(bookId);
@@ -123,7 +154,9 @@ export async function runValidationGate(
     attempt: MAX_GENERATION_ATTEMPTS,
     status: sub.status || "needs_regeneration",
     message:
-      "Automated checks still failing after " + MAX_GENERATION_ATTEMPTS +
-      " attempts - routed to human review. " + sub.message,
+      "Automated checks still failing after " +
+      MAX_GENERATION_ATTEMPTS +
+      " attempts - routed to human review. " +
+      sub.message,
   };
 }

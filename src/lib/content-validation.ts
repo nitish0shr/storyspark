@@ -26,6 +26,10 @@ export interface ValidationFailure {
     | "empty_story"
     | "vision_unavailable";
   detail: string;
+  /** Null means the finding applies to the whole book. */
+  pageNumber?: number | null;
+  severity?: "minor" | "major" | "blocker";
+  source?: "text" | "image" | "both";
 }
 
 export interface ValidationResult {
@@ -276,10 +280,18 @@ export async function validateIllustration(params: {
     });
   }
 
-  if (verdict.monster_like && creature.kind !== "fantasy") {
+  if (verdict.monster_like && creature.kind === "animal") {
     failures.push({
       code: "monster_present",
       detail: 'Illustration looks mythical/monstrous but ' + creature.label + ' is a real ' + creature.kind + '. ' + verdict.description,
+    });
+  } else if (verdict.monster_like && creature.kind === "dinosaur") {
+    failures.push({
+      code: "monster_present",
+      detail:
+        "Advisory only: the dinosaur has a dramatic or monster-like appearance. " +
+        verdict.description,
+      severity: "minor",
     });
   }
 
@@ -301,7 +313,7 @@ const ADVISORY_CODES = new Set(["vision_unavailable"]);
 
 /** True when a failure reflects the content itself, so a retry could help. */
 export function isBlockingFailure(failure: ValidationFailure): boolean {
-  return ADVISORY_CODES.has(failure.code) === false;
+  return failure.severity !== "minor" && ADVISORY_CODES.has(failure.code) === false;
 }
 
 export const MAX_GENERATION_ATTEMPTS = 2;
@@ -324,13 +336,31 @@ export async function validateBook(params: {
     storyText,
     creature,
     recipientName,
-  });
+  }).map((failure) => ({
+    ...failure,
+    pageNumber: failure.pageNumber ?? null,
+    severity:
+      failure.severity ??
+      (ADVISORY_CODES.has(failure.code) ? "minor" : "blocker"),
+    source: "text",
+  }));
 
   const images = (imageUrls || []).filter(Boolean);
   const imageResults = await Promise.all(
     images.map((url) => validateIllustration({ imageUrl: url, creature, themeTitle })),
   );
-  for (const r of imageResults) failures.push(...r);
+  imageResults.forEach((result, index) => {
+    failures.push(
+      ...result.map((failure) => ({
+        ...failure,
+        pageNumber: index + 1,
+        severity:
+          failure.severity ??
+          (ADVISORY_CODES.has(failure.code) ? "minor" : "blocker"),
+        source: "image" as const,
+      })),
+    );
+  });
 
   return {
     ok: failures.filter(isBlockingFailure).length === 0,

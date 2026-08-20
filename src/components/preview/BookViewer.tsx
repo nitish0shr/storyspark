@@ -26,11 +26,21 @@ interface BookPage {
 
 interface BookViewerProps {
   pages: BookPage[];
+  /** Number of pages visible before the paywall slide (only relevant when showPaywall=true) */
   previewPageCount: number;
+  /** True when the viewer should show all pages without a paywall */
+  isFullAccess?: boolean;
+  /** True when the paywall CTA should be shown after the preview pages */
+  showPaywall?: boolean;
   childName: string;
   themeId?: string;
   themeTitle?: string;
   bookId: string;
+  /** Exact approved version ID — forwarded to PaywallOverlay for checkout */
+  versionId?: string;
+  /** Opaque access grant token — forwarded to PaywallOverlay for checkout body only.
+   *  Must NOT appear in the share URL. */
+  accessToken?: string;
   price?: string;
   dedication?: string | null;
 }
@@ -38,10 +48,14 @@ interface BookViewerProps {
 export default function BookViewer({
   pages,
   previewPageCount,
+  isFullAccess = false,
+  showPaywall = false,
   childName,
   themeId,
   themeTitle,
   bookId,
+  versionId,
+  accessToken,
   price,
   dedication,
 }: BookViewerProps) {
@@ -59,14 +73,32 @@ export default function BookViewer({
   const flipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const dedicationOffset = hasDedication ? 1 : 0;
-  const totalVisibleSlides = Math.min(previewPageCount, pages.length) + 1 + dedicationOffset;
+
+  // Slide layout:
+  //   0            = cover
+  //   1            = dedication (if any)
+  //   1+dedOffset … previewPageCount+dedOffset = story pages
+  //   last         = paywall (if showPaywall && !isFullAccess)
+  const paywallSlideCount = !isFullAccess && showPaywall ? 1 : 0;
+  const totalVisibleSlides =
+    Math.min(previewPageCount, pages.length) + 1 + dedicationOffset + paywallSlideCount;
+
   const isCoverSlide = currentPage === 0;
   const isDedicationSlide = hasDedication && currentPage === 1;
   const pageIndex = isCoverSlide ? 0 : currentPage - dedicationOffset;
-  const isPaywallSlide = !isCoverSlide && !isDedicationSlide && pageIndex >= previewPageCount;
+  const isPaywallSlide =
+    !isFullAccess &&
+    showPaywall &&
+    !isCoverSlide &&
+    !isDedicationSlide &&
+    pageIndex >= previewPageCount;
   const isFirstPage = currentPage === 0;
   const isLastSlide = currentPage === totalVisibleSlides - 1;
   const isStorySlide = !isCoverSlide && !isDedicationSlide && !isPaywallSlide;
+
+  // Remaining pages for the paywall copy — we know at most pages.length were sent
+  // (preview only), so use a safe lower-bound estimate for the "N more pages" text.
+  const remainingPages = Math.max(1, pages.length);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowCoverAnim(false), 1500);
@@ -91,7 +123,7 @@ export default function BookViewer({
         flipTimerRef.current = null;
       }, 350);
     },
-    [currentPage, totalVisibleSlides, isFlipping]
+    [currentPage, totalVisibleSlides, isFlipping],
   );
 
   const goNext = useCallback(() => {
@@ -117,7 +149,6 @@ export default function BookViewer({
         setIsFullscreen((prev) => !prev);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goNext, goPrev, isFullscreen]);
@@ -129,30 +160,24 @@ export default function BookViewer({
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-
     const deltaX = e.changedTouches[0].clientX - touchStartX.current;
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-      if (deltaX < 0) {
-        goNext();
-      } else {
-        goPrev();
-      }
+      if (deltaX < 0) goNext();
+      else goPrev();
     }
-
     touchStartX.current = null;
     touchStartY.current = null;
   };
 
   const handleShare = async () => {
+    // Share URL is always the bare preview URL — the access token must NOT appear here
     const url = `${window.location.origin}/preview/${bookId}`;
     const shareData = {
       title: `${childName}'s Story - Starmee`,
       text: `Check out ${childName}'s personalised storybook!`,
       url,
     };
-
     try {
       if (navigator.share) {
         await navigator.share(shareData);
@@ -166,11 +191,7 @@ export default function BookViewer({
     }
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen((prev) => !prev);
-  };
-
-  const remainingPages = pages.length - previewPageCount;
+  const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
 
   const pageContent = (
     <>
@@ -180,6 +201,8 @@ export default function BookViewer({
           childName={childName}
           remainingPages={remainingPages}
           price={price}
+          versionId={versionId}
+          accessToken={accessToken}
         />
       ) : isDedicationSlide ? (
         <DedicationPage dedication={dedication!} themeId={themeId} />
@@ -217,14 +240,13 @@ export default function BookViewer({
             "flex items-center justify-center",
             "text-gray-700 hover:text-[#7C3AED] hover:bg-white",
             "transition-all duration-200 hover:scale-105",
-            isFullscreen ? "sm:left-4 h-12 w-12" : "sm:-left-5"
+            isFullscreen ? "sm:left-4 h-12 w-12" : "sm:-left-5",
           )}
           aria-label="Previous page"
         >
           <ChevronLeft className={cn("h-5 w-5", isFullscreen && "h-6 w-6")} />
         </button>
       )}
-
       {!isLastSlide && (
         <button
           onClick={goNext}
@@ -235,7 +257,7 @@ export default function BookViewer({
             "flex items-center justify-center",
             "text-gray-700 hover:text-[#7C3AED] hover:bg-white",
             "transition-all duration-200 hover:scale-105",
-            isFullscreen ? "sm:right-4 h-12 w-12" : "sm:-right-5"
+            isFullscreen ? "sm:right-4 h-12 w-12" : "sm:-right-5",
           )}
           aria-label="Next page"
         >
@@ -246,12 +268,22 @@ export default function BookViewer({
   );
 
   const pageDots = (
-    <div className={cn("flex items-center justify-center gap-1.5", isFullscreen ? "mt-4" : "mt-6")}>
+    <div
+      className={cn(
+        "flex items-center justify-center gap-1.5",
+        isFullscreen ? "mt-4" : "mt-6",
+      )}
+    >
       {Array.from({ length: totalVisibleSlides }).map((_, i) => {
         const isActive = i === currentPage;
         const isDedDot = hasDedication && i === 1;
         const dotPageIdx = i - dedicationOffset;
-        const isPaywall = !isDedDot && i > 0 && dotPageIdx >= previewPageCount;
+        const isPaywallDot =
+          !isFullAccess &&
+          showPaywall &&
+          !isDedDot &&
+          i > 0 &&
+          dotPageIdx >= previewPageCount;
 
         return (
           <button
@@ -263,13 +295,26 @@ export default function BookViewer({
               isActive
                 ? cn(isFullscreen ? "w-8" : "w-6", "bg-[#7C3AED]")
                 : isDedDot
-                  ? cn(isFullscreen ? "w-2.5" : "w-2", "bg-pink-300 hover:bg-pink-400")
-                  : isPaywall
-                    ? cn(isFullscreen ? "w-2.5" : "w-2", "bg-pink-200 hover:bg-pink-300")
-                    : cn(isFullscreen ? "w-2.5" : "w-2", "bg-violet-200 hover:bg-violet-300")
+                  ? cn(
+                      isFullscreen ? "w-2.5" : "w-2",
+                      "bg-pink-300 hover:bg-pink-400",
+                    )
+                  : isPaywallDot
+                    ? cn(
+                        isFullscreen ? "w-2.5" : "w-2",
+                        "bg-pink-200 hover:bg-pink-300",
+                      )
+                    : cn(
+                        isFullscreen ? "w-2.5" : "w-2",
+                        "bg-violet-200 hover:bg-violet-300",
+                      ),
             )}
             aria-label={
-              isDedDot ? "Dedication" : isPaywall ? "Unlock more pages" : `Go to page ${i + 1}`
+              isDedDot
+                ? "Dedication"
+                : isPaywallDot
+                  ? "Unlock more pages"
+                  : `Go to page ${i + 1}`
             }
           />
         );
@@ -313,11 +358,13 @@ export default function BookViewer({
           <div
             className={cn(
               "transition-all duration-[350ms] ease-in-out",
-              isFlipping && flipDirection === "next" &&
+              isFlipping &&
+                flipDirection === "next" &&
                 "[transform:rotateY(-8deg)_scale(0.95)] opacity-80",
-              isFlipping && flipDirection === "prev" &&
+              isFlipping &&
+                flipDirection === "prev" &&
                 "[transform:rotateY(8deg)_scale(0.95)] opacity-80",
-              !isFlipping && "[transform:rotateY(0deg)_scale(1)] opacity-100"
+              !isFlipping && "[transform:rotateY(0deg)_scale(1)] opacity-100",
             )}
             style={{ transformStyle: "preserve-3d" }}
           >
@@ -334,7 +381,7 @@ export default function BookViewer({
 
         <AudioNarrationPlayer
           audioUrls={pages.map((p, i) =>
-            i < previewPageCount ? (p.audioUrl || null) : null
+            i < previewPageCount ? (p.audioUrl || null) : null,
           )}
           currentPage={isDedicationSlide ? -1 : pageIndex}
           totalPages={Math.min(previewPageCount, pages.length)}
@@ -390,14 +437,20 @@ export default function BookViewer({
         <div
           className={cn(
             "w-full transition-all duration-[350ms] ease-in-out",
-            showCoverAnim && currentPage === 0 &&
+            showCoverAnim &&
+              currentPage === 0 &&
               "animate-in fade-in zoom-in-95 slide-in-from-bottom-6 duration-1000",
-            !showCoverAnim && isFlipping && flipDirection === "next" &&
+            !showCoverAnim &&
+              isFlipping &&
+              flipDirection === "next" &&
               "[transform:rotateY(-8deg)_scale(0.96)] opacity-70",
-            !showCoverAnim && isFlipping && flipDirection === "prev" &&
+            !showCoverAnim &&
+              isFlipping &&
+              flipDirection === "prev" &&
               "[transform:rotateY(8deg)_scale(0.96)] opacity-70",
-            !showCoverAnim && !isFlipping &&
-              "[transform:rotateY(0deg)_scale(1)] opacity-100"
+            !showCoverAnim &&
+              !isFlipping &&
+              "[transform:rotateY(0deg)_scale(1)] opacity-100",
           )}
           style={{ transformStyle: "preserve-3d" }}
         >
@@ -414,7 +467,7 @@ export default function BookViewer({
 
       <AudioNarrationPlayer
         audioUrls={pages.map((p, i) =>
-          i < previewPageCount ? (p.audioUrl || null) : null
+          i < previewPageCount ? (p.audioUrl || null) : null,
         )}
         currentPage={isDedicationSlide ? -1 : pageIndex}
         totalPages={Math.min(previewPageCount, pages.length)}
