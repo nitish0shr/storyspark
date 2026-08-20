@@ -15,6 +15,7 @@ import {
   shouldApplyCheckoutExpiry,
   shouldReuseUnboundCheckoutReservation,
 } from "@/lib/checkout-recovery";
+import { runPostPaymentRecovery } from "@/lib/notification-recovery";
 
 // ---------------------------------------------------------------------------
 // Replay protection — decideCheckoutProcessing
@@ -81,6 +82,40 @@ describe("stripe webhook replay protection", () => {
     }
     assert.equal(sideEffects, 1);
     assert.equal(order.status, "paid");
+  });
+});
+
+describe("post-payment notification recovery", () => {
+  test("suppressed confirmation is recorded but finalisation still runs", async () => {
+    let failures = 0;
+    let finalisations = 0;
+    const result = await runPostPaymentRecovery({
+      attemptNotification: async () => {
+        throw new Error("not_configured");
+      },
+      recordNotificationFailure: async () => {
+        failures += 1;
+      },
+      finalise: async () => {
+        finalisations += 1;
+      },
+    });
+    assert.equal(result.notificationSucceeded, false);
+    assert.equal(failures, 1);
+    assert.equal(finalisations, 1);
+  });
+
+  test("finalisation failures remain retryable to the caller", async () => {
+    await assert.rejects(
+      runPostPaymentRecovery({
+        attemptNotification: async () => undefined,
+        recordNotificationFailure: async () => undefined,
+        finalise: async () => {
+          throw new Error("[transient] finalisation failed");
+        },
+      }),
+      /finalisation failed/,
+    );
   });
 });
 

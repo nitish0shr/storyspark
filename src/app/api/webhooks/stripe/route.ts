@@ -8,13 +8,14 @@ import {
   extractSessionMetadata,
   verifySessionPayment,
   verifyExactIdentity,
-  shouldSendPurchaseConfirmation,
 } from "@/lib/webhook-idempotency";
 import { isResendConfigured, resend, RESEND_FROM_EMAIL } from "@/lib/resend";
 import { getAppUrl } from "@/lib/utils";
 import { getNextThemeForSubscriber } from "@/services/theme-rotation";
-import { sendPurchaseConfirmationEmail } from "@/lib/email-notifications";
 import { shouldApplyCheckoutExpiry } from "@/lib/checkout-recovery";
+import { recordOperationalError } from "@/lib/lifecycle-service";
+import { runPostPaymentRecovery } from "@/lib/notification-recovery";
+import { attemptPurchaseConfirmation } from "@/services/purchase-confirmation";
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -525,100 +526,17 @@ async function handleCheckoutCompleted(
   //   Only send when: email known + not already sent + provider is configured.
   //   Only record sent_at when the provider actually delivered the email.
 
-  const { data: freshOrder } = await supabaseAdmin
-    .from("orders")
-    .select("purchase_confirmation_sent_at, purchase_confirmation_status")
-    .eq("id", order.id)
-    .maybeSingle();
-
-  if (buyerEmail && shouldSendPurchaseConfirmation(freshOrder)) {
-    const { count: confirmationClaimCount, error: confirmationClaimError } =
-      await supabaseAdmin
-        .from("orders")
-        .update(
-          {
-            purchase_confirmation_status: "pending",
-            purchase_confirmation_error: null,
-          },
-          { count: "exact" },
-        )
-        .eq("id", order.id)
-        .is("purchase_confirmation_sent_at", null)
-        .or(
-          "purchase_confirmation_status.is.null,purchase_confirmation_status.eq.failed",
-        );
-    if (confirmationClaimError) {
-      throw new Error(
-        "[transient] Could not claim purchase confirmation: " +
-          confirmationClaimError.message,
-      );
-    }
-    if ((confirmationClaimCount ?? 0) !== 1) {
-      throw new Error(
-        "[transient] Purchase confirmation is awaiting provider reconciliation",
-      );
-    }
-
-    let providerAccepted = false;
-    try {
-      const sendResult = await sendPurchaseConfirmationEmail({
-        email: buyerEmail,
-        buyerName,
-        childName,
-        bookId,
-        dashboardUrl: `${appUrl}/dashboard`,
-      });
-      providerAccepted = sendResult.sent;
-
-      if (!sendResult.sent) {
-        throw new Error(
-          "Purchase confirmation not sent: " +
-            (sendResult.reason ?? "provider returned not_sent"),
-        );
-      }
-
-      const { error: confErr, count: confCount } = await supabaseAdmin
-        .from("orders")
-        .update(
-          {
-            email_delivered: true,
-            purchase_confirmation_sent_at: new Date().toISOString(),
-            purchase_confirmation_status: "sent",
-            purchase_confirmation_error: null,
-            purchase_confirmation_provider_message_id:
-              sendResult.providerMessageId ?? sendResult.provider ?? null,
-          },
-          { count: "exact" },
-        )
-        .eq("id", order.id)
-        .eq("purchase_confirmation_status", "pending");
-      if (confErr || (confCount ?? 0) !== 1) {
-        throw new Error(
-          "Could not durably record purchase confirmation: " +
-            (confErr?.message ?? "claim was no longer pending"),
-        );
-      }
-    } catch (emailErr) {
-      // If the provider did not accept the message, this is safe to retry. If
-      // it did accept it, retain pending so an operator reconciles the
-      // ambiguous acknowledgement before any resend.
-      if (!providerAccepted) {
-        await supabaseAdmin
-          .from("orders")
-          .update({
-            purchase_confirmation_status: "failed",
-            purchase_confirmation_error:
-              emailErr instanceof Error ? emailErr.message : String(emailErr),
-          })
-          .eq("id", order.id)
-          .eq("purchase_confirmation_status", "pending");
-      }
-      throw new Error(
-        "[transient] " +
-          (emailErr instanceof Error ? emailErr.message : String(emailErr)),
-      );
-    }
-  }
+  const attemptConfirmationNotification = async (): Promise<void> => {
+    if (!buyerEmail) return;
+    await attemptPurchaseConfirmation({
+      orderId: order.id,
+      email: buyerEmail,
+      buyerName,
+      childName,
+      bookId,
+      dashboardUrl: `${appUrl}/dashboard`,
+    });
+  };
 
   const orderId = order?.id ?? null;
 
@@ -668,21 +586,38 @@ async function handleCheckoutCompleted(
   //   above and reaches this call again without duplicating side effects.
 
   const { finalisePurchasedBook } = await import("@/services/book-pipeline");
-  try {
-    await finalisePurchasedBook(bookId, effectiveVersionId, orderId);
-  } catch (finaliseErr) {
-    // Finalisation is idempotent, so treat any failure here as transient: tag
-    // it so the outer handler returns 503 and Stripe retries the (idempotent)
-    // flow until finalisation succeeds. We never seal the event on this path.
-    const detail =
-      finaliseErr instanceof Error ? finaliseErr.message : String(finaliseErr);
-    throw new Error(
-      "[transient] finalisePurchasedBook failed for book " +
-        bookId +
-        ": " +
-        detail
-    );
-  }
+  await runPostPaymentRecovery({
+    attemptNotification: attemptConfirmationNotification,
+    recordNotificationFailure: async (notificationError) => {
+      console.error(
+        "[stripe] Purchase confirmation failed without blocking finalisation:",
+        notificationError,
+      );
+      await recordOperationalError(
+        bookId,
+        "purchase_confirmation",
+        notificationError,
+      );
+    },
+    finalise: async () => {
+      try {
+        await finalisePurchasedBook(bookId, effectiveVersionId, orderId);
+      } catch (finaliseErr) {
+        // Finalisation is idempotent, so treat any failure here as transient:
+        // the webhook remains unsealed and Stripe can retry it.
+        const detail =
+          finaliseErr instanceof Error
+            ? finaliseErr.message
+            : String(finaliseErr);
+        throw new Error(
+          "[transient] finalisePurchasedBook failed for book " +
+            bookId +
+            ": " +
+            detail,
+        );
+      }
+    },
+  });
 
   return { orderId, bookId };
 }

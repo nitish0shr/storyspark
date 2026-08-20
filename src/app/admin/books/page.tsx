@@ -49,12 +49,27 @@ async function getBooks() {
   return { books: books ?? [], statusCounts };
 }
 
-export default async function AdminBooksPage() {
+export default async function AdminBooksPage({
+  searchParams,
+}: {
+  searchParams?: { notice?: string; error?: string };
+}) {
   const { books, statusCounts } = await getBooks();
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Books</h1>
+
+      {searchParams?.notice ? (
+        <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {searchParams.notice}
+        </p>
+      ) : null}
+      {searchParams?.error ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {searchParams.error}
+        </p>
+      ) : null}
 
       {/* Status distribution */}
       <div className="flex flex-wrap gap-2">
@@ -164,12 +179,43 @@ export default async function AdminBooksPage() {
                       {new Date(book.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/preview/${book.id}`}
-                        className="text-xs text-violet-600 hover:underline"
-                      >
-                        View
-                      </Link>
+                      <div className="flex flex-col items-start gap-1">
+                        <Link
+                          href={`/preview/${book.id}`}
+                          className="text-xs text-violet-600 hover:underline"
+                        >
+                          View
+                        </Link>
+                        {book.lifecycle_stage === "Approved" ? (
+                          <form
+                            action="/api/admin/retry-approval-invitation"
+                            method="post"
+                          >
+                            <input type="hidden" name="bookId" value={book.id} />
+                            <button
+                              type="submit"
+                              className="text-left text-xs font-medium text-amber-700 hover:underline"
+                            >
+                              Retry invitation
+                            </button>
+                          </form>
+                        ) : null}
+                        {book.lifecycle_stage === "Purchased" ||
+                        book.lifecycle_stage === "Delivered" ? (
+                          <form
+                            action="/api/admin/retry-purchase-confirmation"
+                            method="post"
+                          >
+                            <input type="hidden" name="bookId" value={book.id} />
+                            <button
+                              type="submit"
+                              className="text-left text-xs font-medium text-indigo-700 hover:underline"
+                            >
+                              Retry purchase email
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))

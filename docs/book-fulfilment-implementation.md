@@ -227,9 +227,12 @@ Rules are deliberately conservative: **stage is never inferred from
 - Callers treat `sent: false` as "not delivered" and never advance the
   lifecycle on it: an unsent approval invitation keeps the book at Approved and
   records an operational failure; an unsent delivery email keeps the book at
-  Purchased. Before any manual acceptance run, verify the isolated environment
-  does not expose a SendGrid key. The automated suite uses synthetic decision
-  logic and never invokes a configured provider.
+  Purchased. Purchase confirmation is non-essential: its failure is recorded
+  durably but does not prevent exact-version access/artefact finalisation from
+  running. Admins can retry failed approval invitations and purchase
+  confirmations from the Books screen. Before any manual acceptance run, verify
+  the isolated environment does not expose a SendGrid key. The automated suite
+  uses synthetic decision logic and never invokes a configured provider.
 - To exercise real delivery in a controlled environment, set `SENDGRID_API_KEY`
   and address only inboxes you own.
 
@@ -293,7 +296,13 @@ double-generates, or double-fulfils.
 - **Invitation** (`sendApprovalInvitation`): the attempt is durably reserved as
   `pending` before provider work. A unique key serialises concurrent requests;
   a confirmed `sent` attempt short-circuits, while an ambiguous `pending`
-  attempt is not automatically resent and requires reconciliation.
+  attempt is not automatically resent and requires reconciliation. Failed
+  attempts on Approved books can be retried from the authenticated admin Books
+  screen.
+- **Purchase confirmation** (`attemptPurchaseConfirmation`): uses a conditional
+  pending claim and records sent/failed/ambiguous provider outcomes on the
+  order. Failure never blocks paid-book finalisation; an authenticated admin
+  retry is available for Purchased/Delivered books and never touches payment.
 - **Delivery** (`delivery_attempts` + `finalisePurchasedBook`): the attempt is
   reserved as `pending` before provider work. A prior confirmed `sent` attempt
   replays the Delivered transition idempotently; an ambiguous pending attempt
@@ -319,6 +328,16 @@ order by b.updated_at asc;
 Recovery: re-run `finalisePurchasedBook(bookId, approvedVersionId, orderId)`.
 It is idempotent, no-ops when the order is already fulfilled, and only advances
 to Delivered once artefact/access/notification are verified.
+
+**Stuck at Approved (invitation failed):** use **Retry invitation** on
+`/admin/books`. The POST-only action re-authenticates the allow-listed admin,
+requires Approved plus an exact `approved_version_id`, and reuses the idempotent
+invitation/Ready-for-Purchase workflow.
+
+**Failed purchase confirmation:** use **Retry purchase email** on
+`/admin/books`. The POST-only action requires an allow-listed admin and a
+verified paid/fulfilled order. It retries only the notification claim and never
+creates a checkout, payment intent, or payment transition.
 
 **Ambiguous legacy rows to reconcile (never auto-promoted):**
 ```sql
@@ -371,7 +390,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 258 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 263 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit --incremental false -p tsconfig.json` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop/mobile | **Passed**: homepage, retired admin GET routes, invalid review token, invalid preview fail-closed |

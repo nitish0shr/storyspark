@@ -17,7 +17,7 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 258 passed, 0 failed.
+- `npm test`: 263 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
 - Safe desktop/mobile browser smoke: passed for the homepage, retired admin GET
@@ -115,6 +115,10 @@ provider setup. Unchecked items below must not be interpreted as passed.
 - [ ] Confirm the book only reaches **Ready for Purchase** after the invitation
   is confirmed sent. With email suppressed, the book stays **Approved** and an
   operational failure is recorded.
+- [ ] After a failed invitation, sign in as an allow-listed admin and use
+  **Retry invitation** on the Books screen with a mock successful provider.
+  **Expect:** the exact approved version is reused; one confirmed invitation;
+  Approved → Ready for Purchase without a fresh review decision.
 
 ## G. Checkout blocking (stale / unapproved)
 
@@ -149,6 +153,11 @@ provider setup. Unchecked items below must not be interpreted as passed.
   **Expect:** the paid/fulfilled order is not downgraded to failed.
 - [ ] Feed an event whose amount/currency/identity/version mismatches the order.
   **Expect:** rejected as non-retryable; order not marked paid.
+- [ ] Suppress only the purchase-confirmation send and process a verified
+  payment.
+  **Expect:** confirmation status/error recorded, but full-access/artefact
+  finalisation still runs. The notification can later be retried from the
+  authenticated admin Books screen without replaying payment.
 
 ## J. Full access after payment
 
@@ -203,7 +212,7 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 258/258 |
+| Automated tests | **Pass** | 263/263 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
 | Safe browser smoke | **Pass** | Desktop and mobile |
