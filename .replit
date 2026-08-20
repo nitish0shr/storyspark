@@ -42,3 +42,7 @@ build = ["npm", "run", "build"]
 
 [userenv.shared]
 ADMIN_EMAIL = "hello@starmeestories.com"
+
+[postMerge]
+path = "scripts/post-merge-setup.sh"
+timeoutMs = 180000
