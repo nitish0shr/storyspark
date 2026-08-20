@@ -300,9 +300,10 @@ create table if not exists public.product_artefacts (
   url                text        not null,
   -- durable_verified_at: when the artefact was last confirmed present in storage
   durable_verified_at timestamptz,
-  -- access_url: customer-facing URL (may differ from storage url)
+  -- access_url: retained for schema compatibility; final paid artefacts keep
+  -- this NULL so raw bearer capabilities are never persisted here.
   access_url         text,
-  -- access_verified_at: when the access_url was last confirmed reachable
+  -- access_verified_at: when exact customer access was verified out-of-band
   access_verified_at timestamptz,
   size_bytes         bigint,
   checksum           text,
@@ -315,6 +316,13 @@ create index if not exists idx_product_artefacts_book
 
 create index if not exists idx_product_artefacts_version
   on public.product_artefacts(version_id) where version_id is not null;
+
+-- Repair older pending-migration runs that stored a raw customer bearer URL.
+-- The delivery attempt points to the hash-only grant identity instead.
+update public.product_artefacts
+set access_url = null
+where kind in ('pdf_digital', 'pdf_print', 'epub')
+  and access_url is not null;
 
 -- Final paid-book files are isolated from legacy/public media. There are no
 -- anon/authenticated object policies: the trusted server issues bounded signed
@@ -1854,8 +1862,9 @@ begin
       and payment_verified_at is not null
     limit 1;
 
-    -- 10a. Durable artefact: storage and its customer-facing access URL were
-    -- both verified by actual responses.
+    -- 10a. Durable artefact: private storage and separately recorded customer
+    -- access verification were both proven by actual responses. The raw bearer
+    -- URL is never persisted on the artefact.
     if not exists (
       select 1 from public.product_artefacts
       where book_id = p_book_id
@@ -1865,7 +1874,6 @@ begin
         and storage_path like
           'books/' || p_book_id::text || '/versions/' || v_effective_vid::text || '/%'
         and metadata->>'storage_bucket' = 'final-books'
-        and nullif(pg_catalog.btrim(access_url), '') is not null
         and durable_verified_at is not null
         and access_verified_at is not null
     ) then
@@ -1893,6 +1901,7 @@ begin
         and ag.book_id = p_book_id
         and ag.version_id = v_effective_vid
         and ag.access_kind in ('full_book', 'download', 'gift')
+        and pg_catalog.nullif(pg_catalog.btrim(ag.token_hash), '') is not null
         and ag.revoked_at is null
         and (ag.expires_at is null or ag.expires_at > v_now)
         and ag.verified_at is not null

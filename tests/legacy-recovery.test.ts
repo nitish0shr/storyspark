@@ -135,6 +135,11 @@ describe("explicit recovery action", () => {
     assert.match(recoveryRoute, /\.eq\("updated_at", book\.updated_at\)/);
     assert.match(recoveryRoute, /\.is\("lifecycle_stage", null\)/);
     assert.match(recoveryRoute, /await revokeReviewTokens\(bookId\)/);
+    assert.match(recoveryRoute, /await generatePreview\(bookId, false/);
+    assert.doesNotMatch(
+      recoveryRoute,
+      /generatePreview\(bookId[\s\S]*\)\.catch\(/,
+    );
   });
 
   test("enforces exactly 12 pages and disables automatic regeneration", () => {

@@ -18,7 +18,7 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 308 passed, 0 failed.
+- `npm test`: 312 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
 - Safe desktop browser smoke: passed for the homepage, invalid preview
@@ -173,9 +173,11 @@ provider setup. Unchecked items below must not be interpreted as passed.
 
 - [ ] Confirm a `pdf_digital`/`epub` `product_artefacts` row with both
   a non-empty exact-version `storage_path`, metadata bucket `final-books`,
-  `durable_verified_at`, `access_verified_at`, and a non-empty verified
-  customer-route `access_url`; the durable `url` is
-  `private://final-books/...`, not an HTTP/public/signed object link.
+  `durable_verified_at`, and `access_verified_at`; the durable `url` is
+  `private://final-books/...` and `access_url` is null. Search artefact,
+  attempt, grant metadata, and logs for the raw customer token.
+  **Expect:** the raw bearer URL/token is absent; only its hash and linked grant
+  identity are durable.
 - [ ] Read the `final-books` bucket configuration and attempt direct client
   object access as anon and authenticated roles.
   **Expect:** bucket `public = false`; both direct reads fail. Service-role
@@ -221,6 +223,12 @@ provider setup. Unchecked items below must not be interpreted as passed.
   **Expect:** Delivered replay succeeds only when that attempt's linked
   `access_grant_id` still identifies an unrevoked, verified grant for the exact
   paid order/version.
+- [ ] Revoke, expire, delete, or detach the grant linked to a prior `sent`
+  attempt while the book is still Purchased, then re-run finalisation with a
+  mocked successful provider.
+  **Expect:** the old sent attempt is recorded as unusable rather than replayed;
+  a new pending claim and fresh hash-only grant are created, one replacement
+  notification is sent, and the usable new evidence permits Delivered.
 - [ ] Start two finalisers concurrently for the same paid order/version.
   **Expect:** only one pending delivery claim and one provider send. The losing
   worker never revokes/mints a competing grant. The sent attempt's
@@ -285,7 +293,7 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 308/308 |
+| Automated tests | **Pass** | 312/312 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
 | Safe browser smoke | **Pass** | Desktop |

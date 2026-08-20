@@ -103,9 +103,16 @@ describe("private final-book storage contract", () => {
       transition,
       /'books\/' \|\| p_book_id::text \|\| '\/versions\/' \|\| v_effective_vid::text/i,
     );
-    assert.match(transition, /nullif\(pg_catalog\.btrim\(access_url\), ''\) is not null/i);
     assert.match(transition, /access_verified_at is not null/i);
-    assert.match(pipeline, /access_url: bookAccessUrl/i);
+    assert.doesNotMatch(
+      transition,
+      /btrim\(access_url\)[\s\S]*is not null/i,
+    );
+    assert.doesNotMatch(pipeline, /access_url:\s*bookAccessUrl/i);
+    assert.match(
+      migration,
+      /update public\.product_artefacts[\s\S]*set access_url = null[\s\S]*kind in \('pdf_digital', 'pdf_print', 'epub'\)/i,
+    );
   });
 
   test("owner RLS never exposes full versions or artefacts without exact paid grants", () => {
@@ -204,6 +211,9 @@ describe("exact fulfilment evidence", () => {
     );
     assert.match(transition, /ag\.revoked_at is null/i);
     assert.match(transition, /ag\.verified_at is not null/i);
+    assert.match(transition, /btrim\(ag\.token_hash\)/i);
+    assert.match(pipeline, /isUsableLinkedDeliveryGrant/);
+    assert.match(pipeline, /sent_delivery_grant_unusable/);
   });
 
   test("the delivery claim is acquired before any grant is revoked or minted", () => {

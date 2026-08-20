@@ -131,21 +131,28 @@ export async function POST(request: NextRequest) {
   }
 
   await revokeReviewTokens(bookId);
-  generatePreview(bookId, false, {
-    expectedPageCount: CANONICAL_RECOVERY_PAGE_COUNT,
-    allowAutomaticRegeneration: false,
-    actor: `admin:${user.email || user.id}`,
-    controlledLegacyRecovery: true,
-  }).catch((error) => {
+  try {
+    await generatePreview(bookId, false, {
+      expectedPageCount: CANONICAL_RECOVERY_PAGE_COUNT,
+      allowAutomaticRegeneration: false,
+      actor: `admin:${user.email || user.id}`,
+      controlledLegacyRecovery: true,
+    });
+  } catch (error) {
     console.error(
       `[legacy-recovery] controlled generation failed for ${bookId}:`,
       error,
     );
-  });
+    return adminBooksRedirect(
+      request,
+      "error",
+      `Controlled recovery attempt failed for ${bookId.slice(0, 8)}. It was not retried automatically; inspect the recorded failure before confirming another attempt.`,
+    );
+  }
 
   return adminBooksRedirect(
     request,
     "notice",
-    `Controlled 12-page recovery queued for ${bookId.slice(0, 8)}. Exactly one generation attempt is allowed; refresh to see its stage.`,
+    `Controlled 12-page recovery attempt finished for ${bookId.slice(0, 8)}. Refresh to see its canonical stage.`,
   );
 }

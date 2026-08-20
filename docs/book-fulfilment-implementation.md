@@ -72,10 +72,10 @@ the **exact approved version** (`transition_book_lifecycle` step 10, mirrored by
 
 1. A `product_artefacts` row of kind `pdf_digital` or `epub` with a non-empty,
    exact-version `storage_path` in the private `final-books` bucket (proved by
-   artefact metadata), a non-blank verified customer-route `access_url`, plus
-   both `durable_verified_at` and `access_verified_at`. The durable `url` stores
-   only `private://final-books/...` object identity; no public or signed object
-   URL is persisted.
+   artefact metadata), plus both `durable_verified_at` and
+   `access_verified_at`. The durable `url` stores only
+   `private://final-books/...` object identity and `access_url` remains null; no
+   public, signed-object, or raw customer bearer URL is persisted.
 2. Exactly one paid/verified order exists for the book/version.
 3. A `delivery_attempts` row with `status = 'sent'`, `notification_sent_at`,
    and `access_verified_at` is linked by `access_grant_id` to the **same**
@@ -345,7 +345,9 @@ double-generates, or double-fulfils.
   then Under Review; no existing version is mutated. The public preview endpoint
   accepts only a newly created lifecycle-null `draft`, and the generation
   service independently rejects every other legacy/default invocation, so owner
-  or anonymous requests cannot bypass the admin claim and cost controls.
+  or anonymous requests cannot bypass the admin claim and cost controls. The
+  authenticated POST awaits the single generation attempt and reports its
+  result; it never detaches expensive work into an untracked request promise.
 - **Revision** (`revision-engine.applyRevision`): bounded to
   `MAX_REVISION_ATTEMPTS = 2` via the durable successor count; duplicate/
   near-duplicate output (content hash + text similarity ≥ 0.95) is rejected and
@@ -369,7 +371,9 @@ double-generates, or double-fulfils.
 - **Artefacts** (`finalisePurchasedBook`): reuses an existing exact-version
   private `pdf_digital` object when a freshly minted bounded URL is reachable;
   otherwise rebuilds and re-verifies. Stored artefacts carry only private
-  bucket/object identity; the immutable version row is never mutated.
+  bucket/object identity and verification timestamps; their `access_url` is
+  explicitly null, so the raw customer capability exists only long enough to
+  verify and send it. The immutable version row is never mutated.
 - **Access** grants: full-book grants are minted per attempt with a fresh raw
   token, and the customer route/authorisation is verified deterministically
   before `verified_at` is set; stale unsent grants are revoked before reminting.
@@ -387,9 +391,12 @@ double-generates, or double-fulfils.
   order/version/channel attempt is reserved as `pending` **before any full-book
   grant is revoked or minted**. The attempt is then bound to that specific
   verified grant before provider work. A prior confirmed `sent` attempt replays
-  the Delivered transition only while its linked grant remains usable; an
-  ambiguous pending attempt requires reconciliation rather than a duplicate
-  notification.
+  the Delivered transition only while its linked grant still exists and exactly
+  matches the order/book/version, is verified, token-backed, unrevoked, and
+  unexpired. If that capability is stale, the stale evidence is recorded and a
+  newly claimed replacement attempt/grant is sent instead of permanently
+  replaying a doomed transition. An ambiguous pending attempt still requires
+  reconciliation rather than a duplicate notification.
 
 ---
 
@@ -490,7 +497,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 308 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 312 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop | **Passed**: homepage rendered; fake preview returned the safe not-found UI; unauthorised book-status/generate-PDF requests returned safe 4xx responses without private paths |

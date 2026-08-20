@@ -36,6 +36,10 @@ import {
   createFinalBookSignedUrl,
   FINAL_BOOK_BUCKET,
 } from "@/lib/storage-urls";
+import {
+  isUsableLinkedDeliveryGrant,
+  type LinkedDeliveryGrantEvidence,
+} from "@/lib/delivery-recovery";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -975,7 +979,7 @@ export async function finalisePurchasedBook(
     const { data: existingArtefact } = await supabaseAdmin
       .from("product_artefacts")
       .select(
-        "id, storage_path, access_url, metadata, durable_verified_at, access_verified_at",
+        "id, storage_path, metadata, durable_verified_at, access_verified_at",
       )
       .eq("book_id", bookId)
       .eq("version_id", approvedVersionId)
@@ -1011,6 +1015,7 @@ export async function finalisePurchasedBook(
         .from("product_artefacts")
         .update({
           durable_verified_at: verifiedAt,
+          access_url: null,
         })
         .eq("id", existingArtefact.id);
       if (verifyArtefactError) {
@@ -1127,18 +1132,67 @@ export async function finalisePurchasedBook(
     // ── Grant exact-version full-book access (idempotent) ───────────────────
     // If a successful notification already exists, do not send it again. The
     // canonical transition remains safe and idempotent.
-    const { data: existingSentAttempt } = await supabaseAdmin
+    const { data: existingSentAttempts, error: sentAttemptsError } =
+      await supabaseAdmin
       .from("delivery_attempts")
-      .select("id")
+      .select("id, access_grant_id")
       .eq("order_id", orderIdForGrant)
       .eq("book_id", bookId)
       .eq("version_id", approvedVersionId)
       .eq("status", "sent")
       .not("notification_sent_at", "is", null)
       .not("access_verified_at", "is", null)
-      .limit(1)
-      .maybeSingle();
-    if (existingSentAttempt) {
+      .order("created_at", { ascending: false });
+    if (sentAttemptsError) {
+      throw new Error(
+        `Could not read sent delivery attempts: ${sentAttemptsError.message}`,
+      );
+    }
+    const linkedGrantIds = Array.from(
+      new Set(
+        (existingSentAttempts ?? [])
+          .map((attempt) => attempt.access_grant_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    let linkedGrants: LinkedDeliveryGrantEvidence[] = [];
+    if (linkedGrantIds.length > 0) {
+      const { data: grantRows, error: linkedGrantsError } = await supabaseAdmin
+        .from("access_grants")
+        .select(
+          "id, order_id, book_id, version_id, access_kind, token_hash, verified_at, revoked_at, expires_at",
+        )
+        .in("id", linkedGrantIds);
+      if (linkedGrantsError) {
+        throw new Error(
+          `Could not verify sent delivery grants: ${linkedGrantsError.message}`,
+        );
+      }
+      linkedGrants = (grantRows ?? []).map((grant) => ({
+        id: grant.id as string,
+        orderId: grant.order_id as string | null,
+        bookId: grant.book_id as string,
+        versionId: grant.version_id as string,
+        accessKind: grant.access_kind as string,
+        tokenHash: grant.token_hash as string | null,
+        verifiedAt: grant.verified_at as string | null,
+        revokedAt: grant.revoked_at as string | null,
+        expiresAt: grant.expires_at as string | null,
+      }));
+    }
+    const usableSentAttempt = (existingSentAttempts ?? []).find((attempt) => {
+      const accessGrantId = attempt.access_grant_id as string | null;
+      const grant =
+        linkedGrants.find((candidate) => candidate.id === accessGrantId) ?? null;
+      return isUsableLinkedDeliveryGrant({
+        grant,
+        accessGrantId,
+        orderId: orderIdForGrant,
+        bookId,
+        versionId: approvedVersionId,
+      });
+    });
+    if (usableSentAttempt) {
       const replayTransition = await transitionStage(
         bookId,
         "Delivered",
@@ -1152,6 +1206,19 @@ export async function finalisePurchasedBook(
       }
       await setOperationalState(bookId, "idle");
       return;
+    }
+    if ((existingSentAttempts?.length ?? 0) > 0) {
+      await recordOperationalFailure({
+        bookId,
+        orderId: orderIdForGrant,
+        stage: "Purchased",
+        errorCode: "sent_delivery_grant_unusable",
+        errorDetail:
+          "A previously sent delivery attempt no longer has its exact verified usable access grant; a replacement delivery attempt is required.",
+        context: {
+          staleAttemptIds: existingSentAttempts!.map((attempt) => attempt.id),
+        },
+      });
     }
 
     const email =
@@ -1305,7 +1372,7 @@ export async function finalisePurchasedBook(
         .from("product_artefacts")
         .update(
           {
-            access_url: bookAccessUrl,
+            access_url: null,
             access_verified_at: accessVerifiedAt,
           },
           { count: "exact" },
