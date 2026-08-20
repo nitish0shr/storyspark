@@ -311,18 +311,66 @@ async function prepareIllustrationChildren(
  * Idempotent/resumable: safe to call again if a previous run failed.
  * No customer preview email is sent before approval.
  */
+export interface PreviewGenerationControls {
+  expectedPageCount?: number;
+  allowAutomaticRegeneration?: boolean;
+  actor?: string;
+  controlledLegacyRecovery?: boolean;
+}
+
 export async function generatePreview(
   bookId: string,
   skipGate = false,
+  controls: PreviewGenerationControls = {},
 ): Promise<void> {
-  // Record the attempt
-  await setOperationalState(bookId, "generating_preview", {
-    generation_attempt_started_at: new Date().toISOString(),
-  });
-  await updateBookStatus(bookId, "preview_generating");
-
+  let generationStarted = false;
   try {
     const { book, child, secondChild } = await fetchBookWithChildren(bookId);
+    const lifecycleStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
+    const isControlledLegacyRecovery =
+      controls.controlledLegacyRecovery === true;
+    if (isControlledLegacyRecovery) {
+      if (
+        lifecycleStage !== null ||
+        skipGate ||
+        controls.expectedPageCount !== 12 ||
+        controls.allowAutomaticRegeneration !== false ||
+        !controls.actor?.startsWith("admin:")
+      ) {
+        throw new Error(
+          "Invalid controlled legacy recovery invocation; exact admin, lifecycle, page-count, and retry controls are required",
+        );
+      }
+    } else if (skipGate) {
+      if (lifecycleStage !== "Generated") {
+        throw new Error(
+          "Automatic preview regeneration is allowed only from the canonical Generated stage",
+        );
+      }
+    } else if (lifecycleStage !== null || book.status !== "draft") {
+      throw new Error(
+        "Preview generation is allowed only for a new draft or an explicitly controlled legacy recovery",
+      );
+    }
+
+    // Record the attempt only after the invocation boundary has been proven.
+    await setOperationalState(bookId, "generating_preview", {
+      generation_attempt_started_at: new Date().toISOString(),
+    });
+    await updateBookStatus(bookId, "preview_generating");
+    generationStarted = true;
+
+    const skeleton = storySkeletons[book.theme_id];
+    if (controls.expectedPageCount !== undefined) {
+      const skeletonIsExact =
+        skeleton?.length === controls.expectedPageCount &&
+        skeleton.every((page, index) => page.pageNumber === index + 1);
+      if (!skeletonIsExact) {
+        throw new Error(
+          `Controlled recovery requires a contiguous ${controls.expectedPageCount}-page story skeleton`,
+        );
+      }
+    }
 
     const contextualAnswers: Record<string, string> =
       book.contextual_answers || {};
@@ -365,7 +413,17 @@ export async function generatePreview(
       prepareIllustrationChildren(child, secondChild, descriptions),
     ]);
 
-    const skeleton = storySkeletons[book.theme_id];
+    if (controls.expectedPageCount !== undefined) {
+      const generatedPagesAreExact =
+        storyPages.length === controls.expectedPageCount &&
+        storyPages.every((page, index) => page.pageNumber === index + 1);
+      if (!generatedPagesAreExact) {
+        throw new Error(
+          `Controlled recovery generated ${storyPages.length} pages instead of the required contiguous ${controls.expectedPageCount}`,
+        );
+      }
+    }
+
     const hasTwoChildren = !!secondChild;
     const sceneDescriptions = skeleton
       ? skeleton.map((s) => getSceneDescription(s, hasTwoChildren))
@@ -417,6 +475,8 @@ export async function generatePreview(
       metadata: {
         generatedAt: new Date().toISOString(),
         pageCount: storyPages.length,
+        controlledLegacyRecovery:
+          controls.controlledLegacyRecovery === true,
       },
     });
 
@@ -444,8 +504,10 @@ export async function generatePreview(
     const genTransition = await transitionStage(
       bookId,
       "Generated",
-      "system",
-      "All pages and illustrations generated successfully",
+      controls.actor ?? "system",
+      controls.controlledLegacyRecovery
+        ? "Explicitly confirmed controlled legacy recovery generated a complete canonical version"
+        : "All pages and illustrations generated successfully",
     );
 
     if (!genTransition.ok) {
@@ -459,9 +521,13 @@ export async function generatePreview(
     // Nothing is released to the customer here. Validate, then hand to review queue.
     if (!skipGate) {
       try {
-        const gate = await runValidationGate(bookId, async (id) => {
-          await generatePreview(id, true);
-        });
+        const regenerate =
+          controls.allowAutomaticRegeneration === false
+            ? undefined
+            : async (id: string) => {
+                await generatePreview(id, true);
+              };
+        const gate = await runValidationGate(bookId, regenerate);
         console.log("[gate] book " + bookId + ": " + gate.message);
       } catch (err) {
         console.error("[gate] failed for book " + bookId + ":", err);
@@ -475,9 +541,11 @@ export async function generatePreview(
     // Customers receive an invitation ONLY after a human approves (review-workflow.ts).
   } catch (error) {
     console.error(`Preview generation failed for book ${bookId}:`, error);
-    await updateBookStatus(bookId, "failed");
-    await recordOperationalError(bookId, "generatePreview", error);
-    await setOperationalState(bookId, "failed");
+    if (generationStarted) {
+      await updateBookStatus(bookId, "failed");
+      await recordOperationalError(bookId, "generatePreview", error);
+      await setOperationalState(bookId, "failed");
+    }
     throw error;
   }
 }

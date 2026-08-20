@@ -2,6 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
+import { storySkeletons } from "@/data/story-skeletons";
+import {
+  evaluateLegacyRecoveryEligibility,
+  legacyRecoveryConfirmation,
+} from "@/lib/legacy-recovery";
 
 const statusColor: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
@@ -46,7 +51,72 @@ async function getBooks() {
     statusCounts[b.status] = (statusCounts[b.status] ?? 0) + 1;
   }
 
-  return { books: books ?? [], statusCounts };
+  // Lifecycle-null legacy books are deliberately loaded without the general
+  // 100-row table limit so incomplete records cannot disappear from recovery.
+  const { data: legacyBooks } = await supabase
+    .from("books")
+    .select(
+      "id, child_name, theme_id, theme_title, status, lifecycle_stage, is_purchased, page_count, operational_state, operational_error, generation_attempts, created_at",
+    )
+    .is("lifecycle_stage", null)
+    .order("created_at", { ascending: true });
+
+  const legacyIds = (legacyBooks ?? []).map((book) => book.id);
+  let versions: Array<{
+    book_id: string;
+    is_complete: boolean;
+    page_count: number;
+  }> = [];
+  let paidOrders: Array<{ book_id: string }> = [];
+  if (legacyIds.length > 0) {
+    const [versionsResult, paidOrdersResult] = await Promise.all([
+      supabase
+        .from("book_versions")
+        .select("book_id, is_complete, page_count")
+        .in("book_id", legacyIds),
+      supabase
+        .from("orders")
+        .select("book_id")
+        .in("book_id", legacyIds)
+        .in("status", ["paid", "fulfilled"]),
+    ]);
+    versions = versionsResult.data ?? [];
+    paidOrders = paidOrdersResult.data ?? [];
+  }
+
+  const recoveryRows = (legacyBooks ?? []).map((book) => {
+    const bookVersions = versions.filter(
+      (version) => version.book_id === book.id,
+    );
+    const paidOrderCount = paidOrders.filter(
+      (order) => order.book_id === book.id,
+    ).length;
+    const eligibility = evaluateLegacyRecoveryEligibility({
+      lifecycleStage: book.lifecycle_stage,
+      legacyStatus: book.status,
+      isPurchased: Boolean(book.is_purchased),
+      paidOrderCount,
+      completeVersionCount: bookVersions.filter(
+        (version) => version.is_complete,
+      ).length,
+      operationalState: book.operational_state,
+      skeletonPageNumbers: (storySkeletons[book.theme_id] ?? []).map(
+        (page) => page.pageNumber,
+      ),
+    });
+    return {
+      ...book,
+      versionCount: bookVersions.length,
+      completeVersionCount: bookVersions.filter(
+        (version) => version.is_complete,
+      ).length,
+      paidOrderCount,
+      eligibility,
+      confirmation: legacyRecoveryConfirmation(book.id),
+    };
+  });
+
+  return { books: books ?? [], statusCounts, recoveryRows };
 }
 
 export default async function AdminBooksPage({
@@ -54,7 +124,7 @@ export default async function AdminBooksPage({
 }: {
   searchParams?: { notice?: string; error?: string };
 }) {
-  const { books, statusCounts } = await getBooks();
+  const { books, statusCounts, recoveryRows } = await getBooks();
 
   return (
     <div className="space-y-6">
@@ -70,6 +140,124 @@ export default async function AdminBooksPage({
           {searchParams.error}
         </p>
       ) : null}
+
+      <section className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-amber-950">
+              Controlled legacy recovery ({recoveryRows.length})
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-amber-900">
+              These books have no canonical lifecycle stage. They remain
+              unpurchasable and undeliverable until a complete immutable
+              version is explicitly recovered. Nothing in this list regenerates
+              or promotes a book automatically.
+            </p>
+          </div>
+          <Link
+            href="/admin/review"
+            className="text-sm font-medium text-amber-900 underline"
+          >
+            Canonical review queue
+          </Link>
+        </div>
+
+        {recoveryRows.length === 0 ? (
+          <p className="mt-4 text-sm text-amber-800">
+            No lifecycle-null books need controlled recovery.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {recoveryRows.map((book) => (
+              <article
+                key={book.id}
+                className="rounded-lg border border-amber-200 bg-white p-4"
+              >
+                <div className="flex flex-wrap justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {book.child_name || "Unnamed book"} ·{" "}
+                      {book.theme_title || book.theme_id}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-gray-500">
+                      {book.id}
+                    </p>
+                    <p className="mt-2 text-xs text-gray-700">
+                      Legacy status: <strong>{book.status}</strong> · legacy
+                      pages: {book.page_count ?? 0} · immutable versions:{" "}
+                      {book.versionCount} ({book.completeVersionCount} complete)
+                      {" · "}paid orders: {book.paidOrderCount}
+                      {book.generation_attempts
+                        ? ` · recorded attempts: ${book.generation_attempts}`
+                        : ""}
+                    </p>
+                    <p
+                      className={`mt-2 text-sm font-medium ${
+                        book.eligibility.allowed
+                          ? "text-emerald-700"
+                          : "text-red-700"
+                      }`}
+                    >
+                      {book.eligibility.reason}
+                    </p>
+                    {book.operational_error ? (
+                      <p className="mt-1 text-xs text-red-700">
+                        Last operational error: {book.operational_error}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Link
+                    href={`/preview/${book.id}`}
+                    className="text-xs text-violet-700 underline"
+                  >
+                    Inspect legacy preview
+                  </Link>
+                </div>
+
+                {book.eligibility.allowed ? (
+                  <form
+                    action="/api/admin/regenerate-legacy-book"
+                    method="post"
+                    className="mt-4 grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
+                  >
+                    <input type="hidden" name="bookId" value={book.id} />
+                    <p className="text-xs text-gray-700">
+                      This starts one paid AI story generation plus exactly 12
+                      illustrations. Automatic regeneration is disabled. Type{" "}
+                      <code className="font-semibold">{book.confirmation}</code>{" "}
+                      to confirm.
+                    </p>
+                    <input
+                      name="confirmation"
+                      required
+                      autoComplete="off"
+                      placeholder={book.confirmation}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs"
+                    />
+                    <label className="flex items-start gap-2 text-xs text-gray-800">
+                      <input
+                        type="checkbox"
+                        name="acknowledgeCost"
+                        value="yes"
+                        required
+                        className="mt-0.5"
+                      />
+                      I authorise one controlled 12-page generation attempt and
+                      understand that it incurs AI generation cost.
+                    </label>
+                    <button
+                      type="submit"
+                      className="w-fit rounded-md bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+                    >
+                      Regenerate canonical 12-page version
+                    </button>
+                  </form>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Status distribution */}
       <div className="flex flex-wrap gap-2">

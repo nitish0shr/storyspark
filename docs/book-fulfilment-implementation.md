@@ -205,6 +205,25 @@ Rules are deliberately conservative: **stage is never inferred from
     timestamps are retained only for records that passed the Approved/Purchased
     evidence gates; a compatibility `lifecycle_events` row is appended once per
     mapped book (idempotent by key).
+11. Active review tokens are retained only when they are bound to the exact
+    complete `review_version_id` of a canonical Under Review/Revised book.
+    Unbound, incomplete, mismatched, or lifecycle-null legacy tokens are marked
+    used, expired immediately, and surfaced as
+    `legacy_review_token_sealed`; they are never rebound by inference.
+
+### 3.3 Live legacy reconciliation inventory (2026-08-20)
+
+The pre-rollout read-only reconciliation found **28/28 legacy books
+snapshot-ineligible**: 18 `preview_ready`, 4 `pending_review`, 5 `failed`, and 1
+legacy row falsely labelled `delivered`. None has a provable complete immutable
+page set, so the expected migration result is **zero compatibility versions and
+zero canonical lifecycle promotions** for this inventory.
+
+Three active review tokens belong to the incomplete `pending_review` rows.
+Migration 010 seals those links instead of guessing a version. The false
+Delivered row remains lifecycle-null and is ineligible for generation,
+Purchased, or Delivered promotion until its financial/delivery evidence is
+separately reconciled.
 
 ---
 
@@ -300,9 +319,9 @@ Rules are deliberately conservative: **stage is never inferred from
   is read-mostly or advances an already-paid book toward delivery using
   idempotent RPCs — it never creates a checkout session or payment intent.
 - Ambiguous legacy rows (`lifecycle_stage IS NULL`) are recoverable but remain
-  non-terminal until an operator supplies the missing evidence
-  (complete version, verified access) — they are never auto-promoted to
-  Purchased or Delivered.
+  non-terminal until an operator supplies the missing evidence. They are listed
+  explicitly on `/admin/books`, are never auto-regenerated, and are never
+  auto-promoted to Purchased or Delivered.
 
 ---
 
@@ -315,6 +334,18 @@ double-generates, or double-fulfils.
   snapshot must be created before any transition, and incomplete pages abort
   before snapshotting. Attempts/errors are recorded; re-running an already
   Generated/Under Review book is a quiet no-op.
+- **Controlled legacy generation** (`/admin/books`): available only to
+  allow-listed reviewer/admin users for lifecycle-null, unpaid
+  `preview_ready`/`pending_review`/`failed` rows with no complete immutable
+  version. It requires the book-specific typed confirmation plus a checkbox
+  acknowledging one story and 12 illustration generations. The route claims
+  the row before AI work, revokes stale review tokens, requires a contiguous
+  12-page skeleton and 12-page output, and disables automatic validation-gate
+  regeneration. Success creates a new immutable version and enters Generated,
+  then Under Review; no existing version is mutated. The public preview endpoint
+  accepts only a newly created lifecycle-null `draft`, and the generation
+  service independently rejects every other legacy/default invocation, so owner
+  or anonymous requests cannot bypass the admin claim and cost controls.
 - **Revision** (`revision-engine.applyRevision`): bounded to
   `MAX_REVISION_ATTEMPTS = 2` via the durable successor count; duplicate/
   near-duplicate output (content hash + text similarity ≥ 0.95) is rejected and
@@ -408,6 +439,16 @@ Recovery: confirm a complete immutable version exists; only then use
 stage. Never map to Purchased/Delivered without exact paid-order and verified
 access evidence.
 
+For a snapshot-ineligible, unpaid row, use **Controlled legacy recovery** on
+`/admin/books`. The page lists every lifecycle-null record outside the normal
+100-book table limit and explains why each is eligible or blocked. An eligible
+recovery requires typing `REGENERATE <first-8-book-id>`, acknowledging the
+12-page AI cost, and submitting the admin-only POST. It performs one generation
+attempt only; retrying after a definite failure requires another explicit
+confirmation. Rows with payment evidence, an existing complete version, a
+canonical stage, an active generation, a non-12-page theme, or legacy status
+`delivered` are blocked.
+
 **Paid but never Purchased (payment/transition mismatch):**
 ```sql
 select o.id as order_id, o.book_id, o.version_id, o.payment_verified_at, b.lifecycle_stage
@@ -449,7 +490,7 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 297 tests, 0 failures** |
+| Unit + integration suite | `npm test` | **Passed: 308 tests, 0 failures** |
 | TypeScript | `npx tsc --noEmit` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
 | Safe browser smoke | Playwright desktop | **Passed**: homepage rendered; fake preview returned the safe not-found UI; unauthorised book-status/generate-PDF requests returned safe 4xx responses without private paths |

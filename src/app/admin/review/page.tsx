@@ -60,6 +60,10 @@ export default async function ReviewQueuePage() {
     .order("created_at", { ascending: true });
 
   const rows = canonicalRows ?? [];
+  const { count: legacyRecoveryCount } = await supabaseAdmin
+    .from("books")
+    .select("id", { count: "exact", head: true })
+    .is("lifecycle_stage", null);
 
   // Mint each link only from the authoritative review pointer. Missing bindings
   // are reconciliation cases and must never substitute current_version_id.
@@ -83,6 +87,21 @@ export default async function ReviewQueuePage() {
           ? "Nothing is waiting for review right now."
           : rows.length + (rows.length === 1 ? " story needs" : " stories need") + " your attention."}
       </p>
+      {(legacyRecoveryCount ?? 0) > 0 ? (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <strong>
+            {legacyRecoveryCount} incomplete legacy{" "}
+            {legacyRecoveryCount === 1 ? "book needs" : "books need"} controlled
+            recovery.
+          </strong>{" "}
+          They are intentionally excluded from this actionable canonical queue,
+          not hidden or approved.{" "}
+          <Link href="/admin/books" className="font-semibold underline">
+            Open the recovery list
+          </Link>
+          .
+        </div>
+      ) : null}
 
       {rows.length === 0 ? (
         <div className="mt-8 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">

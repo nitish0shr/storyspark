@@ -18,7 +18,7 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 297 passed, 0 failed.
+- `npm test`: 308 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
 - Safe desktop browser smoke: passed for the homepage, invalid preview
@@ -229,6 +229,16 @@ provider setup. Unchecked items below must not be interpreted as passed.
 
 ## N. Legacy recovery (never recharge)
 
+- [ ] Before applying migration 010, confirm the reconciled inventory: 28
+  lifecycle-null snapshot-ineligible books (18 `preview_ready`, 4
+  `pending_review`, 5 `failed`, 1 falsely `delivered`).
+  **Expect after migration:** zero compatibility versions and zero canonical
+  stage promotions for these rows.
+- [ ] Inspect the three active review tokens associated with incomplete
+  `pending_review` rows, then apply migration 010 in the isolated database.
+  **Expect:** each unsafe token has `used_at` set and `expires_at <= now()`, no
+  inferred `version_id`, and a `legacy_review_token_sealed` operational failure.
+  Opening the old raw link cannot display or action review content.
 - [ ] Take a legacy paid row mapped to **Purchased** by migration 010.
   **Expect:** it is **not** Delivered (no inferred delivery); it can only reach
   Delivered by passing canonical artefact/access/notification verification.
@@ -241,6 +251,29 @@ provider setup. Unchecked items below must not be interpreted as passed.
   `payment_confirmed_at`, or conflicting version pointers.
   **Expect:** none is promoted past the evidence it actually proves. In
   particular, `payment_confirmed_at` never becomes `payment_verified_at`.
+- [ ] Open `/admin/review` and `/admin/books`.
+  **Expect:** the review queue shows a visible count/link for incomplete legacy
+  books, and the Books page lists all lifecycle-null records in a dedicated
+  controlled-recovery section even when the main table limit is exceeded.
+- [ ] Attempt controlled regeneration without admin auth, without the exact
+  `REGENERATE <first-8-book-id>` phrase, or without the AI-cost checkbox.
+  **Expect:** rejected; no operational claim, token revocation, or provider work.
+- [ ] As the owner and as an anonymous caller holding a legacy book id, POST the
+  same lifecycle-null book to `/api/generate-preview`.
+  **Expect:** `409`; only a brand-new `draft` may use the public generation
+  endpoint, and the service records no attempt or status mutation.
+- [ ] Attempt controlled regeneration for the false legacy `delivered` row, a
+  row with payment evidence, or a row with a complete immutable version.
+  **Expect:** blocked for reconciliation; no AI work and no lifecycle promotion.
+- [ ] Confirm an eligible unpaid incomplete row and run one controlled recovery
+  with mocked AI outputs.
+  **Expect:** one worker claims it; stale review tokens are revoked; exactly 12
+  contiguous text/illustration pages become a new immutable version; the book
+  enters Generated and then Under Review with a fresh exact-version token.
+  Automated quality-gate regeneration is disabled.
+- [ ] Return 11, 13, duplicate, or out-of-order pages from the mocked generator.
+  **Expect:** no immutable version and no canonical stage; the row remains
+  unpurchasable and undeliverable with an operator-visible failure.
 - [ ] Run any operator reconciliation procedure from the implementation report.
   **Expect:** no Stripe session/charge is ever created; the customer is never
   recharged; only idempotent lifecycle advancement occurs.
@@ -252,7 +285,7 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 297/297 |
+| Automated tests | **Pass** | 308/308 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
 | Safe browser smoke | **Pass** | Desktop |

@@ -1055,6 +1055,66 @@ where b.lifecycle_stage is null
       and existing.resolved_at is null
   );
 
+-- Legacy review links never inherit authority from ambiguous mutable content.
+-- Keep only exact-version links for a complete version that is currently bound
+-- to a canonical human-review stage. Every other active token is sealed and
+-- surfaced for controlled operator recovery; no token is guessed onto a
+-- compatibility snapshot.
+insert into public.operational_failures (
+  book_id, stage, error_code, error_detail, context
+)
+select
+  token.book_id,
+  book.status,
+  'legacy_review_token_sealed',
+  'An active legacy review token lacked a complete canonical review-version binding and was revoked.',
+  pg_catalog.jsonb_build_object(
+    'sealed_token_count', pg_catalog.count(*),
+    'migration', '010'
+  )
+from public.book_review_tokens token
+join public.books book on book.id = token.book_id
+where token.used_at is null
+  and not exists (
+    select 1
+    from public.book_versions version
+    where version.id = token.version_id
+      and version.book_id = token.book_id
+      and version.is_complete
+      and version.content_hash is not null
+      and book.lifecycle_stage in ('Under Review', 'Revised')
+      and book.review_version_id = version.id
+  )
+  and not exists (
+    select 1
+    from public.operational_failures existing
+    where existing.book_id = token.book_id
+      and existing.error_code = 'legacy_review_token_sealed'
+      and existing.resolved_at is null
+  )
+group by token.book_id, book.status;
+
+update public.book_review_tokens token
+set
+  used_at = coalesce(token.used_at, now()),
+  expires_at = least(
+    coalesce(token.expires_at, now()),
+    now()
+  )
+where token.used_at is null
+  and not exists (
+    select 1
+    from public.books book
+    join public.book_versions version
+      on version.id = token.version_id
+     and version.book_id = token.book_id
+    where book.id = token.book_id
+      and version.is_complete
+      and version.content_hash is not null
+      and book.lifecycle_stage in ('Under Review', 'Revised')
+      and book.review_version_id = version.id
+  );
+
 -- Append migration events once; ambiguous records remain lifecycle_stage NULL.
 insert into public.lifecycle_events (
   book_id, version_id, from_stage, to_stage, actor, reason, idempotency_key, metadata
