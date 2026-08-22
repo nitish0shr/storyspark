@@ -6,9 +6,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/shared/Navbar";
 import BookStatusPoller from "./BookStatusPoller";
+import ShareBookButton from "./ShareBookButton";
 import ConversionTracker from "@/components/shared/ConversionTracker";
 import { centsToMajorUnits } from "@/lib/analytics";
-import { Sparkles, BookOpen, Share2, PlusCircle } from "lucide-react";
+import { Sparkles, BookOpen, PlusCircle } from "lucide-react";
 import {
   canExposeDeliveredArtefacts,
   canIssueFinalBookSignedLink,
@@ -336,14 +337,7 @@ export default async function CheckoutSuccessPage({
             <PlusCircle className="h-4 w-4" />
             Create Another Book
           </Link>
-          <button
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium hover:border-pink-300 hover:text-pink-600 transition-colors"
-            onClick={undefined}
-            title="Share feature coming soon"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </button>
+          <ShareBookButton />
         </div>
 
         {/* Confetti styles */}
