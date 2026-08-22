@@ -193,14 +193,6 @@ function LoginPageContent() {
                   autoComplete="current-password"
                   className="h-11 rounded-xl border-2 border-[#262625]/15 bg-[#FDF5E7] px-4 font-body text-base placeholder:text-[#262625]/30 focus-visible:border-[#5E17EB] focus-visible:ring-[#CB6CE6]/20"
                 />
-                <div className="text-right mt-1.5">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="font-body text-xs text-[#5E17EB] hover:underline font-bold"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
               </div>
               <Button
                 type="submit"
