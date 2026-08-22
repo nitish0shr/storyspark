@@ -32,12 +32,12 @@ stage.
 
 | Stage | Meaning | Entry preconditions (enforced by the RPC) |
 |---|---|---|
-| **Generated** | A complete, immutable version exists: every ordered page has text and an illustration. | A `book_versions` row with `is_complete = true`, page count matching `book_version_pages`, and no blank text/illustration. |
+| **Generated** | A complete, immutable version exists: every ordered page has text and an illustration. | A `book_versions` row with a non-empty `content_hash`, `is_complete = true`, contiguous pages 1…`page_count`, and no blank text/illustration. |
 | **Under Review** | The exact `review_version_id` is with a human reviewer, with all findings visible. | Complete version with every ordered text/illustration pair. Blocker findings are shown to the reviewer rather than hiding the version. Binds `review_version_id`. |
 | **Changes Requested** | A reviewer rejected or requested changes; exactly one structured `revision_requests` row (plus `revision_request_items`) is open. | Reached only from Under Review. |
 | **Revised** | A successor immutable version, materially different from its predecessor, satisfies the request. | Complete version; no `blocker` findings; the revision engine confirmed material difference and non-duplication. |
 | **Approved** | A human approved the exact reviewed version. Binds `approved_version_id`. | Reached from Under Review or Revised; a non-null `review_version_id` must exactly match the approved version. |
-| **Ready for Purchase** | The "Preview and Complete Your Purchase" invitation for the exact approved version was durably confirmed sent. | `approved_version_id` matches; a confirmed `approval_invitation_attempts` row (`status = 'sent'`, `notification_sent_at` set) exists for that exact version. |
+| **Ready for Purchase** | The "Preview and Complete Your Purchase" invitation for the exact approved version was durably confirmed sent. | `approved_version_id` matches; the confirmed `approval_invitation_attempts` row is linked to an unrevoked, unexpired, token-bearing `preview` grant for that exact version. |
 | **Purchased** | Stripe payment for the exact approved version was verified. | A paid/fulfilled `orders` row for the exact version with `stripe_payment_intent_id` **and** `payment_verified_at`. |
 | **Delivered** (terminal) | The final product is durably stored, access is verified, and a delivery notification was confirmed sent. | See §1.3. |
 
@@ -70,29 +70,37 @@ keyed by a unique `idempotency_key`. Stale/concurrent updates are rejected with
 the **exact approved version** (`transition_book_lifecycle` step 10, mirrored by
 `checkVersionCompleteness`/`checkDeliveryPrerequisites` for pre-flight):
 
-1. A `product_artefacts` row of kind `pdf_digital` or `epub` with a non-empty
-   `storage_path`, plus both `durable_verified_at` and `access_verified_at` set
-   (storage **and** the customer access URL verified by real responses).
-2. A usable `access_grant` (`full_book`/`download`/`gift`), not revoked, not
-   expired, with `verified_at` set, joined to a paid/verified order.
+1. A `product_artefacts` row of kind `pdf_digital` or `epub` with a non-empty,
+   exact-version `storage_path` in the private `final-books` bucket (proved by
+   artefact metadata), plus both `durable_verified_at` and
+   `access_verified_at`. The durable `url` stores only
+   `private://final-books/...` object identity and `access_url` remains null; no
+   public, signed-object, or raw customer bearer URL is persisted.
+2. Exactly one paid/verified order exists for the book/version.
 3. A `delivery_attempts` row with `status = 'sent'`, `notification_sent_at`,
-   and `access_verified_at`, joined to the same paid/verified order.
+   and `access_verified_at` is linked by `access_grant_id` to the **same**
+   usable, unrevoked, unexpired, verified full-book/download/gift grant sent to
+   the customer, and that grant is bound to the exact order/version.
 4. `approved_version_id` equals the version being delivered.
 
-Only on this transition does the order become `fulfilled` (`fulfilled_at` set).
-Delivery is **never** inferred from provider acceptance alone.
+Only that proven order becomes `fulfilled` (`fulfilled_at` set) on transition.
+Delivery is **never** inferred from provider acceptance or from unrelated grant
+and attempt rows.
 
 ---
 
 ## 2. Immutable version binding
 
 - `book_versions` and `book_version_pages` are **immutable after insert**:
-  `reject_version_mutation()` triggers raise on any UPDATE/DELETE.
+  `reject_version_mutation()` triggers raise on direct UPDATE/DELETE. Nested
+  foreign-key cascades remain permitted so intended book/profile deletion does
+  not strand immutable children.
 - New versions are created only via the `create_book_version_snapshot` RPC,
   which validates every page (positive page number, non-blank text and
-  illustration, no duplicate page numbers) and serialises version numbering per
-  book with an advisory transaction lock. A partial or incomplete version can
-  never become visible to review.
+   illustration, a content hash, and contiguous page numbers from 1) and
+   requires any predecessor to belong to the same book. It serialises version
+   numbering per book with an advisory transaction lock. A partial or
+   incomplete version can never become visible to review.
 - Successor versions carry a `predecessor_id`; the durable count of versions
   with a predecessor is the revision attempt counter (no mutable column).
 - Review, approval, checkout, payment, access, and delivery are all bound to a
@@ -128,7 +136,8 @@ automatically by application startup.
    triggers), exact-version binding for `book_review_tokens`, and
    `book_quality_findings`.
 3. `revision_requests`, `revision_request_items`, `lifecycle_events`,
-   `product_artefacts`.
+    `product_artefacts`; the private `final-books` storage bucket is created or
+    repaired with service-role-only object access.
 4. `orders` additive columns (`version_id`, `checkout_idempotency_key`,
    `checkout_reservation_expires_at`, `payment_verified_at`,
    `purchaser_email`, `fulfilled_at`, etc.), relaxation of `user_id` NOT NULL,
@@ -140,12 +149,17 @@ automatically by application startup.
 6. Deferred foreign keys from `books`/`orders` version pointers to
    `book_versions` (added once the table exists).
 7. **Conservative legacy backfill** (§3.2).
-8. RLS enablement + owner-scoped policies; service-role-only tables left with
-   no anon/authenticated policies.
-9. SECURITY DEFINER RPCs: `create_book_version_snapshot`,
+8. RLS enablement + least-privilege policies. Authenticated ownership alone
+   cannot read full immutable snapshots/pages or final artefact locations:
+   those require an exact verified paid-order grant. Before payment, only
+   selected preview pages can pass the linked restricted-preview-grant policy.
+   Service-role-only tables have no anon/authenticated write policy.
+9. Hardened privileged functions: `reject_version_mutation`,
+    `create_book_version_snapshot`,
    `transition_book_lifecycle`, `record_verified_payment_and_purchase`, and
-   `create_revision_request_and_transition`, each revoked from
-   public/anon/authenticated and granted to `service_role` only.
+    `create_revision_request_and_transition`. Each uses `search_path = ''`,
+    explicitly qualified application objects, deterministic `postgres`
+    ownership, rerun-safe ACL repair, and service-role-only execution.
 
 Re-run safety: every table uses `IF NOT EXISTS`; policies and triggers are
 DO-block guarded; column additions use `ADD COLUMN IF NOT EXISTS`; the
@@ -158,13 +172,17 @@ Rules are deliberately conservative: **stage is never inferred from
 
 1. **Compatibility snapshot.** Build a single immutable version (`version_number
    = 1`, `is_complete = true`) **only** where the legacy JSON demonstrably has
-   the same non-zero number of ordered text and image pages, with no blank text
-   and no blank illustration URL. Otherwise no snapshot is built.
+    the same non-zero number of ordered text and image pages, each JSON page's
+    explicit `pageNumber` matches its 1-based position, no text/illustration is
+    blank, and a deterministic content hash can be recorded. Otherwise no
+    snapshot is built.
 2. **Version pointers.** Set `current_version_id` to that complete snapshot.
-3. **Order binding.** Bind historical paid orders
-   (`status in ('paid','fulfilled')` with a `stripe_payment_intent_id`) to the
-   compatibility version and set `payment_verified_at` from the best available
-   existing timestamp. Every order row and amount is retained.
+3. **Order binding.** Bind only when the compatibility snapshot is the only
+   immutable version for the book and there is exactly one historical financial
+   row that already has `status in ('paid','fulfilled')`, a
+   `stripe_payment_intent_id`, and `payment_verified_at`. A legacy
+   `payment_confirmed_at` value is never upgraded into verified-payment
+   evidence. Every order row and amount is retained.
 4. **Purchased** — only from **exact paid-order evidence**: a paid/fulfilled
    order for `current_version_id` with a `stripe_payment_intent_id` and
    `payment_verified_at`. Sets `approved_version_id = current_version_id`.
@@ -176,14 +194,36 @@ Rules are deliberately conservative: **stage is never inferred from
 7. **Generated** — `status in ('complete','preview_ready')` with a complete
    snapshot (content demonstrably exists).
 8. **All other rows** are left with `lifecycle_stage = NULL`: ambiguous /
-   recoverable, in a non-terminal state, to be reconciled by an operator.
+    recoverable, in a non-terminal state. Advanced-looking rows get an
+    unresolved `legacy_reconciliation_required` operational failure so they are
+    visible to operators rather than guessed.
 9. **No inferred Delivered — ever.** The legacy schema never recorded an actual
    successful access response, so a stored PDF URL plus provider acceptance is
    **insufficient proof**. Paid legacy rows stay at Purchased and must pass the
    canonical finalisation/access verification before they can reach Delivered.
-10. Stage timestamps are backfilled from existing columns (`delivered_at`,
-    `reviewed_at`) only where present; a compatibility `lifecycle_events` row is
-    appended once per mapped book (idempotent by key).
+10. `stage_delivered_at` is never inferred from a legacy timestamp. Approved
+    timestamps are retained only for records that passed the Approved/Purchased
+    evidence gates; a compatibility `lifecycle_events` row is appended once per
+    mapped book (idempotent by key).
+11. Active review tokens are retained only when they are bound to the exact
+    complete `review_version_id` of a canonical Under Review/Revised book.
+    Unbound, incomplete, mismatched, or lifecycle-null legacy tokens are marked
+    used, expired immediately, and surfaced as
+    `legacy_review_token_sealed`; they are never rebound by inference.
+
+### 3.3 Live legacy reconciliation inventory (2026-08-20)
+
+The pre-rollout read-only reconciliation found **28/28 legacy books
+snapshot-ineligible**: 18 `preview_ready`, 4 `pending_review`, 5 `failed`, and 1
+legacy row falsely labelled `delivered`. None has a provable complete immutable
+page set, so the expected migration result is **zero compatibility versions and
+zero canonical lifecycle promotions** for this inventory.
+
+Three active review tokens belong to the incomplete `pending_review` rows.
+Migration 010 seals those links instead of guessing a version. The false
+Delivered row remains lifecycle-null and is ineligible for generation,
+Purchased, or Delivered promotion until its financial/delivery evidence is
+separately reconciled.
 
 ---
 
@@ -194,12 +234,13 @@ Rules are deliberately conservative: **stage is never inferred from
 | Supabase URL + service-role key | DB access; the fulfilment RPCs are `service_role`-only. | Server-only. Never exposed to the client. |
 | `STRIPE_SECRET_KEY` | Stripe API. Use a **test-mode** key in all non-production work. | `isStripeConfigured()` gates checkout/webhook. |
 | `STRIPE_WEBHOOK_SECRET` | Verifies webhook signatures. | Webhook returns 503 if absent. |
-| `SENDGRID_API_KEY` | Enables outbound email (`isEmailConfigured()`). | **Leave unset to suppress all email** (§6). |
-| `EMAIL_FROM` | From address for SendGrid. | Optional; defaults to `hello@starmeestories.com`. |
+| `EMAIL_MODE` | Runtime email policy. | Non-production accepts only `suppress` (default) or `capture`; production must explicitly set `provider`. |
+| `SENDGRID_API_KEY` | Production outbound provider credential. | Ignored for delivery in non-production. Required with production `EMAIL_MODE=provider`. |
+| `EMAIL_FROM` | Verified production SendGrid sender. | Required with production `EMAIL_MODE=provider`; there is no implicit production fallback. |
+| `INTERNAL_API_SECRET` | Authenticates the internal generic email endpoint. | Endpoint fails closed with 503 when absent. |
 | `NEXT_PUBLIC_APP_URL` | Builds review/preview/delivery links. | Used by review-workflow and pipeline. |
 | `PREVIEW_TOKEN_TTL_DAYS` | Lifetime of the approval preview access grant. | Defaults to 30. |
 | `REVIEW_EMAIL` / `ADMIN_EMAIL` | Reviewer inbox for "story waiting for review". | First non-empty wins. |
-| `RESEND_API_KEY` / `RESEND_FROM_EMAIL` | Gift-notification email path only. | Optional; gift email is best-effort. |
 
 ---
 
@@ -219,22 +260,46 @@ Rules are deliberately conservative: **stage is never inferred from
   `webhook-idempotency.ts` decision logic and the RPC contract directly. No test
   charges a real card.
 
-## 6. Email suppression procedure
+## 6. Email modes and fail-closed provider policy
 
-- Email is suppressed when `SENDGRID_API_KEY` is unset:
-  `sendEmail()` logs and returns `{ sent: false, reason: "not_configured" }`
-  without contacting any provider and **never throws**.
+- In every environment where `NODE_ENV != production`, outbound email is
+  non-networking by construction. The default mode is suppression; set
+  `EMAIL_MODE=capture` to use the internal capture result. Even if a SendGrid
+  credential is present or `EMAIL_MODE=provider` is requested, no provider
+  request is made and no real recipient is addressed.
+- Suppression returns `{ sent: false, reason: "suppressed_not_sent" }`; capture
+  returns `{ sent: false, provider: "capture", reason: "captured_not_sent" }`.
+  Capture means accepted by the local adapter, **not sent**.
+- Production fails closed unless all three conditions are explicit:
+  `EMAIL_MODE=provider`, `SENDGRID_API_KEY`, and `EMAIL_FROM`. Missing any one
+  returns an unavailable/unsent result without a provider call. Resend is not a
+  fulfilment provider path; purchase, gift, subscription, reviewer, password
+  reset, and delivery messages all route through `sendEmail()`.
 - Callers treat `sent: false` as "not delivered" and never advance the
   lifecycle on it: an unsent approval invitation keeps the book at Approved and
   records an operational failure; an unsent delivery email keeps the book at
   Purchased. Purchase confirmation is non-essential: its failure is recorded
   durably but does not prevent exact-version access/artefact finalisation from
   running. Admins can retry failed approval invitations and purchase
-  confirmations from the Books screen. Before any manual acceptance run, verify
-  the isolated environment does not expose a SendGrid key. The automated suite
-  uses synthetic decision logic and never invokes a configured provider.
-- To exercise real delivery in a controlled environment, set `SENDGRID_API_KEY`
-  and address only inboxes you own.
+  confirmations from the Books screen. The automated suite proves that a
+  non-production process cannot invoke a configured provider.
+- Provider delivery is not part of non-production acceptance. Production
+  readiness must be reviewed separately with a verified sender and explicit
+  provider mode before rollout.
+
+## 6.1 Private final-book links
+
+- Migration 010 must be applied before canonical fulfilment so the
+  `final-books` bucket exists and is private. The service role is the only role
+  with object access; authenticated and anonymous clients receive no storage
+  policy.
+- Artefact rows persist the bucket/object identity only. The status and checkout
+  success surfaces mint a new URL with a maximum 15-minute TTL after confirming
+  Delivered, exact approved version, exact verified payment, and owner or
+  paid-order-bound access authorisation.
+- Signed URLs are bearer capabilities. Do not log, persist, analytics-tag, or
+  forward them. Refresh by repeating the authorised status request; never reuse
+  an expired URL or fall back to a public object URL.
 
 ---
 
@@ -254,9 +319,9 @@ Rules are deliberately conservative: **stage is never inferred from
   is read-mostly or advances an already-paid book toward delivery using
   idempotent RPCs — it never creates a checkout session or payment intent.
 - Ambiguous legacy rows (`lifecycle_stage IS NULL`) are recoverable but remain
-  non-terminal until an operator supplies the missing evidence
-  (complete version, verified access) — they are never auto-promoted to
-  Purchased or Delivered.
+  non-terminal until an operator supplies the missing evidence. They are listed
+  explicitly on `/admin/books`, are never auto-regenerated, and are never
+  auto-promoted to Purchased or Delivered.
 
 ---
 
@@ -269,6 +334,33 @@ double-generates, or double-fulfils.
   snapshot must be created before any transition, and incomplete pages abort
   before snapshotting. Attempts/errors are recorded; re-running an already
   Generated/Under Review book is a quiet no-op.
+- **Controlled legacy generation** (`/admin/books`): available only to
+  allow-listed reviewer/admin users for lifecycle-null, unpaid
+  `preview_ready`/`pending_review`/`failed` rows with no complete immutable
+  version. It requires the book-specific typed confirmation plus a checkbox
+  acknowledging one story and 12 illustration generations. The route claims
+  the row before AI work, revokes stale review tokens, requires a contiguous
+  12-page skeleton and 12-page output, and disables automatic validation-gate
+  regeneration. Success creates a new immutable version and enters Generated,
+  then Under Review; no existing version is mutated. The public preview endpoint
+  accepts only a newly created lifecycle-null `draft`, and the generation
+  service independently rejects every other legacy/default invocation, so owner
+  or anonymous requests cannot bypass the admin claim and cost controls. The
+  authenticated POST awaits the single generation attempt and reports its
+  result; it never detaches expensive work into an untracked request promise.
+- **Legacy full-book generation is disabled**: `/api/generate-book` and
+  `generateFullBook` accept only a canonical Purchased book and await the
+  idempotent finaliser. Lifecycle-null `preview_ready` rows receive no
+  illustration/PDF/email work through that path, and subscription preview
+  generation no longer chains into full fulfilment.
+- **Direct output endpoints are retired**: owner calls to `/api/generate-pdf`
+  and `/api/generate-audio` return a fail-closed conflict without invoking
+  assembly or narration. `assemblePdf` independently requires canonical
+  Purchased, the exact `approved_version_id`, exactly one verified paid order,
+  and a complete immutable page set before it writes to `final-books`.
+  Legacy narration is also disabled because it stored public audio URLs;
+  migration 010 clears those page-level URLs. Narration must not be restored
+  until it has an equivalent private, exact-payment access path.
 - **Revision** (`revision-engine.applyRevision`): bounded to
   `MAX_REVISION_ATTEMPTS = 2` via the durable successor count; duplicate/
   near-duplicate output (content hash + text similarity ≥ 0.95) is rejected and
@@ -280,16 +372,26 @@ double-generates, or double-fulfils.
 - **Payment** (`record_verified_payment_and_purchase`): the order update and
   Purchased transition commit together; a replay of an already-paid,
   already-Purchased book returns `idempotent_replay = true` and does not
-  re-charge, re-generate, or duplicate the transition.
+  re-charge, re-generate, or duplicate the transition. Reusing an idempotency
+  key with a different checkout/payment/version identity fails closed.
 - **Checkout reservation**: a pending order is persisted before Stripe. If a
   process stops before Stripe creation or before session binding, retry reuses
   that same order and an order-scoped Stripe idempotency key. An unbound
   reservation is not released merely because its operational lease elapsed;
-  only a definite request/authentication/permission rejection releases it.
-- **Artefacts** (`finalisePurchasedBook`): reuses an existing durable-verified
-  `pdf_digital` artefact when its URL is reachable; otherwise rebuilds and
-  re-verifies. Artefacts live in `product_artefacts`; the immutable version row
-  is never mutated.
+  only a definite request/authentication/permission rejection releases it. A
+  duplicate concurrent insert recovers only the exact same operation's winning
+  reservation before Stripe; it never attaches to another buyer's attempt.
+- **Artefacts** (`finalisePurchasedBook`): reuses an existing exact-version
+  private `pdf_digital` object when a freshly minted bounded URL is reachable;
+  otherwise rebuilds and re-verifies. Stored artefacts carry only private
+  bucket/object identity and verification timestamps; their `access_url` is
+  explicitly null, so the raw customer capability exists only long enough to
+  verify and send it. The immutable version row is never mutated.
+  Migration 010 also rewrites every pre-existing non-private
+  `product_artefacts.url` to a non-secret `private://` storage identity (or an
+  unresolved private marker), clears every `access_url`, and clears legacy
+  `books`/`book_versions` PDF URL columns. Evidence timestamps are retained only
+  when exact `final-books` storage identity is present.
 - **Access** grants: full-book grants are minted per attempt with a fresh raw
   token, and the customer route/authorisation is verified deterministically
   before `verified_at` is set; stale unsent grants are revoked before reminting.
@@ -303,10 +405,16 @@ double-generates, or double-fulfils.
   pending claim and records sent/failed/ambiguous provider outcomes on the
   order. Failure never blocks paid-book finalisation; an authenticated admin
   retry is available for Purchased/Delivered books and never touches payment.
-- **Delivery** (`delivery_attempts` + `finalisePurchasedBook`): the attempt is
-  reserved as `pending` before provider work. A prior confirmed `sent` attempt
-  replays the Delivered transition idempotently; an ambiguous pending attempt
-  requires reconciliation rather than a duplicate notification.
+- **Delivery** (`delivery_attempts` + `finalisePurchasedBook`): one exact
+  order/version/channel attempt is reserved as `pending` **before any full-book
+  grant is revoked or minted**. The attempt is then bound to that specific
+  verified grant before provider work. A prior confirmed `sent` attempt replays
+  the Delivered transition only while its linked grant still exists and exactly
+  matches the order/book/version, is verified, token-backed, unrevoked, and
+  unexpired. If that capability is stale, the stale evidence is recorded and a
+  newly claimed replacement attempt/grant is sent instead of permanently
+  replaying a doomed transition. An ambiguous pending attempt still requires
+  reconciliation rather than a duplicate notification.
 
 ---
 
@@ -341,15 +449,30 @@ creates a checkout, payment intent, or payment transition.
 
 **Ambiguous legacy rows to reconcile (never auto-promoted):**
 ```sql
-select id, status, current_version_id, reviewed_at
-from public.books
-where lifecycle_stage is null
-order by created_at asc;
+select b.id, b.status, b.current_version_id, b.reviewed_at,
+       of.error_code, of.error_detail, of.context
+from public.books b
+left join public.operational_failures of
+  on of.book_id = b.id
+ and of.error_code = 'legacy_reconciliation_required'
+ and of.resolved_at is null
+where b.lifecycle_stage is null
+order by b.created_at asc;
 ```
 Recovery: confirm a complete immutable version exists; only then use
 `transition_book_lifecycle` to place the book at the correct **non-financial**
 stage. Never map to Purchased/Delivered without exact paid-order and verified
 access evidence.
+
+For a snapshot-ineligible, unpaid row, use **Controlled legacy recovery** on
+`/admin/books`. The page lists every lifecycle-null record outside the normal
+100-book table limit and explains why each is eligible or blocked. An eligible
+recovery requires typing `REGENERATE <first-8-book-id>`, acknowledging the
+12-page AI cost, and submitting the admin-only POST. It performs one generation
+attempt only; retrying after a definite failure requires another explicit
+confirmation. Rows with payment evidence, an existing complete version, a
+canonical stage, an active generation, a non-12-page theme, or legacy status
+`delivered` are blocked.
 
 **Paid but never Purchased (payment/transition mismatch):**
 ```sql
@@ -364,9 +487,11 @@ where o.status in ('paid','fulfilled')
 Recovery: re-invoke the payment/purchase reconciliation for the existing
 verified order — it replays idempotently and never re-charges.
 
-**Delivered audit (timestamps + durable links):**
+**Delivered audit (timestamps + private object identity):**
 ```sql
-select b.id, b.stage_delivered_at, pa.kind, pa.access_url, pa.durable_verified_at
+select b.id, b.stage_delivered_at, pa.kind, pa.storage_path,
+       pa.metadata->>'storage_bucket' as storage_bucket,
+       pa.durable_verified_at, pa.access_verified_at
 from public.books b
 join public.product_artefacts pa on pa.book_id = b.id and pa.version_id = b.approved_version_id
 where b.lifecycle_stage = 'Delivered';
@@ -378,6 +503,12 @@ where b.lifecycle_stage = 'Delivered';
 
 - Legacy webhook writes for `pending_approval` are removed; the canonical
   webhook only advances via `record_verified_payment_and_purchase`.
+- The status-based `/api/generate-book` path and lifecycle-null branch of
+  `generateFullBook` are removed. Full fulfilment is canonical Purchased-only;
+  incomplete legacy rows can be generated only by the confirmed admin recovery.
+- Direct `/api/generate-pdf` and `/api/generate-audio` output generation is
+  retired. Final PDF creation is internal to verified paid fulfilment; customer
+  signed links are issued only by the authorised status/download path.
 - Old GET approval/rejection routes no longer mutate records; all lifecycle
   changes go through `transition_book_lifecycle`.
 - Legacy `books.status`/`orders.status` columns remain for read compatibility
@@ -390,11 +521,12 @@ where b.lifecycle_stage = 'Delivered';
 
 | Item | Command | Result |
 |---|---|---|
-| Unit + integration suite | `npm test` | **Passed: 271 tests, 0 failures** |
-| TypeScript | `npx tsc --noEmit --incremental false -p tsconfig.json` | **Passed** |
+| Unit + integration suite | `npm test` | **Passed: 317 tests, 0 failures** |
+| TypeScript | `npx tsc --noEmit` | **Passed** |
 | Production build | `npm run build` | **Passed**; existing non-blocking lint/dynamic-render diagnostics remain in build output |
-| Safe browser smoke | Playwright desktop/mobile | **Passed**: homepage, retired admin GET routes, invalid review token, invalid preview fail-closed |
-| Independent implementation review | Architect review of migration/lifecycle/review/checkout/webhook/access/delivery | **Passed** after checkout replay, out-of-order expiry, and artefact-link findings were corrected |
+| Safe browser smoke | Playwright desktop | **Passed**: homepage rendered; fake preview returned the safe not-found UI; unauthorised book-status/generate-PDF requests returned safe 4xx responses without private paths |
+| Independent implementation review | Architect review of migration/lifecycle/review/checkout/webhook/access/delivery | **Passed** after the concurrent delivery-grant identity race and its stale assertion were corrected |
+| Security scans | Dependency audit + SAST + privacy/dataflow scan | **SAST/dataflow: 0 findings; dependency audit: 0 critical, 18 high advisories** in the existing Next.js 14/dev-toolchain dependency graph. The direct Next.js fixes require a major framework upgrade and are tracked separately; resolve before production rollout. |
 | Controlled-data manual acceptance | [book-fulfilment-manual-acceptance.md](./book-fulfilment-manual-acceptance.md) | **Pending** in an isolated database after applying migration 010, with Stripe test mode and suppressed/captured email |
 
 The migration was not applied to the configured database in this task. The

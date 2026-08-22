@@ -1,7 +1,8 @@
 # Book fulfilment: manual acceptance checklist
 
-**Mocks / test-mode only.** Do this entire checklist with email suppressed
-(`SENDGRID_API_KEY` **unset**) and Stripe in **test mode** (test
+**Mocks / test-mode only.** Do this entire checklist with `EMAIL_MODE=suppress`
+(default) or `EMAIL_MODE=capture`; non-production must remain non-networking
+even if a provider key is present. Use Stripe in **test mode** (test
 `STRIPE_SECRET_KEY` + test `STRIPE_WEBHOOK_SECRET`). Never charge a real card,
 never send to a real customer inbox, never publish.
 
@@ -17,20 +18,23 @@ Legend: **Expect** = required behaviour. `[ ]` = pass/fail box.
 
 Completed without external side effects:
 
-- `npm test`: 271 passed, 0 failed.
+- `npm test`: 317 passed, 0 failed.
 - TypeScript no-emit check: passed.
 - Production build: passed with existing non-blocking warnings/diagnostics.
-- Safe desktop/mobile browser smoke: passed for the homepage, retired admin GET
-  routes, invalid review token, and invalid preview fail-closed behaviour.
-- Independent implementation review: passed after replay and access findings
-  were corrected.
+- Safe desktop browser smoke: passed for the homepage, invalid preview
+  fail-closed UI, and unauthorised book-status/generate-PDF responses.
+- Independent implementation review: passed after the exact delivery
+  attempt/grant concurrency finding was corrected.
+- SAST and privacy/dataflow scans: no findings. Dependency audit: 0 critical and
+  18 high advisories in the existing Next.js 14/dev-toolchain graph; the
+  framework/toolchain upgrade is separate and must be completed before rollout.
 
 Not executed here:
 
 - Applying migration 010 to the configured database.
 - Controlled-data review/revision/payment/delivery scenarios below.
 - Stripe Checkout or webhook requests, even in test mode.
-- Any real or captured SendGrid delivery.
+- Any real provider delivery.
 
 Those scenarios require an isolated migrated database and explicit test-mode
 provider setup. Unchecked items below must not be interpreted as passed.
@@ -168,12 +172,34 @@ provider setup. Unchecked items below must not be interpreted as passed.
 ## K. Artefact and access checks before delivery
 
 - [ ] Confirm a `pdf_digital`/`epub` `product_artefacts` row with both
-  a non-empty `storage_path`, `durable_verified_at`, and `access_verified_at`.
+  a non-empty exact-version `storage_path`, metadata bucket `final-books`,
+  `durable_verified_at`, and `access_verified_at`; the durable `url` is
+  `private://final-books/...` and `access_url` is null. Search artefact,
+  attempt, grant metadata, and logs for the raw customer token.
+  **Expect:** the raw bearer URL/token is absent; only its hash and linked grant
+  identity are durable.
+- [ ] After migration, inspect all `product_artefacts.url`/`access_url` values
+  and `books`/`book_versions` PDF URL columns, plus both page-table audio URL
+  columns.
+  **Expect:** every artefact URL is a non-secret `private://` identity,
+  `access_url` is null, and both legacy PDF URL columns are null. Rows without
+  provable `final-books` identity have verification timestamps cleared. Legacy
+  public audio URLs are null and paid finalisation reports narration skipped.
+- [ ] Read the `final-books` bucket configuration and attempt direct client
+  object access as anon and authenticated roles.
+  **Expect:** bucket `public = false`; both direct reads fail. Service-role
+  storage operations remain available.
+- [ ] Request a delivered download as the authenticated owner or through the
+  exact paid-order-bound grant.
+  **Expect:** a freshly signed URL with at most a 15-minute TTL. A wrong book,
+  wrong version, unpaid order, unverified/revoked/expired grant, or non-Delivered
+  book receives no link. Repeating the authorised status request mints a fresh
+  link; no signed link is written back to the database.
 - [ ] Confirm the access grant is verified (`verified_at` set) via the actual
   customer route, not a trusted URL string.
 - [ ] Attempt to force Delivered while any prerequisite is missing.
   **Expect:** transition rejected (`artefact_not_verified` /
-  `access_grant_not_verified` / `delivery_not_confirmed`); book stays Purchased.
+  `exact_paid_order_required` / `delivery_not_confirmed`); book stays Purchased.
 
 ## L. Email failure / retry (delivery)
 
@@ -181,6 +207,16 @@ provider setup. Unchecked items below must not be interpreted as passed.
   **Expect:** book **remains Purchased**; a `delivery_attempts` row with
   `status = 'failed'` and an `operational_failures` row are recorded; **not**
   Delivered.
+- [ ] In non-production, set a dummy SendGrid key and request
+  `EMAIL_MODE=provider`, then exercise purchase, reviewer, gift, password-reset,
+  and delivery messages with a network spy.
+  **Expect:** zero SendGrid/Resend calls; every result is `sent = false`.
+- [ ] Set `EMAIL_MODE=capture` and retry.
+  **Expect:** `provider = capture`, `reason = captured_not_sent`; no attempt is
+  marked sent and the book cannot become Ready for Purchase or Delivered.
+- [ ] Evaluate production configuration with each of `EMAIL_MODE=provider`,
+  `SENDGRID_API_KEY`, and `EMAIL_FROM` missing in turn.
+  **Expect:** each fails closed without a provider request.
 - [ ] Re-run finalisation after "enabling" a mock successful send.
   **Expect:** it retries safely, records a `sent` attempt, and only then
   transitions Purchased → Delivered; the order becomes `fulfilled`.
@@ -191,16 +227,83 @@ provider setup. Unchecked items below must not be interpreted as passed.
   **Expect:** idempotent no-op (order already fulfilled); no duplicate email,
   artefact, grant, or fulfilment; stage stays Delivered.
 - [ ] With a prior `sent` delivery attempt present, re-run.
-  **Expect:** Delivered replay transition succeeds idempotently.
+  **Expect:** Delivered replay succeeds only when that attempt's linked
+  `access_grant_id` still identifies an unrevoked, verified grant for the exact
+  paid order/version.
+- [ ] Revoke, expire, delete, or detach the grant linked to a prior `sent`
+  attempt while the book is still Purchased, then re-run finalisation with a
+  mocked successful provider.
+  **Expect:** the old sent attempt is recorded as unusable rather than replayed;
+  a new pending claim and fresh hash-only grant are created, one replacement
+  notification is sent, and the usable new evidence permits Delivered.
+- [ ] Start two finalisers concurrently for the same paid order/version.
+  **Expect:** only one pending delivery claim and one provider send. The losing
+  worker never revokes/mints a competing grant. The sent attempt's
+  `access_grant_id` is the same still-usable grant in the emailed customer URL,
+  and only that exact order becomes fulfilled.
 
 ## N. Legacy recovery (never recharge)
 
+- [ ] Before applying migration 010, confirm the reconciled inventory: 28
+  lifecycle-null snapshot-ineligible books (18 `preview_ready`, 4
+  `pending_review`, 5 `failed`, 1 falsely `delivered`).
+  **Expect after migration:** zero compatibility versions and zero canonical
+  stage promotions for these rows.
+- [ ] Inspect the three active review tokens associated with incomplete
+  `pending_review` rows, then apply migration 010 in the isolated database.
+  **Expect:** each unsafe token has `used_at` set and `expires_at <= now()`, no
+  inferred `version_id`, and a `legacy_review_token_sealed` operational failure.
+  Opening the old raw link cannot display or action review content.
 - [ ] Take a legacy paid row mapped to **Purchased** by migration 010.
   **Expect:** it is **not** Delivered (no inferred delivery); it can only reach
   Delivered by passing canonical artefact/access/notification verification.
 - [ ] Take an ambiguous legacy row (`lifecycle_stage = NULL`).
   **Expect:** it is non-terminal and requires operator reconciliation; it is
-  never auto-promoted to Purchased or Delivered.
+  never auto-promoted to Purchased or Delivered, and has an unresolved
+  `legacy_reconciliation_required` operational failure.
+- [ ] Try legacy rows with missing/duplicate/out-of-order page numbers,
+  incomplete images, multiple immutable versions, multiple paid rows, only
+  `payment_confirmed_at`, or conflicting version pointers.
+  **Expect:** none is promoted past the evidence it actually proves. In
+  particular, `payment_confirmed_at` never becomes `payment_verified_at`.
+- [ ] Open `/admin/review` and `/admin/books`.
+  **Expect:** the review queue shows a visible count/link for incomplete legacy
+  books, and the Books page lists all lifecycle-null records in a dedicated
+  controlled-recovery section even when the main table limit is exceeded.
+- [ ] Attempt controlled regeneration without admin auth, without the exact
+  `REGENERATE <first-8-book-id>` phrase, or without the AI-cost checkbox.
+  **Expect:** rejected; no operational claim, token revocation, or provider work.
+- [ ] As the owner and as an anonymous caller holding a legacy book id, POST the
+  same lifecycle-null book to `/api/generate-preview`.
+  **Expect:** `409`; only a brand-new `draft` may use the public generation
+  endpoint, and the service records no attempt or status mutation.
+- [ ] As the authenticated owner of a lifecycle-null `preview_ready` legacy
+  row, POST its id to `/api/generate-book`, and separately invoke
+  `generateFullBook` in a controlled test harness.
+  **Expect:** both reject before status mutation, illustration/PDF/audio work,
+  email, or URL persistence. The endpoint/service accept only canonical
+  Purchased finalisation.
+- [ ] As the same owner, POST the lifecycle-null book to `/api/generate-pdf`
+  and `/api/generate-audio`.
+  **Expect:** both return `409`; neither PDF assembly, narration, storage writes,
+  signed links, nor email occur.
+- [ ] Invoke `assemblePdf` directly in a controlled test with lifecycle null,
+  the wrong approved version, no verified payment, two qualifying payments, or
+  an incomplete immutable page set.
+  **Expect:** every case rejects before rendering/upload. Only canonical
+  Purchased plus the exact approved version and one verified paid order passes.
+- [ ] Attempt controlled regeneration for the false legacy `delivered` row, a
+  row with payment evidence, or a row with a complete immutable version.
+  **Expect:** blocked for reconciliation; no AI work and no lifecycle promotion.
+- [ ] Confirm an eligible unpaid incomplete row and run one controlled recovery
+  with mocked AI outputs.
+  **Expect:** one worker claims it; stale review tokens are revoked; exactly 12
+  contiguous text/illustration pages become a new immutable version; the book
+  enters Generated and then Under Review with a fresh exact-version token.
+  Automated quality-gate regeneration is disabled.
+- [ ] Return 11, 13, duplicate, or out-of-order pages from the mocked generator.
+  **Expect:** no immutable version and no canonical stage; the row remains
+  unpurchasable and undeliverable with an operator-visible failure.
 - [ ] Run any operator reconciliation procedure from the implementation report.
   **Expect:** no Stripe session/charge is ever created; the customer is never
   recharged; only idempotent lifecycle advancement occurs.
@@ -212,10 +315,11 @@ provider setup. Unchecked items below must not be interpreted as passed.
 | Section | Pass? | Notes |
 |---|---|---|
 | A–N controlled-data acceptance | _Pending_ | Requires isolated migrated database plus explicit Stripe/email test setup. |
-| Automated tests | **Pass** | 271/271 |
+| Automated tests | **Pass** | 317/317 |
 | TypeScript | **Pass** | No-emit check |
 | Production build | **Pass** | Existing non-blocking diagnostics only |
-| Safe browser smoke | **Pass** | Desktop and mobile |
+| Safe browser smoke | **Pass** | Desktop |
+| Security scan | **Follow-up required** | SAST/dataflow clean; dependency audit has 0 critical / 18 high existing framework/toolchain advisories |
 
 Confirm at completion: **no real email sent, no real card charged, nothing
 published.**

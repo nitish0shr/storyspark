@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Fetch the book using admin client (bypasses RLS for anonymous books)
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
-      .select("id, user_id, status")
+      .select("id, user_id, status, lifecycle_stage")
       .eq("id", bookId)
       .single();
 
@@ -56,6 +56,19 @@ export async function POST(request: NextRequest) {
     // - If the book has no user_id (anonymous), allow anyone who knows the bookId.
     if (book.user_id !== null && book.user_id !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // This public/customer endpoint is for a newly created draft only.
+    // Lifecycle-null legacy recovery is privileged, explicitly confirmed, and
+    // must pass /api/admin/regenerate-legacy-book instead.
+    if (book.lifecycle_stage !== null || book.status !== "draft") {
+      return NextResponse.json(
+        {
+          error:
+            "This book cannot be generated through the public preview endpoint.",
+        },
+        { status: 409 },
+      );
     }
 
     // Prevent re-generating if already in progress

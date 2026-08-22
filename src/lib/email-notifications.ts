@@ -6,12 +6,12 @@
  * recording delivery — never mark something delivered when the send did not
  * happen.
  *
- * No real email is sent when the provider is unconfigured (SENDGRID_API_KEY
- * absent) — every function resolves to { sent: false, reason: "not_configured"}.
- * This allows tests to import the module without credentials.
+ * Non-production is always non-networking. Suppressed/captured attempts resolve
+ * to sent:false so callers cannot mistake acceptance into a test adapter for
+ * provider delivery.
  */
 
-import { sendEmail, isEmailConfigured } from "@/lib/email-provider";
+import { sendEmail } from "@/lib/email-provider";
 import type { SendResult } from "@/lib/email-provider";
 import { getAppUrl } from "@/lib/utils";
 
@@ -92,13 +92,6 @@ export interface BookReadyEmailParams {
 export async function sendPurchaseConfirmationEmail(
   params: PurchaseConfirmationParams
 ): Promise<SendResult> {
-  if (!isEmailConfigured()) {
-    console.log(
-      `[email] Provider not configured — skipping purchase confirmation to ${params.email}`
-    );
-    return { sent: false, reason: "not_configured" };
-  }
-
   const appUrl = getAppUrl();
 
   return sendEmail({
@@ -123,13 +116,6 @@ export async function sendPurchaseConfirmationEmail(
 export async function sendInvitationEmail(
   params: InvitationEmailParams
 ): Promise<SendResult> {
-  if (!isEmailConfigured()) {
-    console.log(
-      `[email] Provider not configured — skipping invitation email to ${params.email}`
-    );
-    return { sent: false, reason: "not_configured" };
-  }
-
   return sendEmail({
     to: params.email,
     subject: `✨ ${params.childName}'s storybook preview is ready!`,
@@ -150,13 +136,6 @@ export async function sendInvitationEmail(
 export async function sendDeliveryEmail(
   params: DeliveryEmailParams
 ): Promise<SendResult> {
-  if (!isEmailConfigured()) {
-    console.log(
-      `[email] Provider not configured — skipping delivery email to ${params.email}`
-    );
-    return { sent: false, reason: "not_configured" };
-  }
-
   return sendEmail({
     to: params.email,
     subject: `🎉 ${params.childName}'s complete storybook is ready to read!`,
@@ -178,13 +157,6 @@ export async function sendPreviewReadyEmail({
   childName,
   bookId,
 }: PreviewEmailParams): Promise<SendResult> {
-  if (!isEmailConfigured()) {
-    console.log(
-      `[email] Provider not configured — skipping preview email to ${email}`
-    );
-    return { sent: false, reason: "not_configured" };
-  }
-
   const appUrl = getAppUrl();
   const previewUrl = `${appUrl}/preview/${bookId}`;
 
@@ -205,13 +177,6 @@ export async function sendBookReadyEmail({
   bookId,
   pdfUrl,
 }: BookReadyEmailParams): Promise<SendResult> {
-  if (!isEmailConfigured()) {
-    console.log(
-      `[email] Provider not configured — skipping book-ready email to ${email}`
-    );
-    return { sent: false, reason: "not_configured" };
-  }
-
   const appUrl = getAppUrl();
   const bookUrl = `${appUrl}/preview/${bookId}`;
 

@@ -13,9 +13,12 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const ILLUSTRATION_BUCKET = "book-illustrations";
+export const FINAL_BOOK_BUCKET = "final-books";
 
 /** How long a signed illustration URL stays valid. */
 export const SIGNED_URL_TTL_SECONDS = 60 * 60;
+/** Final paid downloads are intentionally shorter-lived than illustration URLs. */
+export const FINAL_BOOK_SIGNED_URL_TTL_SECONDS = 15 * 60;
 
 const PUBLIC_MARKER = "/storage/v1/object/public/" + ILLUSTRATION_BUCKET + "/";
 const SIGNED_MARKER = "/storage/v1/object/sign/" + ILLUSTRATION_BUCKET + "/";
@@ -81,4 +84,56 @@ export async function toViewableUrl(
 ): Promise<string | null> {
   const [url] = await toViewableUrls([stored]);
   return url ?? null;
+}
+
+/**
+ * Final artefacts are stored as object paths, never public or previously-signed
+ * URLs. Keep this validation strict so an artefact row cannot make the service
+ * role sign an object from another bucket or accept an external URL.
+ */
+export function isFinalBookStoragePath(value: string): boolean {
+  if (!value || value.includes("://") || value.startsWith("/")) return false;
+  const segments = value.split("/");
+  return (
+    segments.length >= 4 &&
+    segments[0] === "books" &&
+    segments.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        !segment.includes("\\"),
+    )
+  );
+}
+
+/**
+ * Mint one bounded download URL from the private final-book bucket.
+ *
+ * Authorisation belongs to the caller and must be completed before this helper
+ * is invoked. Unlike illustration display, this fails closed: a storage error
+ * never falls back to a stored/public URL.
+ */
+export async function createFinalBookSignedUrl(
+  storagePath: string,
+  expiresIn = FINAL_BOOK_SIGNED_URL_TTL_SECONDS,
+): Promise<string | null> {
+  if (
+    !isFinalBookStoragePath(storagePath) ||
+    !Number.isInteger(expiresIn) ||
+    expiresIn < 60 ||
+    expiresIn > FINAL_BOOK_SIGNED_URL_TTL_SECONDS
+  ) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from(FINAL_BOOK_BUCKET)
+      .createSignedUrl(storagePath, expiresIn);
+    if (error || !data?.signedUrl) return null;
+    return data.signedUrl;
+  } catch {
+    return null;
+  }
 }

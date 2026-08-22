@@ -4,3 +4,4 @@
 - Runtime E2E of AI generation may be impossible when the OpenAI account is over quota (429 insufficient_quota) — verify via `npm run build` + code review instead; after a prod build, `rm -rf .next` before restarting the dev workflow.
 - [Immutable review identity](immutable-review-identity.md) — once review starts, missing review-version identity requires reconciliation; never substitute the latest/current version.
 - [Fulfilment notification recovery](fulfilment-notification-recovery.md) — non-essential notices must not strand paid work; provider ambiguity stays pending and operator retries remain idempotent.
+- [Paid output generation boundaries](paid-output-generation-boundaries.md) — legacy recovery, subscription previews, and paid final artefacts have separate fail-closed entrypoints.

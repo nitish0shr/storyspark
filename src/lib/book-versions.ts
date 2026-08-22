@@ -193,6 +193,23 @@ export async function createBookVersion(
       error: "Every page requires non-empty text and an illustration before versioning",
     };
   }
+  const pageNumbers = storyPages
+    .map((page) => page.pageNumber)
+    .sort((a, b) => a - b);
+  if (
+    pageNumbers.some(
+      (pageNumber, index) =>
+        !Number.isInteger(pageNumber) || pageNumber !== index + 1,
+    )
+  ) {
+    return {
+      ok: false,
+      versionId: null,
+      versionNumber: null,
+      contentHash: null,
+      error: "Version pages must be numbered contiguously from 1",
+    };
+  }
 
   // Compute content hash for duplicate detection
   const pageHashInputs = storyPages.map((p, i) => ({
@@ -437,43 +454,9 @@ export async function updateVersionPdfUrls(
   pdfUrl: string | null,
   pdfPrintUrl: string | null,
 ): Promise<void> {
-  const { data: version, error: versionError } = await supabaseAdmin
-    .from("book_versions")
-    .select("book_id")
-    .eq("id", versionId)
-    .maybeSingle();
-  if (versionError || !version) {
-    console.error(
-      `[book-versions] Cannot attach artefacts to missing version ${versionId}:`,
-      versionError?.message,
+  if (pdfUrl || pdfPrintUrl) {
+    throw new Error(
+      `Refusing to persist raw PDF URLs for immutable version ${versionId}; record private storage identity in product_artefacts instead`,
     );
-    return;
-  }
-  const rows = [
-    pdfUrl
-      ? {
-          book_id: version.book_id,
-          version_id: versionId,
-          kind: "pdf_digital",
-          url: pdfUrl,
-          metadata: { source: "compatibility-helper", verification_required: true },
-        }
-      : null,
-    pdfPrintUrl
-      ? {
-          book_id: version.book_id,
-          version_id: versionId,
-          kind: "pdf_print",
-          url: pdfPrintUrl,
-          metadata: { source: "compatibility-helper", verification_required: true },
-        }
-      : null,
-  ].filter(Boolean);
-  if (rows.length === 0) return;
-
-  const { error } = await supabaseAdmin.from("product_artefacts").insert(rows);
-
-  if (error) {
-    console.error(`[book-versions] Failed to update PDF URLs for version ${versionId}:`, error.message);
   }
 }

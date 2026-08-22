@@ -36,6 +36,30 @@ export function canExposeDeliveredArtefacts(params: {
   );
 }
 
+export function canIssueFinalBookSignedLink(params: {
+  stage: CustomerBookStage;
+  bookId: string;
+  approvedVersionId: string | null;
+  artefactVersionId: string | null;
+  storagePath: string | null;
+  storageBucket: string | null;
+  hasExactVerifiedPayment: boolean;
+  hasAccessAuthorisation: boolean;
+}): boolean {
+  const expectedPrefix =
+    params.approvedVersionId &&
+    `books/${params.bookId}/versions/${params.approvedVersionId}/`;
+  return Boolean(
+    canExposeDeliveredArtefacts(params) &&
+      params.hasAccessAuthorisation &&
+      params.artefactVersionId === params.approvedVersionId &&
+      params.storageBucket === "final-books" &&
+      params.storagePath &&
+      expectedPrefix &&
+      params.storagePath.startsWith(expectedPrefix),
+  );
+}
+
 /**
  * Pure access rule for an exact approved version.
  *
