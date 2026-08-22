@@ -96,6 +96,18 @@ export function StepSummary() {
 
       if (!genRes.ok) {
         const data = await genRes.json().catch(() => ({}));
+        // A book id saved in this browser can point at a book that no longer
+        // exists - it may have been removed since. Clearing the stale ids means
+        // the next attempt starts clean, instead of trapping the visitor on a
+        // dead end they have no way to escape.
+        if (genRes.status === 404) {
+          setBookId(null);
+          setChildProfileId(null);
+          setSecondChildProfileId(null);
+          throw new Error(
+            "That saved draft is no longer available. Tap the button once more and we will start a fresh one.",
+          );
+        }
         throw new Error(data.error || "Failed to start generation. Please try again.");
       }
 
