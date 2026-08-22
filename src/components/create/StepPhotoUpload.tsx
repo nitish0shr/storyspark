@@ -85,6 +85,38 @@ export function StepPhotoUpload() {
     nextStep();
   }
 
+  /**
+   * Phone photos are routinely 5-10 MB. Sent whole they balloon twice over:
+   * base64 adds a third to the upload, and vision at high detail charges by
+   * resolution - a 2.4 MB image already costs about 25,000 prompt tokens.
+   * Large photos were failing outright because of it.
+   *
+   * Hair colour and skin tone do not need that resolution, so shrink first.
+   * On any failure we fall back to the original rather than block the customer.
+   */
+  async function downscaleForAnalysis(original: File, maxEdge = 768): Promise<File> {
+    try {
+      const bitmap = await createImageBitmap(original);
+      const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1) return original;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (ctx === null) return original;
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.85),
+      );
+      if (blob === null) return original;
+      return new File([blob], "photo.jpg", { type: "image/jpeg" });
+    } catch {
+      return original;
+    }
+  }
+
   async function handleUsePhoto() {
     if (!file || !consentChecked) return;
     setLoading(true);
@@ -92,7 +124,7 @@ export function StepPhotoUpload() {
 
     try {
       const form = new FormData();
-      form.append("photo", file);
+      form.append("photo", await downscaleForAnalysis(file));
 
       const res = await fetch("/api/analyze-photo", {
         method: "POST",
