@@ -57,9 +57,9 @@ interface WizardState {
   setDedication: (dedication: string) => void;
   setLanguage: (language: string) => void;
   setEmail: (email: string) => void;
-  setChildProfileId: (id: string) => void;
-  setSecondChildProfileId: (id: string) => void;
-  setBookId: (id: string) => void;
+  setChildProfileId: (id: string | null) => void;
+  setSecondChildProfileId: (id: string | null) => void;
+  setBookId: (id: string | null) => void;
   setGenerating: (generating: boolean, step?: string) => void;
   reset: () => void;
 }
