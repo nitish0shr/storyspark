@@ -11,6 +11,7 @@ import ConversionTracker from "@/components/shared/ConversionTracker";
 import Navbar from "@/components/shared/Navbar";
 import { ChevronLeft, Sparkles } from "lucide-react";
 import { decideBookAccess } from "@/lib/book-access";
+import { isCreatorOwner } from "@/lib/creator-session";
 
 interface PreviewPageProps {
   params: Promise<{ bookId: string }>;
@@ -280,7 +281,7 @@ export default async function PreviewPage({ params, searchParams }: PreviewPageP
   // Visitor = holder of a valid access_grants token scoped to the exact
   //           approved version (preview or full grant)
   // -------------------------------------------------------------------------
-  const isOwner = !!user && user.id === book.user_id;
+  const isOwner = isCreatorOwner(user?.id, book.user_id);
 
   let grant: GrantResult | null = null;
   if (rawToken && approvedVersionId) {

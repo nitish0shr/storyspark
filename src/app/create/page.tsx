@@ -10,9 +10,13 @@ import { StepQuestions } from "@/components/create/StepQuestions";
 import { StepSummary } from "@/components/create/StepSummary";
 import { StepPreview } from "@/components/create/StepPreview";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import { cn, getMarketingUrl } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import {
+  establishCreatorSession,
+  type CreatorIdentity,
+} from "@/lib/creator-session";
 
 // Maps internal step numbers (1–6) → visible progress steps (1–5)
 // Step 5 (Summary) and step 6 (Preview generation) both show progress step 5
@@ -26,37 +30,40 @@ export default function CreatePage() {
   const prevStep = useWizardStore((s) => s.prevStep);
   const [fadeKey, setFadeKey] = useState(step);
   const [isVisible, setIsVisible] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [creatorIdentity, setCreatorIdentity] =
+    useState<CreatorIdentity | null>(null);
+  const [authState, setAuthState] = useState<"checking" | "ready" | "error">(
+    "checking",
+  );
+  const [authAttempt, setAuthAttempt] = useState(0);
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    let active = true;
+    setAuthState("checking");
+    setCreatorIdentity(null);
 
-    if (!supabaseUrl || !supabaseKey) {
-      setAuthChecked(true);
-      return;
-    }
-
-    const supabase = createClient();
-    if (!supabase) {
-      setAuthChecked(true);
-      return;
-    }
-
-    supabase.auth.getUser().then(({ data: { user } }: { data: { user: unknown } }) => {
-      if (!user) {
-        supabase.auth
-          .signInAnonymously()
-          .then(() => setAuthChecked(true))
-          .catch((err: unknown) => {
-            console.warn("Anonymous sign-in failed, continuing anyway:", err);
-            setAuthChecked(true);
-          });
-      } else {
-        setAuthChecked(true);
+    async function initialiseCreatorSession() {
+      try {
+        const supabase = createClient();
+        if (!supabase) {
+          throw new Error("Supabase is not configured.");
+        }
+        const identity = await establishCreatorSession(supabase.auth);
+        if (!active) return;
+        setCreatorIdentity(identity);
+        setAuthState("ready");
+      } catch (error) {
+        console.warn("Creator session could not be established:", error);
+        if (!active) return;
+        setAuthState("error");
       }
-    });
-  }, []);
+    }
+
+    void initialiseCreatorSession();
+    return () => {
+      active = false;
+    };
+  }, [authAttempt]);
 
   useEffect(() => {
     setIsVisible(false);
@@ -67,10 +74,42 @@ export default function CreatePage() {
     return () => clearTimeout(timeout);
   }, [step]);
 
-  if (!authChecked) {
+  if (authState === "checking") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FDF5E7]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#5E17EB]" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#FDF5E7] px-4 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#5E17EB]" aria-hidden="true" />
+        <p className="font-body text-sm font-bold text-[#262625]/60">
+          Starting your secure book session…
+        </p>
+      </div>
+    );
+  }
+
+  if (authState === "error" || !creatorIdentity) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FDF5E7] px-4">
+        <div className="card-chunky max-w-md space-y-5 bg-white p-6 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-red-200 bg-red-50">
+            <AlertCircle className="h-7 w-7 text-red-500" aria-hidden="true" />
+          </div>
+          <div>
+            <h1 className="font-heading text-xl font-bold text-[#262625]">
+              We couldn&apos;t start a secure session
+            </h1>
+            <p className="mt-2 font-body text-sm leading-relaxed text-[#262625]/60">
+              Your book needs a private guest session so only you can open it.
+              Please try again before continuing.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setAuthAttempt((attempt) => attempt + 1)}
+            className="btn-chunky w-full gap-2 bg-[#5E17EB] font-heading font-bold text-white"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Retry secure session
+          </Button>
+        </div>
       </div>
     );
   }
@@ -127,7 +166,9 @@ export default function CreatePage() {
         >
           {fadeKey === 1 && <StepChildInfo />}
           {fadeKey === 2 && <StepPhotoUpload />}
-          {fadeKey === 3 && <StepThemeSelect />}
+          {fadeKey === 3 && (
+            <StepThemeSelect isGuest={creatorIdentity.isAnonymous} />
+          )}
           {fadeKey === 4 && <StepQuestions />}
           {fadeKey === 5 && <StepSummary />}
           {fadeKey === 6 && <StepPreview />}
