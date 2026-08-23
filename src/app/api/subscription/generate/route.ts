@@ -50,16 +50,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Insert the book in the durable queued state so it can be recovered
+    // by the generation sweep if the worker crashes before completing.
+    const claimedAt = new Date().toISOString();
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .insert({
         user_id: sub.user_id,
         child_profile_id: sub.child_profile_id,
         theme_id: nextTheme,
-        status: "draft",
+        status: "preview_generating",
         language: "en",
         subscription_id: sub.id,
         contextual_answers: {},
+        operational_state: "generation_queued",
+        generation_attempt_started_at: claimedAt,
+        generation_heartbeat_at: claimedAt,
+        generation_retry_at: null,
       })
       .select("id")
       .single();
@@ -81,13 +88,19 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", sub.id);
 
-    generatePreview(book.id).catch((err: Error) => {
-      console.error(`Subscription book generation failed for ${book.id}:`, err);
-      supabaseAdmin
-        .from("books")
-        .update({ status: "failed" })
-        .eq("id", book.id);
-    });
+    // Dispatch generation. The book is already in preview_generating state so
+    // The dedicated subscription control keeps this privileged path separate
+    // from the customer draft claim while preserving active-subscription checks.
+    generatePreview(book.id, false, {
+      claimedSubscriptionGeneration: true,
+    }).catch(
+      (err: Error) => {
+        // The pipeline owns retryable-vs-terminal durable state.
+        console.warn(
+          `Subscription book generation ended for ${book.id}: ${err.message}`,
+        );
+      }
+    );
 
     return NextResponse.json({
       success: true,

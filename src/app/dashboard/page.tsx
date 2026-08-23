@@ -43,7 +43,10 @@ export default async function DashboardPage() {
   const childProfiles: ChildProfile[] = (childProfilesRes.data ?? []).map((row: any) => ({
     id: row.id, userId: row.user_id, name: row.name, age: row.age, gender: row.gender,
     photoUrl: row.photo_url, photoProcessedUrl: row.photo_processed_url,
-    appearanceProfile: row.appearance_profile, createdAt: row.created_at, updatedAt: row.updated_at,
+    appearanceProfile: row.appearance_profile
+      ? { ...row.appearance_profile, referenceSheetUrl: undefined }
+      : row.appearance_profile,
+    createdAt: row.created_at, updatedAt: row.updated_at,
   }));
 
   const books: Book[] = (booksRes.data ?? []).map((row: any) => ({

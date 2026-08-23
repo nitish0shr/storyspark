@@ -10,7 +10,10 @@ import {
   IllustrationChild,
 } from "@/services/illustration";
 import { assemblePdf } from "@/services/pdf-assembly";
-import { isOpenAIConfigured } from "@/lib/openai";
+import {
+  isOpenAIConfigured,
+  isRetryableProviderError,
+} from "@/lib/openai";
 import {
   sendDeliveryEmail,
 } from "@/lib/email-notifications";
@@ -28,7 +31,15 @@ import {
 } from "@/lib/lifecycle-service";
 import type { LifecycleStage } from "@/types/book";
 import { applyRevision } from "@/services/revision-engine";
-import { validateBook } from "@/lib/content-validation";
+import {
+  buildCorrectivePrompt,
+  isBlockingFailure,
+  targetedIllustrationPages,
+  validateBook,
+  validateIllustration,
+  type ValidationFailure,
+  type ValidationResult,
+} from "@/lib/content-validation";
 import { resolveCreatureFromAnswers } from "@/data/animals";
 import {
   createFinalBookSignedUrl,
@@ -39,6 +50,10 @@ import {
   type LinkedDeliveryGrantEvidence,
 } from "@/lib/delivery-recovery";
 import { canInvokeCanonicalFullBook } from "@/lib/legacy-recovery";
+import {
+  computeGenerationRetryDelayMs,
+  MAX_GENERATION_RECOVERY_ATTEMPTS,
+} from "@/lib/generation-recovery";
 
 const DEFAULT_APPEARANCE: AppearanceProfile = {
   skinTone: "warm medium",
@@ -124,6 +139,36 @@ async function updateBookStatus(
       `Failed to update book ${bookId} status to ${status}:`,
       error
     );
+  }
+}
+
+const GENERATION_HEARTBEAT_INTERVAL_MS = 60_000;
+
+async function heartbeatGeneration(
+  bookId: string,
+  state: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await setOperationalState(bookId, state, {
+    generation_heartbeat_at: new Date().toISOString(),
+    ...extra,
+  });
+}
+
+async function withGenerationHeartbeat<T>(
+  bookId: string,
+  state: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  await heartbeatGeneration(bookId, state);
+  const timer = setInterval(() => {
+    void heartbeatGeneration(bookId, state);
+  }, GENERATION_HEARTBEAT_INTERVAL_MS);
+  timer.unref?.();
+  try {
+    return await operation();
+  } finally {
+    clearInterval(timer);
   }
 }
 
@@ -324,6 +369,18 @@ export interface PreviewGenerationControls {
    * preview_generating before dispatch. No other caller should set this.
    */
   claimedPublicGeneration?: boolean;
+  /**
+   * The protected subscription route created an owned book from an active
+   * subscription directly in the durable queued state.
+   */
+  claimedSubscriptionGeneration?: boolean;
+  /**
+   * The CRON recovery sweep atomically reclaimed a stale/interrupted
+   * pre-lifecycle draft (no current_version_id, lifecycle_stage IS NULL)
+   * and moved it to preview_generating with an incremented recovery counter
+   * before dispatch. No other caller should set this.
+   */
+  claimedRecoveryGeneration?: boolean;
 }
 
 export async function generatePreview(
@@ -332,19 +389,29 @@ export async function generatePreview(
   controls: PreviewGenerationControls = {},
 ): Promise<void> {
   let generationStarted = false;
+  let generationRecoveryAttempts = 0;
   try {
     const { book, child, secondChild } = await fetchBookWithChildren(bookId);
+    generationRecoveryAttempts = Number(
+      book.generation_recovery_attempts ?? 0,
+    );
     const lifecycleStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
     const isControlledLegacyRecovery =
       controls.controlledLegacyRecovery === true;
     const isClaimedPublicGeneration =
       controls.claimedPublicGeneration === true;
+    const isClaimedSubscriptionGeneration =
+      controls.claimedSubscriptionGeneration === true;
+    const isClaimedRecoveryGeneration =
+      controls.claimedRecoveryGeneration === true;
     if (isClaimedPublicGeneration) {
       if (
         lifecycleStage !== null ||
         skipGate ||
         book.status !== "preview_generating" ||
-        isControlledLegacyRecovery
+        isControlledLegacyRecovery ||
+        isClaimedRecoveryGeneration ||
+        isClaimedSubscriptionGeneration
       ) {
         throw new Error(
           "Invalid claimed public generation invocation; exact lifecycle and operational state are required",
@@ -352,6 +419,39 @@ export async function generatePreview(
       }
       // The route has already made the durable generation claim. Any failure
       // after this boundary must move the book to failed rather than strand it.
+      generationStarted = true;
+    } else if (isClaimedSubscriptionGeneration) {
+      if (
+        lifecycleStage !== null ||
+        skipGate ||
+        book.status !== "preview_generating" ||
+        !book.subscription_id ||
+        isControlledLegacyRecovery ||
+        isClaimedRecoveryGeneration
+      ) {
+        throw new Error(
+          "Invalid claimed subscription generation invocation; an active-route durable subscription claim is required",
+        );
+      }
+      generationStarted = true;
+    } else if (isClaimedRecoveryGeneration) {
+      // The CRON sweep atomically reclaimed this stale/interrupted book and
+      // moved it to preview_generating with an incremented recovery counter.
+      // Validate the expected boundary state before proceeding.
+      if (
+        lifecycleStage !== null ||
+        skipGate ||
+        book.status !== "preview_generating" ||
+        book.current_version_id !== null ||
+        book.operational_state !== "generation_recovery_claimed" ||
+        isControlledLegacyRecovery
+      ) {
+        throw new Error(
+          "Invalid claimed recovery generation invocation; book must have no lifecycle stage and be in preview_generating status",
+        );
+      }
+      // The sweep has already made the durable reclaim. Any failure after this
+      // boundary must move the book to failed rather than strand it again.
       generationStarted = true;
     } else if (isControlledLegacyRecovery) {
       if (
@@ -378,8 +478,11 @@ export async function generatePreview(
     }
 
     // Record the attempt only after the invocation boundary has been proven.
-    await setOperationalState(bookId, "generating_preview", {
-      generation_attempt_started_at: new Date().toISOString(),
+    const attemptStartedAt = new Date().toISOString();
+    await heartbeatGeneration(bookId, "generating_story", {
+      generation_attempt_started_at: attemptStartedAt,
+      generation_retry_at: null,
+      operational_error: null,
     });
     await updateBookStatus(bookId, "preview_generating");
     generationStarted = true;
@@ -422,20 +525,29 @@ export async function generatePreview(
     }
 
     // Story generation and character preparation (reference sheets) run in parallel.
-    const [storyPages, illustrationChildren] = await Promise.all([
-      generateStory({
-        regenerationNote: book.rejection_reason ?? null,
-        childName: child.name,
-        childAge: child.age,
-        childGender: child.gender,
-        appearanceProfile: resolveCharacterProfile(child, descriptions.first),
-        themeId: book.theme_id,
-        contextualAnswers: storyContextualAnswers,
-        language: book.language || "en",
-        secondChild: secondChildData,
-      }),
-      prepareIllustrationChildren(child, secondChild, descriptions),
-    ]);
+    const [storyPages, illustrationChildren] =
+      await withGenerationHeartbeat(
+        bookId,
+        "generating_story",
+        () =>
+          Promise.all([
+            generateStory({
+              regenerationNote: book.rejection_reason ?? null,
+              childName: child.name,
+              childAge: child.age,
+              childGender: child.gender,
+              appearanceProfile: resolveCharacterProfile(
+                child,
+                descriptions.first,
+              ),
+              themeId: book.theme_id,
+              contextualAnswers: storyContextualAnswers,
+              language: book.language || "en",
+              secondChild: secondChildData,
+            }),
+            prepareIllustrationChildren(child, secondChild, descriptions),
+          ]),
+      );
 
     if (controls.expectedPageCount !== undefined) {
       const generatedPagesAreExact =
@@ -457,21 +569,29 @@ export async function generatePreview(
     console.log(
       `[pipeline] Generating all ${storyPages.length} illustrations for book ${bookId}`
     );
-    const allIllustrationUrls = await generateIllustrations({
+    const allIllustrationUrls = await withGenerationHeartbeat(
       bookId,
-      storyPages,
-      themeId: book.theme_id,
-      sceneDescriptions,
-      // No pageNumbers filter → generate every page
-      children: illustrationChildren,
-      contextualAnswers: book.contextual_answers as Record<
-        string,
-        unknown
-      > | null,
-    });
+      "generating_illustrations",
+      () =>
+        generateIllustrations({
+          bookId,
+          storyPages,
+          themeId: book.theme_id,
+          sceneDescriptions,
+          // No pageNumbers filter → generate every page
+          children: illustrationChildren,
+          contextualAnswers: book.contextual_answers as Record<
+            string,
+            unknown
+          > | null,
+        }),
+    );
 
-    // ── Persist pages to the legacy book_pages table ───────────────────────────
-    await upsertBookPages(bookId, storyPages, allIllustrationUrls);
+    const finalIllustrationUrls = [...allIllustrationUrls];
+
+    // Persist completed work before validation so an interrupted attempt is
+    // observable. A recovery still rebuilds from the durable atomic claim.
+    await upsertBookPages(bookId, storyPages, finalIllustrationUrls);
 
     // ── Verify EVERY page has text + illustration before snapshotting ──────────
     // The snapshot is the immutable source of truth for review and delivery, so
@@ -479,7 +599,7 @@ export async function generatePreview(
     const incompletePages: number[] = [];
     storyPages.forEach((page, idx) => {
       const hasText = typeof page.text === "string" && page.text.trim().length > 0;
-      const hasIllustration = Boolean(allIllustrationUrls[idx]);
+      const hasIllustration = Boolean(finalIllustrationUrls[idx]);
       if (!hasText || !hasIllustration) {
         incompletePages.push(page.pageNumber);
       }
@@ -491,16 +611,141 @@ export async function generatePreview(
       );
     }
 
+    // Validate before immutable snapshotting so a content-only image failure can
+    // be corrected without creating or replacing a whole-book version.
+    const creature = resolveCreatureFromAnswers(
+      book.contextual_answers as Record<string, unknown> | null,
+    );
+    let validationResult: ValidationResult =
+      await withGenerationHeartbeat(bookId, "validating_preview", () =>
+        validateBook({
+          storyText: storyPages.map((page) => page.text).join("\n\n"),
+          imageUrls: finalIllustrationUrls,
+          creature,
+          recipientName: child.name,
+          attempt: 1,
+          themeTitle: book.theme_title ?? null,
+          themeId: book.theme_id,
+          sceneDescriptions,
+        }),
+      );
+
+    const correctionPages =
+      controls.allowAutomaticRegeneration === false
+        ? []
+        : targetedIllustrationPages(validationResult.failures);
+
+    if (correctionPages.length > 0) {
+      const correctionsByPage: Record<number, string> = {};
+      for (const pageNumber of correctionPages) {
+        const pageFailures = validationResult.failures.filter(
+          (failure) =>
+            failure.source === "image" &&
+            failure.pageNumber === pageNumber &&
+            isBlockingFailure(failure),
+        );
+        correctionsByPage[pageNumber] = buildCorrectivePrompt(
+          pageFailures,
+          creature,
+        );
+      }
+
+      const correctedUrls = await withGenerationHeartbeat(
+        bookId,
+        "correcting_illustrations",
+        () =>
+          generateIllustrations({
+            bookId: `${bookId}/quality-correction-${Number(
+              book.generation_recovery_attempts ?? 0,
+            )}`,
+            storyPages,
+            themeId: book.theme_id,
+            sceneDescriptions,
+            pageNumbers: correctionPages,
+            children: illustrationChildren,
+            contextualAnswers:
+              book.contextual_answers as Record<string, unknown> | null,
+            correctionsByPage,
+          }),
+      );
+
+      correctionPages.forEach((pageNumber, correctedIndex) => {
+        const storyIndex = storyPages.findIndex(
+          (page) => page.pageNumber === pageNumber,
+        );
+        if (storyIndex < 0 || !correctedUrls[correctedIndex]) {
+          throw new Error(
+            `Targeted illustration correction did not return page ${pageNumber}`,
+          );
+        }
+        finalIllustrationUrls[storyIndex] = correctedUrls[correctedIndex];
+      });
+      await upsertBookPages(
+        bookId,
+        storyPages,
+        finalIllustrationUrls,
+        correctionPages,
+      );
+
+      const correctedFindings = await withGenerationHeartbeat(
+        bookId,
+        "validating_corrections",
+        () =>
+          Promise.all(
+            correctionPages.map(async (pageNumber) => {
+              const storyIndex = storyPages.findIndex(
+                (page) => page.pageNumber === pageNumber,
+              );
+              const failures = await validateIllustration({
+                imageUrl: finalIllustrationUrls[storyIndex],
+                creature,
+                themeTitle: book.theme_title ?? null,
+                themeId: book.theme_id,
+                sceneDescription: sceneDescriptions[storyIndex] ?? null,
+              });
+              return failures.map(
+                (failure): ValidationFailure => ({
+                  ...failure,
+                  pageNumber,
+                  severity:
+                    failure.severity ??
+                    (failure.code === "vision_unavailable"
+                      ? "minor"
+                      : "blocker"),
+                  source: "image",
+                }),
+              );
+            }),
+          ),
+      );
+      const targetSet = new Set(correctionPages);
+      const retainedFailures = validationResult.failures.filter(
+        (failure) =>
+          failure.source !== "image" ||
+          !failure.pageNumber ||
+          !targetSet.has(failure.pageNumber),
+      );
+      const failures = retainedFailures.concat(correctedFindings.flat());
+      validationResult = {
+        ok: failures.every((failure) => !isBlockingFailure(failure)),
+        failures,
+        attempt: 2,
+        checkedAt: new Date().toISOString(),
+      };
+    }
+
     // ── Create immutable snapshot (MUST succeed before any transition) ──────────
+    await heartbeatGeneration(bookId, "snapshotting_preview");
     const versionResult = await createBookVersion({
       bookId,
       storyPages,
-      illustrationUrls: allIllustrationUrls,
+      illustrationUrls: finalIllustrationUrls,
       metadata: {
         generatedAt: new Date().toISOString(),
         pageCount: storyPages.length,
         controlledLegacyRecovery:
           controls.controlledLegacyRecovery === true,
+        validationAttempt: validationResult.attempt,
       },
     });
 
@@ -519,7 +764,7 @@ export async function generatePreview(
     // ── Update legacy status fields ────────────────────────────────────────────
     await updateBookStatus(bookId, "preview_ready", {
       story_text: storyPages,
-      illustration_urls: allIllustrationUrls,
+      illustration_urls: finalIllustrationUrls,
       preview_pages: storyPages.slice(0, 2),
       page_count: storyPages.length,
     });
@@ -535,40 +780,71 @@ export async function generatePreview(
     );
 
     if (!genTransition.ok) {
-      // May already be Generated if this is a retry — that's fine
-      console.log(
-        `[pipeline] Generated transition note for book ${bookId}: ${genTransition.error}`
-      );
+      if (genTransition.fromStage !== "Generated") {
+        throw new Error(
+          `Failed to transition complete generation to Generated: ${genTransition.error}`,
+        );
+      }
     }
 
     // ── Validation gate -> Under Review ───────────────────────────────────────
     // Nothing is released to the customer here. Validate, then hand to review queue.
     if (!skipGate) {
-      try {
-        const regenerate =
-          controls.allowAutomaticRegeneration === false
-            ? undefined
-            : async (id: string) => {
-                await generatePreview(id, true);
-              };
-        const gate = await runValidationGate(bookId, regenerate);
-        console.log("[gate] book " + bookId + ": " + gate.message);
-      } catch (err) {
-        console.error("[gate] failed for book " + bookId + ":", err);
-        await recordOperationalError(bookId, "validation_gate", err);
-      }
+      const gate = await runValidationGate(bookId, { validationResult });
+      console.log("[gate] book " + bookId + ": " + gate.message);
     }
 
-    await setOperationalState(bookId, "idle");
+    await setOperationalState(bookId, "idle", {
+      generation_attempt_started_at: null,
+      generation_heartbeat_at: null,
+      generation_retry_at: null,
+    });
 
     // ── No customer preview email is sent here. ───────────────────────────────
     // Customers receive an invitation ONLY after a human approves (review-workflow.ts).
   } catch (error) {
-    console.error(`Preview generation failed for book ${bookId}:`, error);
+    const message =
+      error instanceof Error ? error.message : "Unknown generation failure";
     if (generationStarted) {
-      await updateBookStatus(bookId, "failed");
       await recordOperationalError(bookId, "generatePreview", error);
-      await setOperationalState(bookId, "failed");
+      if (isRetryableProviderError(error)) {
+        if (
+          generationRecoveryAttempts >= MAX_GENERATION_RECOVERY_ATTEMPTS
+        ) {
+          console.warn(
+            `[pipeline] Provider recovery budget exhausted for ${bookId}: ${message}`,
+          );
+          await setOperationalState(bookId, "generation_recovery_exhausted", {
+            status: "failed",
+            generation_heartbeat_at: null,
+            generation_retry_at: null,
+          });
+        } else {
+          const delayMs = computeGenerationRetryDelayMs({
+            retryAfter: error.diagnostics.retryAfter,
+            recoveryAttempts: generationRecoveryAttempts,
+          });
+          const retryAt = new Date(Date.now() + delayMs).toISOString();
+          console.warn(
+            `[pipeline] Temporary OpenAI failure for ${bookId}; durable retry scheduled at ${retryAt}`,
+            error.diagnostics,
+          );
+          await setOperationalState(bookId, "generation_retry_pending", {
+            status: "preview_generating",
+            generation_heartbeat_at: null,
+            generation_retry_at: retryAt,
+          });
+        }
+      } else {
+        console.error(
+          `Preview generation failed for book ${bookId}: ${message}`,
+        );
+        await setOperationalState(bookId, "failed", {
+          status: "failed",
+          generation_heartbeat_at: null,
+          generation_retry_at: null,
+        });
+      }
     }
     throw error;
   }

@@ -90,9 +90,16 @@ export async function POST(request: NextRequest) {
     // Atomically claim the draft before dispatching expensive background work.
     // Two concurrent requests may both read "draft", but only one can update
     // the row while that predicate is still true.
+    const claimedAt = new Date().toISOString();
     const { data: claimedBook, error: claimError } = await supabaseAdmin
       .from("books")
-      .update({ status: "preview_generating" })
+      .update({
+        status: "preview_generating",
+        operational_state: "generation_queued",
+        generation_attempt_started_at: claimedAt,
+        generation_heartbeat_at: claimedAt,
+        generation_retry_at: null,
+      })
       .eq("id", bookId)
       .eq("user_id", identity.userId)
       .eq("status", "draft")
@@ -116,7 +123,11 @@ export async function POST(request: NextRequest) {
 
     // Start preview generation (fire-and-forget — client polls /api/book-status)
     generatePreview(bookId, false, { claimedPublicGeneration: true }).catch((err) => {
-      console.error(`Background preview generation failed for ${bookId}:`, err);
+      console.warn(
+        `Background preview generation ended for ${bookId}: ${
+          err instanceof Error ? err.message : "unknown error"
+        }`,
+      );
     });
 
     return NextResponse.json(

@@ -74,10 +74,228 @@ const MONSTER_WORDS = [
   "beast",
 ];
 
+/**
+ * Theme IDs whose scene descriptions routinely include non-catalogue background
+ * creatures (e.g. aliens, glowing floaters). A companion animal being visible
+ * alongside these is correct behaviour, not a conflict. Also, a monster_like
+ * verdict from vision does NOT mean the companion was drawn as a monster -
+ * it may just mean an alien or fantasy creature is in the background.
+ */
+export const THEME_BACKGROUND_CREATURE_WORDS: Record<string, string[]> = {
+  "space-adventure": [
+    "alien",
+    "extraterrestrial",
+    "glowing creature",
+    "floating creature",
+    "purple creature",
+  ],
+  "dinosaur-discovery": ["dinosaur"],
+  "fairy-garden": ["fairy", "sprite", "gnome"],
+  "halloween-adventure": [
+    "ghost",
+    "witch",
+    "vampire",
+    "werewolf",
+    "pumpkin creature",
+    "jack-o-lantern",
+    "jack-o'-lantern",
+  ],
+  "christmas-magic": ["elf"],
+};
+
+export const THEMES_WITH_BACKGROUND_CREATURES = new Set(
+  Object.keys(THEME_BACKGROUND_CREATURE_WORDS),
+);
+
 function hasWord(haystack: string, needle: string): boolean {
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp("\\b" + escaped + "\\b", "i").test(haystack);
 }
+
+// ─── Pure classification helpers (exported for deterministic unit tests) ──────
+
+/**
+ * Returns true when the vision-reported animal name looks like a theme
+ * background character (alien, fairy, etc.) rather than a real catalogue animal.
+ *
+ * This is a pure string test - no network, no side-effects.
+ */
+export function isThemeBackgroundCreature(
+  animalName: string,
+  themeId?: string | null,
+  sceneDescription?: string | null,
+): boolean {
+  const lower = animalName.toLowerCase().trim();
+  if (!lower) return false;
+  const allowed = themeId
+    ? (THEME_BACKGROUND_CREATURE_WORDS[themeId] ?? [])
+    : [];
+  if (
+    allowed.some(
+      (word) => lower === word || lower.includes(word) || word.includes(lower),
+    )
+  ) {
+    return true;
+  }
+  const scene = sceneDescription?.toLowerCase() ?? "";
+  return Boolean(
+    scene &&
+      (scene.includes(lower) ||
+        allowed.some((word) => scene.includes(word) && lower.includes(word))),
+  );
+}
+
+function scenePermitsCatalogueCreature(
+  spec: CreatureSpec,
+  sceneDescription?: string | null,
+): boolean {
+  const scene = sceneDescription?.toLowerCase() ?? "";
+  if (!scene) return false;
+  if (
+    [spec.id, spec.label, ...spec.aliases].some((term) =>
+      scene.includes(term.toLowerCase()),
+    )
+  ) {
+    return true;
+  }
+  return spec.kind === "dinosaur" && /\bdinosaurs?\b/.test(scene);
+}
+
+/**
+ * Given the list of animal names reported by the vision model and the selected
+ * creature, classify them into three buckets:
+ *
+ *  - companionFound : the selected companion creature was recognised
+ *  - conflicts      : other real catalogue animals that could be replacements
+ *  - backgroundOnly : names that match no catalogue entry (aliens, fairies …)
+ *
+ * This is a pure function - no network, no side-effects.
+ */
+export function classifySeenAnimals(
+  seen: string[],
+  creature: CreatureSpec,
+  context: {
+    themeId?: string | null;
+    sceneDescription?: string | null;
+  } = {},
+): {
+  companionFound: boolean;
+  conflicts: CreatureSpec[];
+  permittedBackground: string[];
+  unclassified: string[];
+} {
+  const normalised = seen.map((value) => value.toLowerCase().trim());
+  const wanted = [
+    creature.id,
+    creature.label.toLowerCase(),
+    ...creature.aliases.map((a) => a.toLowerCase()),
+  ];
+  const companionFound = normalised.some((a) =>
+    wanted.some((w) => a.includes(w) || w.includes(a)),
+  );
+
+  const conflicts: CreatureSpec[] = [];
+  const permittedBackground: string[] = [];
+  const unclassified: string[] = [];
+
+  for (const a of normalised) {
+    // Skip the selected companion itself
+    const isCompanion = wanted.some((w) => a.includes(w) || w.includes(a));
+    if (isCompanion) continue;
+
+    // Is it a known catalogue animal?
+    const match = Object.values(CREATURES).find(
+      (spec) =>
+        spec.id !== creature.id &&
+        (a === spec.label.toLowerCase() || a === spec.id),
+    );
+    if (match) {
+      if (
+        companionFound &&
+        scenePermitsCatalogueCreature(match, context.sceneDescription)
+      ) {
+        permittedBackground.push(a);
+      } else {
+        conflicts.push(match);
+      }
+    } else if (
+      isThemeBackgroundCreature(
+        a,
+        context.themeId,
+        context.sceneDescription,
+      )
+    ) {
+      permittedBackground.push(a);
+    } else {
+      unclassified.push(a);
+    }
+  }
+
+  return { companionFound, conflicts, permittedBackground, unclassified };
+}
+
+/**
+ * Decides whether a monster_like verdict from the vision model should be
+ * treated as a blocker given the theme and companion visibility context.
+ *
+ * Returns false (not a blocker) when the monster-like appearance is explained
+ * by expected background creatures in the theme (e.g. Space Adventure aliens).
+ *
+ * This is a pure function - exported for deterministic unit tests.
+ */
+export function isMonsterLikeBlocker(params: {
+  monsterLike: boolean;
+  companionFound: boolean;
+  companionKind: CreatureSpec["kind"];
+  themeId?: string | null;
+  sceneDescription?: string | null;
+  seen?: string[];
+}): boolean {
+  const {
+    monsterLike,
+    companionFound,
+    companionKind,
+    themeId,
+    sceneDescription,
+    seen = [],
+  } = params;
+
+  if (!monsterLike) return false;
+
+  // Fantasy companions are allowed to look fantastical
+  if (companionKind === "fantasy") return false;
+
+  // Dinosaur companions get a minor advisory, never a full blocker
+  if (companionKind === "dinosaur") return false;
+
+  // For real animals: if the companion WAS correctly drawn AND the theme
+  // routinely features alien/fantasy background creatures, then monster_like
+  // is almost certainly describing those background characters, not the companion.
+  if (
+    companionFound &&
+    themeId &&
+    seen.some((name) =>
+      isThemeBackgroundCreature(name, themeId, sceneDescription),
+    )
+  ) {
+    return false;
+  }
+
+  // Check scene description for explicit mentions of alien/glowing creatures
+  if (companionFound && sceneDescription) {
+    const lower = sceneDescription.toLowerCase();
+    const permittedTerms = themeId
+      ? (THEME_BACKGROUND_CREATURE_WORDS[themeId] ?? [])
+      : [];
+    if (permittedTerms.some((term) => lower.includes(term))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// ─── Text validation ──────────────────────────────────────────────────────────
 
 /**
  * Pure text validation. No network, no side effects - safe to unit test.
@@ -167,6 +385,8 @@ export function validateStoryText(params: {
   return failures;
 }
 
+// ─── Illustration validation ──────────────────────────────────────────────────
+
 /** Vision model used to check what was actually drawn. */
 const VISION_MODEL = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
 
@@ -183,13 +403,21 @@ interface VisionVerdict {
  * Asks a vision model what is actually in the illustration, then checks that
  * answer against the creature the customer selected. This is what catches a
  * "dolphin" that came back as a Loch Ness monster.
+ *
+ * Optional `themeId` and `sceneDescription` improve companion-aware decisions:
+ *  - Space Adventure aliens / glowing creatures are theme-permitted and must
+ *    not raise monster_present or animal_conflict when the companion is present.
+ *  - Any catalogue animal that is also visible is only a conflict when the
+ *    selected companion itself is absent (replacement detection).
  */
 export async function validateIllustration(params: {
   imageUrl: string;
   creature: CreatureSpec | null;
   themeTitle?: string | null;
+  themeId?: string | null;
+  sceneDescription?: string | null;
 }): Promise<ValidationFailure[]> {
-  const { imageUrl, creature, themeTitle } = params;
+  const { imageUrl, creature, themeTitle, themeId, sceneDescription } = params;
   const failures: ValidationFailure[] = [];
   if (!imageUrl) return failures;
 
@@ -198,7 +426,11 @@ export async function validateIllustration(params: {
   const { toViewableUrl } = await import("@/lib/storage-urls");
   const viewableUrl = (await toViewableUrl(imageUrl)) ?? imageUrl;
 
-  const { getOpenAI } = await import("@/lib/openai");
+  const {
+    getOpenAI,
+    isTransientOpenAIError,
+    toRetryableProviderError,
+  } = await import("@/lib/openai");
   let verdict: VisionVerdict;
   try {
     const openai = getOpenAI();
@@ -217,7 +449,16 @@ export async function validateIllustration(params: {
                 '"child_friendly": bool, "description": "one sentence"}. ' +
                 "List every animal or creature you can actually see, using common names " +
                 "(for example dolphin, turtle, octopus, lion). Set monster_like to true if any " +
-                "creature looks mythical, serpentine, dragon-like or like a Loch Ness monster. " +
+                 "creature looks frightening, serpentine, dragon-like or like a Loch Ness monster. " +
+                 (creature
+                   ? `The customer-selected companion is "${creature.label}". List it separately and do not treat a permitted background character as its replacement. `
+                   : "") +
+                 (sceneDescription
+                   ? `The intended scene is: "${sceneDescription}". Characters named by that scene are permitted background characters. `
+                   : "") +
+                 (themeId === "space-adventure"
+                   ? "Friendly aliens and glowing alien creatures are permitted theme characters and are not monsters merely because they are alien. "
+                   : "") +
                 (themeTitle
                   ? "Set matches_theme to false ONLY if the picture clearly contradicts the story theme \"" + themeTitle + "\"; if it is plausible or you are unsure, set it to true."
                   : "Set matches_theme to true."),
@@ -231,6 +472,12 @@ export async function validateIllustration(params: {
     if (!raw) throw new Error("empty vision response");
     verdict = JSON.parse(raw) as VisionVerdict;
   } catch (err) {
+    if (isTransientOpenAIError(err)) {
+      throw toRetryableProviderError(
+        err,
+        "vision chat.completions.create",
+      );
+    }
     // Never silently pass. If we cannot see the image, a human must look.
     failures.push({
       code: "vision_unavailable",
@@ -252,38 +499,67 @@ export async function validateIllustration(params: {
 
   if (!creature) return failures;
 
-  const wanted = [creature.label.toLowerCase(), ...creature.aliases];
-  const found = seen.some((a) => wanted.some((w) => a.includes(w) || w.includes(a)));
-  if (!found) {
+  // ── Companion-aware classification ──────────────────────────────────────────
+  //
+  // Distinguish three kinds of thing the vision model might report:
+  //
+  //  1. The selected companion              → good, we want it
+  //  2. Another real catalogue animal       → conflict ONLY if companion absent
+  //  3. A theme background creature (alien) → never a conflict or monster blocker
+  //
+  const { companionFound, conflicts } = classifySeenAnimals(seen, creature, {
+    themeId,
+    sceneDescription,
+  });
+
+  if (!companionFound) {
     failures.push({
       code: "animal_missing",
       detail:
-        'Illustration does not show a ' + creature.label + '. Vision model saw: ' +
-        (seen.length ? seen.join(', ') : 'nothing recognisable') + '.',
+        "Illustration does not show a " + creature.label + ". Vision model saw: " +
+        (seen.length ? seen.join(", ") : "nothing recognisable") + ".",
     });
   }
 
-  for (const other of Object.values(CREATURES)) {
-    if (other.id === creature.id) continue;
-    if (seen.some((a) => a === other.label.toLowerCase() || a === other.id)) {
-      failures.push({
-        code: "animal_conflict",
-        detail: 'Illustration shows a ' + other.label + ' instead of the selected ' + creature.label + '.',
-      });
-    }
+  // Theme/scene-permitted characters were removed from `conflicts` by the
+  // classifier. A remaining catalogue animal is therefore either a true
+  // replacement or an unexpected extra.
+  for (const other of conflicts) {
+    failures.push({
+      code: "animal_conflict",
+      detail: companionFound
+        ? `Illustration includes an unexpected ${other.label} alongside the selected ${creature.label}.`
+        : `Illustration shows a ${other.label} instead of the selected ${creature.label}.`,
+    });
   }
 
   if (themeTitle && verdict.matches_theme === false) {
     failures.push({
       code: "theme_mismatch",
-      detail: 'Illustration does not match the chosen theme (' + themeTitle + '). ' + verdict.description,
+      detail: "Illustration does not match the chosen theme (" + themeTitle + "). " + verdict.description,
     });
   }
 
-  if (verdict.monster_like && creature.kind === "animal") {
+  // ── Monster-like check with companion + theme awareness ─────────────────────
+  //
+  // Space Adventure aliens and similar theme background creatures legitimately
+  // look "alien/fantastical". Only raise monster_present if the companion itself
+  // appears to have been drawn monstrously (companion absent or non-exempt theme).
+  //
+  if (
+    isMonsterLikeBlocker({
+      monsterLike: verdict.monster_like,
+      companionFound,
+      companionKind: creature.kind,
+      themeId,
+      sceneDescription,
+      seen,
+    })
+  ) {
     failures.push({
       code: "monster_present",
-      detail: 'Illustration looks mythical/monstrous but ' + creature.label + ' is a real ' + creature.kind + '. ' + verdict.description,
+      detail:
+        "Illustration looks mythical/monstrous but " + creature.label + " is a real " + creature.kind + ". " + verdict.description,
     });
   } else if (verdict.monster_like && creature.kind === "dinosaur") {
     failures.push({
@@ -297,6 +573,8 @@ export async function validateIllustration(params: {
 
   return failures;
 }
+
+// ─── Book-level helpers ────────────────────────────────────────────────────────
 
 /**
  * Hard cap on automatic regeneration. After this many attempts the book is
@@ -316,6 +594,31 @@ export function isBlockingFailure(failure: ValidationFailure): boolean {
   return failure.severity !== "minor" && ADVISORY_CODES.has(failure.code) === false;
 }
 
+/**
+ * Automatic illustration correction is safe only when every blocking finding
+ * is image-scoped and identifies a real page. Any text/whole-book finding is
+ * routed to human review rather than causing a broad regeneration.
+ */
+export function targetedIllustrationPages(
+  failures: ValidationFailure[],
+): number[] {
+  const blocking = failures.filter(isBlockingFailure);
+  if (
+    blocking.length === 0 ||
+    blocking.some(
+      (failure) =>
+        failure.source !== "image" ||
+        !Number.isInteger(failure.pageNumber) ||
+        Number(failure.pageNumber) <= 0,
+    )
+  ) {
+    return [];
+  }
+  return Array.from(
+    new Set(blocking.map((failure) => Number(failure.pageNumber))),
+  ).sort((a, b) => a - b);
+}
+
 export const MAX_GENERATION_ATTEMPTS = 2;
 
 /**
@@ -329,8 +632,10 @@ export async function validateBook(params: {
   recipientName: string;
   attempt: number;
   themeTitle?: string | null;
+  themeId?: string | null;
+  sceneDescriptions?: (string | null)[] | null;
 }): Promise<ValidationResult> {
-  const { storyText, imageUrls, creature, recipientName, attempt, themeTitle } = params;
+  const { storyText, imageUrls, creature, recipientName, attempt, themeTitle, themeId, sceneDescriptions } = params;
 
   const failures: ValidationFailure[] = validateStoryText({
     storyText,
@@ -345,15 +650,31 @@ export async function validateBook(params: {
     source: "text",
   }));
 
-  const images = (imageUrls || []).filter(Boolean);
+  const images = (imageUrls || [])
+    .map((url, index) => ({ url, pageIndex: index }))
+    .filter(
+      (entry): entry is { url: string; pageIndex: number } =>
+        typeof entry.url === "string" && entry.url.length > 0,
+    );
   const imageResults = await Promise.all(
-    images.map((url) => validateIllustration({ imageUrl: url, creature, themeTitle })),
+    images.map(({ url, pageIndex }) =>
+      validateIllustration({
+        imageUrl: url,
+        creature,
+        themeTitle,
+        themeId,
+        sceneDescription: sceneDescriptions
+          ? (sceneDescriptions[pageIndex] ?? null)
+          : null,
+      }),
+    ),
   );
   imageResults.forEach((result, index) => {
+    const pageNumber = images[index].pageIndex + 1;
     failures.push(
       ...result.map((failure) => ({
         ...failure,
-        pageNumber: index + 1,
+        pageNumber,
         severity:
           failure.severity ??
           (ADVISORY_CODES.has(failure.code) ? "minor" : "blocker"),

@@ -1,4 +1,8 @@
-import { openai } from "@/lib/openai";
+import {
+  openai,
+  isTransientOpenAIError,
+  toRetryableProviderError,
+} from "@/lib/openai";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
 import { storySkeletons, getTemplate } from "@/data/story-skeletons";
@@ -145,7 +149,9 @@ function validateStory(
 
 /**
  * Generates a complete story for a children's book using GPT-4o-mini.
- * Retries once on parse failure.
+ *
+ * The OpenAI SDK is the sole provider retry layer. Story parse / validation
+ * failures after a successful response are retried once at the outer level.
  */
 export interface SecondChild {
   name: string;
@@ -275,8 +281,10 @@ DUAL-CHARACTER INSTRUCTIONS:
   const fullSystemPrompt = systemPrompt + dualCharacterInstruction + languageInstruction;
 
   const expectedPageCount = skeleton.length;
-  let lastError: Error | null = null;
+  let lastParseError: Error | null = null;
 
+  // This loop repairs malformed successful responses only. It never multiplies
+  // the SDK's bounded provider retry budget.
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
@@ -293,25 +301,26 @@ DUAL-CHARACTER INSTRUCTIONS:
         temperature: 0.8,
         max_tokens: 4000,
       });
-
       const responseText = completion.choices[0]?.message?.content;
-      if (!responseText) {
-        throw new Error("Empty response from OpenAI");
-      }
+      if (!responseText) throw new Error("Empty response from OpenAI");
 
       const pages = parseStoryResponse(responseText, expectedPageCount);
       validateStory(pages, childName, expectedPageCount, secondChild?.name);
 
       return pages;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      if (isTransientOpenAIError(error)) {
+        throw toRetryableProviderError(error, "chat.completions.create");
+      }
+
+      lastParseError = error instanceof Error ? error : new Error(String(error));
       console.warn(
-        `Story generation attempt ${attempt + 1} failed: ${lastError.message}`
+        `Story generation attempt ${attempt + 1} failed: ${lastParseError.message}`
       );
     }
   }
 
   throw new Error(
-    `Story generation failed after 2 attempts: ${lastError?.message}`
+    `Story generation failed after 2 attempts: ${lastParseError?.message}`
   );
 }

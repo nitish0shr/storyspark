@@ -1,5 +1,10 @@
 import { toFile } from "openai";
-import { getOpenAI } from "@/lib/openai";
+import {
+  getOpenAI,
+  isTransientOpenAIError,
+  isRetryableProviderError,
+  toRetryableProviderError,
+} from "@/lib/openai";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AppearanceProfile } from "@/types/child";
 import { BookPage } from "@/types/book";
@@ -10,11 +15,11 @@ import {
   IllustrationCharacter,
 } from "@/data/prompts";
 import { resolveCreatureFromAnswers } from "@/data/animals";
+import { objectPathFromStored } from "@/lib/storage-urls";
 
 const STORAGE_BUCKET = "book-illustrations";
-
-const PLACEHOLDER_URL =
-  "https://placehold.co/1024x1024/FDF5E7/5E17EB?text=Illustration+Coming+Soon";
+export const REFERENCE_STORAGE_BUCKET = "character-reference-sheets";
+export const PRIVATE_REFERENCE_PREFIX = "private-reference://";
 
 /** Outfit descriptions per theme for prompt consistency. */
 const THEME_OUTFITS: Record<string, string> = {
@@ -72,14 +77,18 @@ class Semaphore {
 }
 
 /**
- * Ensures the illustration storage bucket exists (creates it as public if missing).
+ * Ensures a storage bucket exists without changing an existing bucket's live
+ * privacy setting.
  */
-async function ensureBucket(): Promise<void> {
-  const { error } = await supabaseAdmin.storage.getBucket(STORAGE_BUCKET);
+async function ensureBucket(
+  bucket: string,
+  isPublic: boolean,
+): Promise<void> {
+  const { error } = await supabaseAdmin.storage.getBucket(bucket);
   if (error) {
     const { error: createError } = await supabaseAdmin.storage.createBucket(
-      STORAGE_BUCKET,
-      { public: true, fileSizeLimit: 10 * 1024 * 1024 }
+      bucket,
+      { public: isPublic, fileSizeLimit: 10 * 1024 * 1024 }
     );
     if (createError && !createError.message.includes("already exists")) {
       console.warn("Could not create storage bucket:", createError.message);
@@ -87,34 +96,54 @@ async function ensureBucket(): Promise<void> {
   }
 }
 
-let bucketReady = false;
+const readyBuckets = new Set<string>();
 
 /**
- * Uploads an image buffer to Supabase Storage and returns the public URL.
+ * Uploads an image buffer to Supabase Storage and returns the bare object
+ * path (e.g. "<bookId>/page-1.png"). Bare paths are what we persist in the
+ * database; callers that need a viewable URL sign the path on demand via
+ * `toViewableUrl` from `@/lib/storage-urls`.
  */
 async function uploadImageToStorage(
   buffer: Buffer,
   storagePath: string,
-  contentType = "image/png"
+  contentType = "image/png",
+  bucket = STORAGE_BUCKET,
+  isPublic = true,
 ): Promise<string> {
-  if (!bucketReady) {
-    await ensureBucket();
-    bucketReady = true;
+  if (!readyBuckets.has(bucket)) {
+    await ensureBucket(bucket, isPublic);
+    readyBuckets.add(bucket);
   }
 
   const { error } = await supabaseAdmin.storage
-    .from(STORAGE_BUCKET)
+    .from(bucket)
     .upload(storagePath, buffer, { contentType, upsert: true });
 
   if (error) {
     throw new Error(`Storage upload failed: ${error.message}`);
   }
 
-  const { data } = supabaseAdmin.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(storagePath);
+  // Return the bare object path — NOT a public/signed URL.
+  return storagePath;
+}
 
-  return data.publicUrl;
+export function privateReferenceLocator(storagePath: string): string {
+  return `${PRIVATE_REFERENCE_PREFIX}${storagePath.replace(/^\/+/, "")}`;
+}
+
+export function parseReferenceLocator(storedValue: string): {
+  bucket: string;
+  objectPath: string;
+} | null {
+  if (storedValue.startsWith(PRIVATE_REFERENCE_PREFIX)) {
+    const objectPath = storedValue.slice(PRIVATE_REFERENCE_PREFIX.length);
+    return objectPath
+      ? { bucket: REFERENCE_STORAGE_BUCKET, objectPath }
+      : null;
+  }
+  const objectPath = objectPathFromStored(storedValue);
+  return objectPath ? { bucket: STORAGE_BUCKET, objectPath } : null;
 }
 
 /** A reference image (Character Reference Sheet) attached to a generation call. */
@@ -125,15 +154,58 @@ interface ReferenceImage {
 }
 
 /**
+ * Downloads a reference sheet directly through the authenticated Supabase
+ * Storage service role — no raw fetch or persisted bearer URLs.
+ *
+ * New values are opaque private-reference locators. Legacy bare paths, public
+ * URLs, and signed URLs are read from the illustration bucket for migration
+ * compatibility, but the URL itself is never fetched.
+ */
+async function downloadReferenceSheetAuthenticated(
+  storedValue: string,
+  label: string
+): Promise<Buffer> {
+  const location = parseReferenceLocator(storedValue);
+  if (!location) {
+    throw new Error(
+      `Cannot resolve the private character reference for ${label}`,
+    );
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from(location.bucket)
+      .download(location.objectPath);
+
+    if (error || !data) {
+      throw new Error(
+        `Authenticated character reference download failed for ${label}: ${
+          error?.message ?? "no data"
+        }`,
+      );
+    }
+
+    return Buffer.from(await data.arrayBuffer());
+  } catch (err) {
+    throw new Error(
+      `Authenticated character reference download failed for ${label}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+}
+
+/**
  * Generates a single illustration.
  *
- * Attempt order per retry:
+ * Attempt order:
  *   1. gpt-image-1 via images.edit with the Character Reference Sheet(s) as
- *      input images and input_fidelity "high" (best identity preservation)
- *   2. gpt-image-1 via images.generate (text-only, full Character Profile in prompt)
- *   3. dall-e-3 via images.generate (text-only fallback)
+ *      input images and input_fidelity "high" (best identity preservation).
+ *      Eligible transient errors are retried by the OpenAI SDK.
+ *   2. gpt-image-1 via images.generate (text-only, full Character Profile in prompt).
  *
- * Returns a placeholder URL if everything fails after one retry.
+ * A final transient provider error is classified and re-thrown immediately. We
+ * never multiply SDK retries or fall through to a placeholder after a 429.
  */
 async function generateSingleIllustration(
   prompt: string,
@@ -142,6 +214,7 @@ async function generateSingleIllustration(
 ): Promise<string> {
   const openai = getOpenAI();
 
+  // Two outer attempts (one retry on non-transient / upload failures).
   for (let attempt = 0; attempt <= 1; attempt++) {
     try {
       let b64: string | undefined;
@@ -149,7 +222,8 @@ async function generateSingleIllustration(
       // Attempt 1: gpt-image-1 edit with reference sheet(s)
       if (referenceImages.length > 0) {
         try {
-          // File streams are not reusable across calls — create fresh ones each time
+          // File streams are not reusable across calls — create fresh ones each time.
+          // The SDK recreates the HTTP request for its own bounded retry policy.
           const imageFiles = await Promise.all(
             referenceImages.map((ref, i) =>
               toFile(ref.buffer, `reference-${i + 1}.png`, {
@@ -168,6 +242,9 @@ async function generateSingleIllustration(
           b64 = res.data?.[0]?.b64_json ?? undefined;
           if (!b64) throw new Error("No b64_json from gpt-image-1 edit");
         } catch (editErr) {
+          if (isTransientOpenAIError(editErr)) {
+            throw toRetryableProviderError(editErr, "images.edit");
+          }
           console.error(
             `IDENTITY WARNING: gpt-image-1 edit with reference sheet failed for ${storagePath} — falling back to text-only generation (character likeness may drift): ${
               editErr instanceof Error ? editErr.message : editErr
@@ -187,30 +264,34 @@ async function generateSingleIllustration(
           });
           b64 = res.data?.[0]?.b64_json ?? undefined;
           if (!b64) throw new Error("No b64_json from gpt-image-1");
-        } catch (e1) {
-          console.warn(
-            `gpt-image-1 failed (attempt ${attempt + 1}): ${
-              e1 instanceof Error ? e1.message : e1
-            }`
-          );
-          // Attempt 3: dall-e-3 (no image reference support — prompt still
-          // carries the full Character Profile so identity text survives)
-          const res = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: prompt.slice(0, 4000),
-            n: 1,
-            size: "1024x1024",
-            response_format: "b64_json",
-            quality: "standard",
-          });
-          b64 = res.data?.[0]?.b64_json ?? undefined;
-          if (!b64) throw new Error("No b64_json from dall-e-3");
+        } catch (generateErr) {
+          if (isTransientOpenAIError(generateErr)) {
+            throw toRetryableProviderError(
+              generateErr,
+              "images.generate",
+            );
+          }
+          throw generateErr;
         }
       }
 
       const buffer = Buffer.from(b64, "base64");
-      return await uploadImageToStorage(buffer, storagePath);
+      // Returns the bare object path (private bucket; no public URL).
+      await uploadImageToStorage(
+        buffer,
+        storagePath,
+        "image/png",
+        REFERENCE_STORAGE_BUCKET,
+        false,
+      );
+      return privateReferenceLocator(storagePath);
     } catch (err) {
+      // RetryableProviderError — provider is exhausted; do NOT silently fall
+      // through to a placeholder. Re-throw so the caller can surface it.
+      if (isRetryableProviderError(err)) {
+        throw err;
+      }
+
       console.warn(
         `Illustration attempt ${attempt + 1} failed for ${storagePath}: ${
           err instanceof Error ? err.message : err
@@ -222,10 +303,11 @@ async function generateSingleIllustration(
     }
   }
 
-  console.error(
-    `All illustration attempts exhausted for ${storagePath}, using placeholder`
+  // All non-transient attempts exhausted — surface the failure rather than
+  // silently serving a placeholder.
+  throw new Error(
+    `All illustration attempts exhausted for ${storagePath}`
   );
-  return PLACEHOLDER_URL;
 }
 
 /** A child to depict in the book's illustrations. */
@@ -238,8 +320,8 @@ export interface IllustrationChild {
 
 /**
  * Generates a child's canonical Character Reference Sheet image once and
- * uploads it to storage. Returns the public URL, or null on failure (the
- * pipeline then continues with text-only identity preservation).
+ * uploads it to storage. Returns the bare object path, or null on failure
+ * (the pipeline then continues with text-only identity preservation).
  */
 export async function generateCharacterReferenceSheet(params: {
   child: IllustrationChild;
@@ -256,17 +338,33 @@ export async function generateCharacterReferenceSheet(params: {
 
   for (let attempt = 0; attempt <= 1; attempt++) {
     try {
-      const res = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt: prompt.slice(0, 32000),
-        n: 1,
-        size: "1024x1024",
-      });
-      const b64 = res.data?.[0]?.b64_json ?? undefined;
-      if (!b64) throw new Error("No b64_json from gpt-image-1");
+      let b64: string | undefined;
+      try {
+        const res = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: prompt.slice(0, 32000),
+          n: 1,
+          size: "1024x1024",
+        });
+        b64 = res.data?.[0]?.b64_json ?? undefined;
+        if (!b64) throw new Error("No b64_json from gpt-image-1");
+      } catch (providerError) {
+        if (isTransientOpenAIError(providerError)) {
+          throw toRetryableProviderError(
+            providerError,
+            "reference images.generate",
+          );
+        }
+        throw providerError;
+      }
       const buffer = Buffer.from(b64, "base64");
+      // Returns the bare object path — callers sign on demand.
       return await uploadImageToStorage(buffer, storagePath);
     } catch (err) {
+      // Transient provider exhaustion: surface immediately.
+      if (isRetryableProviderError(err)) {
+        throw err;
+      }
       console.warn(
         `Reference sheet attempt ${attempt + 1} failed for ${storagePath}: ${
           err instanceof Error ? err.message : err
@@ -287,26 +385,18 @@ export async function generateCharacterReferenceSheet(params: {
 /**
  * Downloads each child's Character Reference Sheet once so the buffers can be
  * reused across every page generation call.
+ *
+ * Always uses authenticated Supabase Storage download — never a raw public fetch.
  */
 async function downloadReferenceSheets(
   children: IllustrationChild[]
 ): Promise<ReferenceImage[]> {
   const refs: ReferenceImage[] = [];
   for (const child of children) {
-    const url = child.profile.referenceSheetUrl;
-    if (!url) continue;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buffer = Buffer.from(await res.arrayBuffer());
-      refs.push({ name: child.name, buffer });
-    } catch (err) {
-      console.error(
-        `IDENTITY WARNING: failed to download reference sheet for ${child.name} (${url}): ${
-          err instanceof Error ? err.message : err
-        }`
-      );
-    }
+    const stored = child.profile.referenceSheetUrl;
+    if (!stored) continue;
+    const buffer = await downloadReferenceSheetAuthenticated(stored, child.name);
+    refs.push({ name: child.name, buffer });
   }
   return refs;
 }
@@ -324,7 +414,7 @@ async function downloadReferenceSheets(
  * @param params.sceneDescriptions - Scene descriptions matching page order
  * @param params.pageNumbers       - If provided, only generate for these page numbers (1-indexed)
  * @param params.children          - One or two children with their Character Profiles
- * @returns Array of image URLs in the same order as input pages/pageNumbers
+ * @returns Array of bare storage object paths in the same order as input pages/pageNumbers
  */
 export async function generateIllustrations(params: {
   bookId: string;
@@ -334,8 +424,18 @@ export async function generateIllustrations(params: {
   pageNumbers?: number[];
   children: IllustrationChild[];
   contextualAnswers?: Record<string, unknown> | null;
+  correctionsByPage?: Record<number, string>;
 }): Promise<string[]> {
-  const { bookId, storyPages, themeId, sceneDescriptions, pageNumbers, children, contextualAnswers } =
+  const {
+    bookId,
+    storyPages,
+    themeId,
+    sceneDescriptions,
+    pageNumbers,
+    children,
+    contextualAnswers,
+    correctionsByPage,
+  } =
     params;
 
   // The customer-selected animal is a hard requirement, not a suggestion.
@@ -350,7 +450,8 @@ export async function generateIllustrations(params: {
     profile: child.profile,
   }));
 
-  // Download each reference sheet once; reuse the buffers for every page.
+  // Download each reference sheet once via authenticated storage; reuse the
+  // buffers for every page.
   const referenceImages = await downloadReferenceSheets(children);
   const referenceNames = referenceImages.map((r) => r.name);
 
@@ -365,12 +466,16 @@ export async function generateIllustrations(params: {
         sceneDescriptions[sceneIdx] ||
         `A scene from the story: ${page.text.substring(0, 150)}`;
 
-      const prompt = buildIllustrationPrompt({
+      let prompt = buildIllustrationPrompt({
         sceneDescription: scene,
         characters,
         referenceNames,
         creature,
       });
+      const correction = correctionsByPage?.[page.pageNumber]?.trim();
+      if (correction) {
+        prompt += `\n\n${correction}`;
+      }
 
       const storagePath = `${bookId}/page-${page.pageNumber}.png`;
       return { prompt, storagePath };

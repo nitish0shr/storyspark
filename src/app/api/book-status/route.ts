@@ -10,6 +10,7 @@ import {
   createFinalBookSignedUrl,
 } from "@/lib/storage-urls";
 import { isCreatorOwner } from "@/lib/creator-session";
+import { runActivityTriggeredGenerationRecovery } from "@/services/generation-recovery";
 
 export async function GET(request: NextRequest) {
   if (!isAdminConfigured()) {
@@ -74,6 +75,22 @@ export async function GET(request: NextRequest) {
   }
   if (!authorised) {
     return NextResponse.json({ error: "Book not found" }, { status: 404 });
+  }
+
+  // This existing authenticated poll is the no-scheduler production recovery
+  // trigger. It runs only after ownership/payment authorisation and the service
+  // applies its own one-minute throttle plus an atomic database claim.
+  if (book.status === "preview_generating") {
+    try {
+      await runActivityTriggeredGenerationRecovery();
+    } catch (recoveryError) {
+      console.warn(
+        "[book-status] activity recovery sweep failed:",
+        recoveryError instanceof Error
+          ? recoveryError.message
+          : "unknown error",
+      );
+    }
   }
   if (
     isCreatorOwner(user?.id, book.user_id) &&

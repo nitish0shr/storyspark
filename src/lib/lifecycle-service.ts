@@ -211,10 +211,24 @@ export async function recordOperationalError(
   errorContext: string,
   err: unknown,
 ): Promise<void> {
+  const maybeProviderError =
+    err && typeof err === "object"
+      ? (err as {
+          isRetryableProviderError?: unknown;
+          diagnostics?: unknown;
+        })
+      : null;
+  const providerDiagnostics =
+    maybeProviderError?.isRetryableProviderError === true &&
+    maybeProviderError.diagnostics &&
+    typeof maybeProviderError.diagnostics === "object"
+      ? maybeProviderError.diagnostics
+      : null;
   const errorPayload = {
     context: errorContext,
     message: err instanceof Error ? err.message : String(err),
     stack: err instanceof Error ? (err.stack?.slice(0, 500) ?? null) : null,
+    providerDiagnostics,
     recordedAt: new Date().toISOString(),
   };
 
