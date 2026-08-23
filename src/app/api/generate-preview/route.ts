@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin, isAdminConfigured } from "@/lib/supabase/admin";
 import { generatePreview } from "@/services/book-pipeline";
 import { isOpenAIConfigured } from "@/lib/openai";
+import {
+  creatorIdentityFromUser,
+  isCreatorOwner,
+} from "@/lib/creator-session";
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !isAdminConfigured()) {
       return NextResponse.json(
         { error: "Database not configured. Please add Supabase environment variables." },
         { status: 503 }
@@ -19,14 +23,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to get the authenticated user — anonymous visitors are allowed for free preview
-    let userId: string | null = null;
+    // Guests are welcome, but they must be real authenticated anonymous users.
+    let identity = null;
     try {
       const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError) {
+        identity = creatorIdentityFromUser(user);
+      }
     } catch {
-      // No session — fine for free preview
+      identity = null;
+    }
+    if (!identity) {
+      return NextResponse.json(
+        {
+          error:
+            "A secure creator session is required. Please refresh and try again.",
+        },
+        { status: 401 },
+      );
     }
 
     // Parse request body
@@ -40,7 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch the book using admin client (bypasses RLS for anonymous books)
+    // Fetch with the admin client, then enforce the exact authenticated owner
+    // before starting any billable work.
     const { data: book, error: bookError } = await supabaseAdmin
       .from("books")
       .select("id, user_id, status, lifecycle_stage")
@@ -51,10 +70,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    // Ownership check:
-    // - If the book belongs to a specific user, only that user may trigger generation.
-    // - If the book has no user_id (anonymous), allow anyone who knows the bookId.
-    if (book.user_id !== null && book.user_id !== userId) {
+    if (!isCreatorOwner(identity.userId, book.user_id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -71,8 +87,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prevent re-generating if already in progress
-    if (book.status === "preview_generating" || book.status === "generating") {
+    // Atomically claim the draft before dispatching expensive background work.
+    // Two concurrent requests may both read "draft", but only one can update
+    // the row while that predicate is still true.
+    const { data: claimedBook, error: claimError } = await supabaseAdmin
+      .from("books")
+      .update({ status: "preview_generating" })
+      .eq("id", bookId)
+      .eq("user_id", identity.userId)
+      .eq("status", "draft")
+      .is("lifecycle_stage", null)
+      .select("id")
+      .maybeSingle();
+
+    if (claimError) {
+      console.error(`Failed to claim preview generation for ${bookId}:`, claimError);
+      return NextResponse.json(
+        { error: "Failed to start book generation" },
+        { status: 500 },
+      );
+    }
+    if (!claimedBook) {
       return NextResponse.json(
         { error: "Book generation already in progress" },
         { status: 409 }
@@ -80,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Start preview generation (fire-and-forget — client polls /api/book-status)
-    generatePreview(bookId).catch((err) => {
+    generatePreview(bookId, false, { claimedPublicGeneration: true }).catch((err) => {
       console.error(`Background preview generation failed for ${bookId}:`, err);
     });
 

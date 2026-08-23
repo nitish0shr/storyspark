@@ -9,6 +9,7 @@ import {
 import {
   createFinalBookSignedUrl,
 } from "@/lib/storage-urls";
+import { isCreatorOwner } from "@/lib/creator-session";
 
 export async function GET(request: NextRequest) {
   if (!isAdminConfigured()) {
@@ -36,11 +37,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Book not found" }, { status: 404 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  let authorised = Boolean(user && user.id === book.user_id);
+  let user: { id: string } | null = null;
+  try {
+    const supabase = await createClient();
+    const {
+      data,
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (!authError) user = data.user;
+  } catch {
+    user = null;
+  }
+  let authorised = isCreatorOwner(user?.id, book.user_id);
   let hasExactVerifiedPayment = false;
   let accessAuthorised = authorised;
   let authorisedOrderId: string | null = null;
@@ -51,7 +59,6 @@ export async function GET(request: NextRequest) {
       .eq("book_id", bookId)
       .eq("stripe_checkout_session_id", checkoutSessionId)
       .maybeSingle();
-    authorised = Boolean(order);
     hasExactVerifiedPayment = order
       ? isExactVerifiedPayment({
           approvedVersionId: book.approved_version_id,
@@ -60,12 +67,18 @@ export async function GET(request: NextRequest) {
           paymentVerifiedAt: order.payment_verified_at,
         })
       : false;
+    // A checkout session is not an ownership substitute. It authorises status
+    // only after payment is durably verified for the exact approved version.
+    authorised = hasExactVerifiedPayment;
     authorisedOrderId = hasExactVerifiedPayment ? order?.id ?? null : null;
   }
   if (!authorised) {
     return NextResponse.json({ error: "Book not found" }, { status: 404 });
   }
-  if (user && user.id === book.user_id && book.approved_version_id) {
+  if (
+    isCreatorOwner(user?.id, book.user_id) &&
+    book.approved_version_id
+  ) {
     const { data: paidOrder } = await supabaseAdmin
       .from("orders")
       .select("id")

@@ -32,7 +32,11 @@ function isAgeInRange(age: number, ageRange: string): boolean {
   return age >= Number(min) && age <= Number(max);
 }
 
-export function StepThemeSelect() {
+interface StepThemeSelectProps {
+  isGuest: boolean;
+}
+
+export function StepThemeSelect({ isGuest }: StepThemeSelectProps) {
   const { childName, childAge, selectedThemeId, setSelectedTheme, nextStep } = useWizardStore();
   const [activeCategory, setActiveCategory] = useState<"all" | ThemeCategory>("all");
   const posthog = usePostHog();
@@ -97,14 +101,24 @@ export function StepThemeSelect() {
           const Icon = iconMap[theme.icon] ?? Rocket;
           const isSelected = selectedThemeId === theme.id;
           const title = theme.titleTemplate.replace("[Child]", childName);
+          const isLockedForGuest = isGuest && theme.subscriberOnly === true;
 
           return (
             <button
               key={theme.id}
               type="button"
               onClick={() => handleSelect(theme.id)}
+              disabled={isLockedForGuest}
+              aria-disabled={isLockedForGuest}
+              title={
+                isLockedForGuest
+                  ? "Sign in and subscribe to use this theme"
+                  : undefined
+              }
               className={cn(
                 "group relative flex flex-col overflow-hidden rounded-2xl border-2 text-left transition-all duration-200",
+                isLockedForGuest &&
+                  "cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-none",
                 isSelected
                   ? "border-[#262625] shadow-[4px_4px_0px_#262625] -translate-y-0.5"
                   : "border-[#262625]/15 bg-white hover:border-[#CB6CE6] hover:shadow-[3px_3px_0px_#CB6CE6] hover:-translate-y-0.5"

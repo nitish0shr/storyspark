@@ -42,23 +42,12 @@ export function LoadingAnimation({
   illustrationsReady,
 }: LoadingAnimationProps) {
   const [messageIndex, setMessageIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const messageInterval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 3500);
     return () => clearInterval(messageInterval);
-  }, []);
-
-  useEffect(() => {
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 92) return 92;
-        return prev + Math.random() * 3 + 0.5;
-      });
-    }, 400);
-    return () => clearInterval(progressInterval);
   }, []);
 
   const serverMessage = getServerMessage(serverStatus, illustrationsReady, childName);
@@ -111,16 +100,16 @@ export function LoadingAnimation({
         {serverMessage || currentStep || currentMessage}
       </p>
 
-      {/* Progress bar */}
+      {/* Indeterminate progress: the pipeline does not expose a trustworthy
+          percentage, so do not present a fabricated one. */}
       <div className="w-full max-w-xs">
         <div className="h-3 w-full overflow-hidden rounded-full bg-[#262625]/10 border border-[#262625]/20">
           <div
-            className="h-full rounded-full bg-[#FFDE59] border-r border-[#262625]/20 transition-all duration-700 ease-out"
-            style={{ width: `${Math.min(progress, 100)}%` }}
+            className="h-full w-2/3 animate-pulse rounded-full border-r border-[#262625]/20 bg-[#FFDE59]"
           />
         </div>
         <p className="mt-2 font-body text-xs text-[#262625]/40">
-          {Math.round(Math.min(progress, 100))}% complete
+          Usually ready in 6–8 minutes
         </p>
       </div>
 

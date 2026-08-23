@@ -319,6 +319,11 @@ export interface PreviewGenerationControls {
   allowAutomaticRegeneration?: boolean;
   actor?: string;
   controlledLegacyRecovery?: boolean;
+  /**
+   * The public route atomically moved this exact owner's new draft to
+   * preview_generating before dispatch. No other caller should set this.
+   */
+  claimedPublicGeneration?: boolean;
 }
 
 export async function generatePreview(
@@ -332,7 +337,23 @@ export async function generatePreview(
     const lifecycleStage = (book.lifecycle_stage ?? null) as LifecycleStage | null;
     const isControlledLegacyRecovery =
       controls.controlledLegacyRecovery === true;
-    if (isControlledLegacyRecovery) {
+    const isClaimedPublicGeneration =
+      controls.claimedPublicGeneration === true;
+    if (isClaimedPublicGeneration) {
+      if (
+        lifecycleStage !== null ||
+        skipGate ||
+        book.status !== "preview_generating" ||
+        isControlledLegacyRecovery
+      ) {
+        throw new Error(
+          "Invalid claimed public generation invocation; exact lifecycle and operational state are required",
+        );
+      }
+      // The route has already made the durable generation claim. Any failure
+      // after this boundary must move the book to failed rather than strand it.
+      generationStarted = true;
+    } else if (isControlledLegacyRecovery) {
       if (
         lifecycleStage !== null ||
         skipGate ||

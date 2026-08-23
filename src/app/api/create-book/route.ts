@@ -7,6 +7,10 @@ import { AppearanceProfile } from "@/types/child";
 import { CONSENT_VERSION } from "@/lib/consent";
 import { resolveCreatureFromAnswers } from "@/data/animals";
 import { checkRateLimit, clientKeyFromHeaders } from "@/lib/rate-limit";
+import {
+  canUseSubscriberTheme,
+  creatorIdentityFromUser,
+} from "@/lib/creator-session";
 
 /**
  * Whitelisted Character Profile keys accepted from the client.
@@ -74,15 +78,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to get the authenticated user — but do NOT block anonymous visitors
-    let userId: string | null = null;
+    // Every creator, including a guest, must have a real Supabase auth user.
+    // The service-role client below controls the write, but never invents or
+    // omits ownership.
+    let identity = null;
     try {
       const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError) {
+        identity = creatorIdentityFromUser(user);
+      }
     } catch {
-      // No session — that's fine for free preview
+      identity = null;
     }
+    if (!identity) {
+      return NextResponse.json(
+        {
+          error:
+            "A secure creator session is required. Please refresh and try again.",
+        },
+        { status: 401 },
+      );
+    }
+    const userId = identity.userId;
 
     const body = await request.json();
     const {
@@ -129,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     // Subscriber-only themes require an authenticated, active subscriber
     if (theme.subscriberOnly) {
-      if (!userId) {
+      if (identity.isAnonymous) {
         return NextResponse.json(
           { error: "This theme is exclusive to subscribers. Subscribe to the Monthly Book Club to unlock it!" },
           { status: 403 }
@@ -142,7 +163,7 @@ export async function POST(request: NextRequest) {
         .eq("status", "active")
         .maybeSingle();
 
-      if (!activeSub) {
+      if (!canUseSubscriberTheme(identity, Boolean(activeSub))) {
         return NextResponse.json(
           { error: "This theme is exclusive to subscribers. Subscribe to the Monthly Book Club to unlock it!" },
           { status: 403 }
@@ -150,7 +171,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use admin client for all inserts so RLS doesn't block anonymous visitors
+    // Use the admin client for controlled server inserts while preserving the
+    // exact authenticated owner expected by RLS on subsequent reads.
     const { data: childProfile, error: childError } = await supabaseAdmin
       .from("child_profiles")
       .insert({
