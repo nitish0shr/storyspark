@@ -902,7 +902,7 @@ select
   v.id,
   p.ordinality::integer,
   p.page->>'text',
-  b.illustration_urls->>(p.ordinality - 1),
+  b.illustration_urls->>((p.ordinality - 1)::int),
   p.ordinality <= 2,
   jsonb_build_object('compatibility_backfill', true),
   v.created_at
